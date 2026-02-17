@@ -877,7 +877,8 @@ function __tpi_collectViewState() {
     }
 
     // ✅ 排除顶部看板/同步状态：这些必须始终动态生成，不能被快照“锁死”
-    if (id.startsWith('ts-') || id.startsWith('sync-status')) {
+    // ✅ [Fix V12-Bug2] 额外排除 tpi-top-scoreboard（防textContent覆盖破坏看板flex布局）
+    if (id.startsWith('ts-') || id.startsWith('sync-status') || id.startsWith('tpi-top-scoreboard')) {
       return;
     }
 
@@ -1025,7 +1026,8 @@ function __tpi_restoreViewState(viewState) {
     }
 
     // ✅ 排除顶部看板/同步状态：这些必须始终动态生成，不能被快照“锁死”
-    if ((el.id || '').startsWith('ts-') || (el.id || '').startsWith('sync-status')) {
+    // ✅ [Fix V12-Bug2] 额外排除 tpi-top-scoreboard（防textContent覆盖破坏看板flex布局）
+    if ((el.id || '').startsWith('ts-') || (el.id || '').startsWith('sync-status') || (el.id || '').startsWith('tpi-top-scoreboard')) {
       return;
     }
 
@@ -29735,11 +29737,13 @@ try{
                 const hsmScore = this.getScore('hsm-score');
                 const fliScore = this.getScore('fli-score');
                 const bonusScore = this.getScore('bonus-score');
+                const ma7Score = this.getScore('ma7-score');
+                const sysScore = this.getScore('sys-score');
                 
                 // 计算TPI总分（包括FLI）
                 const tpiTotal = amiScore + bcmScore + logisticsScore + hsmScore + fliScore + bonusScore;
                 
-                // 更新看板显示
+                // 更新卡片看板显示
                 this.updateElement('dashboard-ami', amiScore.toFixed(1));
                 this.updateElement('dashboard-bcm', bcmScore.toFixed(1));
                 this.updateElement('dashboard-logistics', logisticsScore.toFixed(1));
@@ -29747,6 +29751,14 @@ try{
                 this.updateElement('dashboard-fli', fliScore.toFixed(1));
                 this.updateElement('dashboard-bonus', bonusScore.toFixed(1));
                 this.updateElement('dashboard-total', tpiTotal.toFixed(1));
+                
+                // ✅ [Fix V12-Bug2] 同步更新顶部固定看板 ts-* 元素（原补丁漏掉了这里）
+                this.updateElement('ts-ma7', ma7Score.toFixed(1));
+                this.updateElement('ts-ami', amiScore.toFixed(1));
+                this.updateElement('ts-fli', fliScore.toFixed(1));
+                this.updateElement('ts-sys', sysScore.toFixed(1));
+                this.updateElement('ts-bonus', bonusScore.toFixed(1));
+                this.updateElement('ts-total', tpiTotal.toFixed(1));
                 
                 // 更新评级
                 this.updateRating(tpiTotal);
@@ -31382,9 +31394,7 @@ console.log('☁️ [上传] 正在写入云端数据库（10s超时/3次重试/
             if (remoteDay2 && typeof window.restoreUIFromData === 'function') {
               window.restoreUIFromData(remoteDay2);
             }
-            if (window.TPI && typeof window.TPI.loadFromLocalStorage === 'function') {
-              try { window.TPI.loadFromLocalStorage(); } catch(e) {}
-            }
+            // ✅ [Fix V12-Bug1] 不调用 loadFromLocalStorage（避免 clearAllForm 清除刚恢复的数据）
             showModal?.({type:'success', title:'✅ 下载成功（兼容模式）', message:'已使用兼容模式恢复数据。\n\n⚠️ 建议：请立即点击"☁️ 上传到Appwrite"重新上传，以升级云端数据格式，确保后续下载正常。', confirmText:'知道了'});
             return;
           }
@@ -31474,32 +31484,25 @@ console.log('☁️ [上传] 正在写入云端数据库（10s超时/3次重试/
           window.restoreUIFromData(dayData);
           __uiRestored = true;
           console.log('✅ [下载] UI恢复完成 (restoreUIFromData)');
+          // ✅ [Fix V12-Bug1] 将云端dayData同步写入 tpi_data_${dateStr}，
+          // 保证后续用户点击"仅读本地"时能正确加载，而不是触发 clearAllForm
+          try {
+            __tpi_ls_set('tpi_data_' + dateStr, JSON.stringify(dayData));
+            console.log('✅ [下载] 云端dayData已写入 tpi_data_' + dateStr);
+          } catch(e) {
+            console.warn('⚠️ [下载] 写入 tpi_data_ 键失败(忽略):', e);
+          }
         } catch(e) {
           console.error('❌ [下载] restoreUIFromData失败:', e);
         }
       }
       
-      // 步骤3：额外调用系统的loadFromLocalStorage（如果存在）作为补充
-      try {
-        if (window.TPI && typeof window.TPI.loadFromLocalStorage === 'function') {
-          console.log('🔧 [下载] 调用TPI.loadFromLocalStorage作为补充...');
-          window.TPI.loadFromLocalStorage();
-          console.log('✅ [下载] TPI.loadFromLocalStorage补充完成');
-        }
-      } catch(e) {
-        console.warn('⚠️ [下载] TPI.loadFromLocalStorage补充失败(忽略):', e);
-      }
-      
-      // 步骤4：调用全局loadFromLocalStorage（如果存在）作为额外补充
-      try {
-        if (typeof window.loadFromLocalStorage === 'function') {
-          console.log('🔧 [下载] 调用loadFromLocalStorage作为额外补充...');
-          window.loadFromLocalStorage();
-          console.log('✅ [下载] loadFromLocalStorage补充完成');
-        }
-      } catch(e) {
-        console.warn('⚠️ [下载] loadFromLocalStorage补充失败(忽略):', e);
-      }
+      // ✅ [Fix V12-Bug1] 步骤3/4 已移除：不再调用 TPI.loadFromLocalStorage/loadFromLocalStorage
+      // 原因：这两个调用在云端数据已通过 restoreUIFromData 恢复之后执行，
+      // 会读取旧的 tpi_data_${date} 键（Appwrite packed格式未写入该键），
+      // 导致 __tpi_clearAllForm() 被触发，清除 FutureRadar/MiscLog 等模块。
+      // restoreUIFromData 已足够完整，无需额外 loadFromLocalStorage 补充。
+      console.log('ℹ️ [下载] 跳过 loadFromLocalStorage（云端数据已通过 restoreUIFromData 完整恢复）');
 
       // 步骤5：【关键】触发所有必要的重新计算和UI刷新
       console.log('🔄 [下载] 开始触发重新计算和UI刷新...');
@@ -31542,6 +31545,16 @@ console.log('☁️ [上传] 正在写入云端数据库（10s超时/3次重试/
           } else if (typeof window.FutureRadar.render === 'function') {
             window.FutureRadar.render();
           }
+          // ✅ [Fix V12-Bug1] 延迟再次刷新，保证跨浏览器正确渲染
+          setTimeout(function(){
+            try{
+              if(window.FutureRadar){
+                if(typeof window.FutureRadar.loadData==='function') window.FutureRadar.loadData();
+                if(typeof window.FutureRadar.reload==='function') window.FutureRadar.reload();
+                else if(typeof window.FutureRadar.render==='function') window.FutureRadar.render();
+              }
+            }catch(e){}
+          }, 500);
           console.log('✅ [下载] FutureRadar刷新完成');
         }
       } catch(e) {
@@ -31553,6 +31566,10 @@ console.log('☁️ [上传] 正在写入云端数据库（10s超时/3次重试/
         if (window.MiscLog && typeof window.MiscLog.render === 'function') {
           console.log('🔧 [下载] 刷新MiscLog...');
           window.MiscLog.render();
+          // ✅ [Fix V12-Bug1] 延迟再次刷新，保证跨浏览器正确渲染
+          setTimeout(function(){
+            try{ if(window.MiscLog && typeof window.MiscLog.render==='function') window.MiscLog.render(); }catch(e){}
+          }, 500);
           console.log('✅ [下载] MiscLog刷新完成');
         }
       } catch(e) {
@@ -31771,7 +31788,8 @@ const __download_end_time = Date.now();
         window.restoreUIFromData(remoteDay);
       }
       if (window.TPI && typeof window.TPI.loadFromLocalStorage === 'function') {
-        try { window.TPI.loadFromLocalStorage(); } catch(e) {}
+        // ✅ [Fix V12-Bug1] 不调用 loadFromLocalStorage（避免清除刚恢复的快照数据）
+        // try { window.TPI.loadFromLocalStorage(); } catch(e) {}
       }
       showModal?.({ type:'success', title:'✅ 快照恢复成功', message: `已从本地快照恢复数据\n\n快照时间: ${new Date(snap.timestamp).toLocaleString('zh-CN')}\n类型: ${snap._type}`, confirmText:'知道了' });
     } catch(e) {
