@@ -24791,6 +24791,7 @@ window.archiveOldDataComplete = function() {
 };
 
 console.log('✅ 全局函数已定义: copyPreviousDayDataComplete, archiveOldDataComplete');
+})();
   </script>
 <script>
    // ═══════════════════════════════════════════════════════════════════
@@ -25328,6 +25329,7 @@ html += `</head><body>
         // ═══════════════════════════════════════════════════════════════════
         if (!window.openBackupManagerComplete) {
             window.openBackupManagerComplete = function(){ try{ alert('ℹ️ 备份管理器（备份历史列表/恢复/删除）已移除'); }catch(e){} };
+        }
 // 页面加载完成后初始化
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => {
@@ -25341,6 +25343,8 @@ if (document.readyState === 'loading') {
         AutoSaveManager.init();
     }, 100);
 }
+}
+})();
   </script>
 <!-- ==================== 实时计算触发器增强 ==================== -->
 <script>
@@ -30838,8 +30842,6 @@ console.log('☁️ [上传] 正在写入云端数据库（10s超时/3次重试/
 
         return await (window.__tpi_retry ? window.__tpi_retry(()=> window.__tpi_withTimeout(run(), 10000), 3, 600) : run());
       };
-        return await (window.__tpi_retry ? window.__tpi_retry(()=> window.__tpi_withTimeout(run(), 10000), 3, 600) : run());
-      };
 
       // 冲突检测：若云端 lastModified 更新且来自其他设备，提示用户
       let __remote = null;
@@ -30878,9 +30880,6 @@ console.log('☁️ [上传] 正在写入云端数据库（10s超时/3次重试/
                 return;
               }
             }
-          }
-        }catch(e){}
-      }
           }
         }catch(e){}
       }
