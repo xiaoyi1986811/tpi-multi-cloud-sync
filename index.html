@@ -4,20 +4,121 @@
 <head>
 <script>
 /* =========================================================
-   V6 Final Stability Patch - Storage Safe Access (2026-02-11)
-   - 仅提供辅助函数，不改写 localStorage 原型/方法
-   - 用于在 iOS Safari 无痕/隐私模式下避免 QuotaExceededError/安全异常导致脚本中断
+   Storage Safe Access (IndexedDB 主存储 + localStorage 同步缓存)
+   - IndexedDB 为主持久化层（容量大、可靠）
+   - localStorage 作为同步缓存（供同步代码读取）
+   - 写入时同时写 localStorage 和 IndexedDB
+   - iOS Safari 无痕模式安全兜底
 ========================================================= */
 (function(){
   function _warn(op, key, e){
     try{ console.warn(`[Storage] ${op}${key ? ' ' + key : ''} 失败:`, e); }catch(_){}
   }
-
   function _getLS(){
     try{ return localStorage; }catch(e){ _warn('访问 localStorage', '', e); return null; }
   }
 
+  // ---- IndexedDB 镜像层（异步，fire-and-forget） ----
+  const _IDB_NAME = 'TPI_LSMirror';
+  const _IDB_STORE = 'kv';
+  let _idb = null;
+  function _openMirrorDB(){
+    if (_idb) return Promise.resolve(_idb);
+    return new Promise((resolve, reject) => {
+      try {
+        const req = indexedDB.open(_IDB_NAME, 1);
+        req.onupgradeneeded = () => {
+          try{ req.result.createObjectStore(_IDB_STORE, { keyPath: 'k' }); }catch(e){}
+        };
+        req.onsuccess = () => { _idb = req.result; resolve(_idb); };
+        req.onerror = () => reject(req.error);
+      } catch(e){ reject(e); }
+    });
+  }
+
+  // 预加载 IndexedDB 数据到内存缓存，供同步读取
+  const _memCache = {};
+  let _cacheReady = false;
+  function _preloadCache(){
+    _openMirrorDB().then(db => {
+      try {
+        const tx = db.transaction([_IDB_STORE], 'readonly');
+        const req = tx.objectStore(_IDB_STORE).getAll();
+        req.onsuccess = () => {
+          try {
+            (req.result || []).forEach(r => { if(r && r.k) _memCache[r.k] = r.v; });
+            _cacheReady = true;
+            console.log('[Storage] IndexedDB 镜像缓存已预载，共', Object.keys(_memCache).length, '个键');
+          } catch(e) {}
+        };
+      } catch(e) {}
+    }).catch(() => { _cacheReady = true; });
+  }
+  // 页面加载后预载
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', _preloadCache, { once: true });
+  } else {
+    setTimeout(_preloadCache, 0);
+  }
+
+  function _idbSet(key, value){
+    _memCache[key] = value; // 立即更新内存缓存
+    _openMirrorDB().then(db => {
+      try {
+        const tx = db.transaction([_IDB_STORE], 'readwrite');
+        tx.objectStore(_IDB_STORE).put({ k: key, v: value, ts: Date.now() });
+      } catch(e) {}
+    }).catch(() => {});
+  }
+  function _idbRemove(key){
+    delete _memCache[key];
+    _openMirrorDB().then(db => {
+      try {
+        const tx = db.transaction([_IDB_STORE], 'readwrite');
+        tx.objectStore(_IDB_STORE).delete(key);
+      } catch(e) {}
+    }).catch(() => {});
+  }
+  function _idbClear(){
+    Object.keys(_memCache).forEach(k => delete _memCache[k]);
+    _openMirrorDB().then(db => {
+      try {
+        const tx = db.transaction([_IDB_STORE], 'readwrite');
+        tx.objectStore(_IDB_STORE).clear();
+      } catch(e) {}
+    }).catch(() => {});
+  }
+
+  // 异步读取 IndexedDB（供需要时使用）
+  window.__tpi_idb_get_async = function(key){
+    // 先查内存缓存
+    if (_cacheReady && Object.prototype.hasOwnProperty.call(_memCache, key)) {
+      return Promise.resolve(_memCache[key] !== undefined ? _memCache[key] : null);
+    }
+    return _openMirrorDB().then(db => new Promise((resolve, reject) => {
+      try {
+        const tx = db.transaction([_IDB_STORE], 'readonly');
+        const req = tx.objectStore(_IDB_STORE).get(key);
+        req.onsuccess = () => {
+          const r = req.result;
+          const v = r ? r.v : null;
+          if (v !== null) _memCache[key] = v;
+          resolve(v);
+        };
+        req.onerror = () => reject(req.error);
+      } catch(e){ reject(e); }
+    })).catch(() => null);
+  };
+
+  // 公开辅助函数
   window.__tpi_ls_get = function(key, defaultValue){
+    // 优先读内存缓存（来自 IndexedDB 预载）
+    if (_cacheReady && Object.prototype.hasOwnProperty.call(_memCache, key)) {
+      const cv = _memCache[key];
+      if (cv !== null && cv !== undefined) return cv;
+      return (defaultValue === undefined ? null : defaultValue);
+    }
+    // 回退到 localStorage 同步读取
     try{
       const ls = _getLS(); if(!ls) return (defaultValue===undefined?null:defaultValue);
       const v = ls.getItem(key);
@@ -29,6 +130,8 @@
   };
 
   window.__tpi_ls_set = function(key, value){
+    // 同时写 localStorage 和 IndexedDB
+    _idbSet(key, value);
     try{
       const ls = _getLS(); if(!ls) return false;
       ls.setItem(key, value);
@@ -37,6 +140,7 @@
   };
 
   window.__tpi_ls_remove = function(key){
+    _idbRemove(key);
     try{
       const ls = _getLS(); if(!ls) return false;
       ls.removeItem(key);
@@ -45,6 +149,7 @@
   };
 
   window.__tpi_ls_clear = function(){
+    _idbClear();
     try{
       const ls = _getLS(); if(!ls) return false;
       ls.clear();
@@ -66,11 +171,12 @@
     }catch(e){ _warn('读取 key()', '', e); return defaultValue===undefined?null:defaultValue; }
   };
 
-  // 用于安全遍历（隐私模式下 localStorage 访问会抛错）
   window.__tpi_ls_obj = function(){
     const ls = _getLS();
     return ls || {};
   };
+
+  console.log('[Storage] IndexedDB+localStorage 双存储已初始化');
 })();
 </script>
 
@@ -1289,6 +1395,7 @@ const __fixEvents = (arr) => (arr || []).map((it, idx) => {
 
       // 6) 回写 localStorage（只影响 FutureRadar 自己的键）
       __tpi_ls_set('tpi_radar_events_v3', JSON.stringify(__mapped));
+      // ✅ 同步写入 IndexedDB 镜像（通过 __tpi_ls_set 内部已处理）
 
       // 7) 强制刷新：优先走 reload（会 loadData + render），避免只 render 导致仍显示旧内存数据
       try {
@@ -1383,11 +1490,29 @@ const __fixEvents = (arr) => (arr || []).map((it, idx) => {
 
 console.log('✅ 独裁补丁 v5 已在 <head> 强制加载 (collectDailyData & restoreUIFromData)');
 
-// ✅ 云端为主：优先临时快照，其次云端缓存，最后本地缓存（兼容）
+// ✅ 云端为主：优先 IndexedDB，其次临时快照，再次云端缓存，最后本地缓存
 window.getTpiDayData = function(dateStr) {
   if (!dateStr) return null;
+
+  // 1. 优先从 IndexedDB 读取已同步数据（同步方式通过内存缓存）
+  try {
+    if (window.TPIIndexedDB && window.TPIIndexedDB.getData) {
+      // 异步获取，但通过 Promise 缓存提升可用性
+      window.TPIIndexedDB.getData(dateStr).then(record => {
+        if (record && record.data) {
+          window.__TPI_IDB_DAY_CACHE__ = window.__TPI_IDB_DAY_CACHE__ || {};
+          window.__TPI_IDB_DAY_CACHE__[dateStr] = record.data;
+        }
+      }).catch(() => {});
+      // 返回缓存（若已有）
+      if (window.__TPI_IDB_DAY_CACHE__ && window.__TPI_IDB_DAY_CACHE__[dateStr]) {
+        console.log(`[读取数据] IndexedDB缓存: ${dateStr}`);
+        return window.__TPI_IDB_DAY_CACHE__[dateStr];
+      }
+    }
+  } catch(e) {}
   
-  // 1. 优先读取临时快照（最新未同步数据）
+  // 2. 优先读取临时快照（最新未同步数据）
   try {
     const tempSnapshot = __tpi_ls_get(`tpi_temp_snapshot_${dateStr}`);
     if (tempSnapshot) {
@@ -1399,19 +1524,19 @@ window.getTpiDayData = function(dateStr) {
     }
   } catch(e) {}
 
-  // 2. 读取云端下载缓存（如果存在）
+  // 3. 读取云端下载缓存（如果存在）
   if (window.__TPI_CLOUD_CACHE__ && window.__TPI_CLOUD_CACHE__[dateStr]) {
     console.log(`[读取数据] 云端缓存: ${dateStr}`);
     return window.__TPI_CLOUD_CACHE__[dateStr];
   }
 
-  // 3. 读取合并库（兼容旧数据）
+  // 4. 读取合并库（兼容旧数据）
   if (window.__TPI_MERGED_DB__ && window.__TPI_MERGED_DB__[dateStr]) {
     console.log(`[读取数据] 合并库: ${dateStr}`);
     return window.__TPI_MERGED_DB__[dateStr];
   }
 
-  // 4. 兼容：读取旧的本地缓存（逐步淘汰）
+  // 5. 兼容：读取旧的本地缓存（逐步淘汰）
   try {
     const local = __tpi_ls_get(`tpi_data_${dateStr}`);
     if (local) {
@@ -1422,6 +1547,27 @@ window.getTpiDayData = function(dateStr) {
 
   console.log(`[读取数据] 无数据: ${dateStr}`);
   return null;
+};
+
+// ✅ 异步版本 getTpiDayDataAsync，优先从 IndexedDB 读取
+window.getTpiDayDataAsync = async function(dateStr) {
+  if (!dateStr) return null;
+  
+  // 1. 从 IndexedDB 读取
+  try {
+    if (window.TPIIndexedDB && window.TPIIndexedDB.getData) {
+      const record = await window.TPIIndexedDB.getData(dateStr);
+      if (record && record.data) {
+        console.log(`[读取数据][async] IndexedDB: ${dateStr}`);
+        window.__TPI_IDB_DAY_CACHE__ = window.__TPI_IDB_DAY_CACHE__ || {};
+        window.__TPI_IDB_DAY_CACHE__[dateStr] = record.data;
+        return record.data;
+      }
+    }
+  } catch(e) {}
+  
+  // 2. 回退到同步版本
+  return window.getTpiDayData(dateStr);
 };
 
 </script>
@@ -5337,6 +5483,9 @@ window.exportAsCSV = function() {
       </button>
       <button type="button" onclick="tpiLogout()" style="padding:12px 20px; background: linear-gradient(135deg,#ef4444,#dc2626); color:white; border:none; border-radius:8px; font-weight:600; cursor:pointer;">
         🚪 退出登录
+      </button>
+      <button type="button" onclick="tpiShowLocalSnapshots()" style="padding:12px 20px; background: linear-gradient(135deg,#7c3aed,#6d28d9); color:white; border:none; border-radius:8px; font-weight:600; cursor:pointer;" title="查看和恢复本地自动保存的上传/下载快照">
+        📸 本地快照管理
       </button>
     </div>
     <div id="tpi-sync-msg" style="margin-top:10px; font-size:14px;"></div>
@@ -25331,16 +25480,42 @@ html += `</head><body>
             window.openBackupManagerComplete = function(){ try{ alert('ℹ️ 备份管理器（备份历史列表/恢复/删除）已移除'); }catch(e){} };
         }
 // 页面加载完成后初始化
+// ✅ [修复] 添加 AutoSaveManager 安全定义，防止 ReferenceError
+if (!window.AutoSaveManager) {
+    window.AutoSaveManager = {
+        _timer: null,
+        _initialized: false,
+        init: function() {
+            if (this._initialized) return;
+            this._initialized = true;
+            try {
+                // 监听输入变化，触发自动保存
+                document.addEventListener('change', () => this.scheduleSave(), true);
+                document.addEventListener('input', () => this.scheduleSave(), true);
+                console.log('✅ [AutoSaveManager] 自动保存管理器已初始化');
+            } catch(e) { console.warn('[AutoSaveManager] init error:', e); }
+        },
+        scheduleSave: function() {
+            if (this._timer) clearTimeout(this._timer);
+            this._timer = setTimeout(() => {
+                try {
+                    if (typeof saveToLocalStorage === 'function') saveToLocalStorage();
+                    else if (window.TPI && typeof window.TPI.saveToLocalStorage === 'function') window.TPI.saveToLocalStorage();
+                } catch(e) {}
+                this._timer = null;
+            }, 1500);
+        }
+    };
+}
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => {
-        // 延迟100ms初始化，确保其他模块已加载
         setTimeout(() => {
-            AutoSaveManager.init();
+            if (window.AutoSaveManager && typeof window.AutoSaveManager.init === 'function') window.AutoSaveManager.init();
         }, 100);
     });
 } else {
     setTimeout(() => {
-        AutoSaveManager.init();
+        if (window.AutoSaveManager && typeof window.AutoSaveManager.init === 'function') window.AutoSaveManager.init();
     }, 100);
 }
 }
@@ -30296,9 +30471,16 @@ window.__tpi_syncDateToMain = function(){
     function _compress(str){
       try{
         if (window.pako && window.pako.deflate){
-          const out = window.pako.deflate(str, {to:'string'});
-          // 标记：pako + binary string -> base64
-          const b64 = btoa(out);
+          // pako v2 always returns Uint8Array (removed {to:'string'} option)
+          const uint8 = window.pako.deflate(str);
+          const bytes = uint8 instanceof Uint8Array ? uint8 : new Uint8Array(uint8);
+          // Convert Uint8Array to binary string for btoa (chunk to avoid stack overflow)
+          let binary = '';
+          const chunkSize = 8192;
+          for (let i = 0; i < bytes.length; i += chunkSize) {
+            binary += String.fromCharCode.apply(null, bytes.subarray(i, Math.min(i + chunkSize, bytes.length)));
+          }
+          const b64 = btoa(binary);
           return { alg:'pako', data:b64 };
         }
       }catch(e){}
@@ -30317,8 +30499,24 @@ window.__tpi_syncDateToMain = function(){
         if (!obj || typeof obj !== 'object') return '';
         const alg = obj.alg, data = obj.data;
         if (alg === 'pako' && window.pako && window.pako.inflate){
-          const bin = atob(data||'');
-          return window.pako.inflate(bin, {to:'string'});
+          try {
+            // pako v2: convert base64 -> Uint8Array -> inflate
+            const bin = atob(data||'');
+            const bytes = new Uint8Array(bin.length);
+            for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+            const result = window.pako.inflate(bytes, {to:'string'});
+            if (typeof result === 'string') return result;
+            // pako v2 might return Uint8Array: decode it
+            return new TextDecoder('utf-8').decode(result);
+          } catch(e1) {
+            // fallback: pako v1 style (binary string directly)
+            try {
+              const bin = atob(data||'');
+              const r = window.pako.inflate(bin, {to:'string'});
+              if (typeof r === 'string') return r;
+            } catch(_) {}
+          }
+          return '';
         }
         if (alg === 'lz-utf16' && window.LZString && window.LZString.decompressFromUTF16){
           return window.LZString.decompressFromUTF16(data||'') || '';
@@ -30427,6 +30625,7 @@ window.__tpi_syncDateToMain = function(){
         _pickGlobalKeys(dateStr).forEach(k=>{
           const v = __tpi_ls_get(k);
           if (v != null) globals[k]=v;
+          // ✅ 同时从 IndexedDB 镜像缓存读取（__tpi_ls_get 内部已处理）
         });
       }catch(e){}
 
@@ -30455,9 +30654,29 @@ window.__tpi_syncDateToMain = function(){
     function _unpackPackedString(packedStr){
       try{
         const outer = JSON.parse(packedStr || '{}');
-        if (!outer || outer.schema !== SYNC_SCHEMA || !outer.compressed) return null;
+        if (!outer || outer.schema !== SYNC_SCHEMA) return null;
+        // 兼容性：如果没有compressed字段，尝试legacy格式解析
+        if (!outer.compressed) {
+          // 可能是旧格式：直接包含数据对象
+          if (outer.meta && outer.day !== undefined) {
+            // legacy直接JSON格式（未压缩）
+            return { outer: { schema: SYNC_SCHEMA, compressed: null, checksum: outer.checksum || '' }, obj: outer, plainStr: packedStr };
+          }
+          return null;
+        }
         const plainStr = _decompress(outer.compressed);
-        if (!plainStr) return null;
+        if (!plainStr) {
+          // 压缩数据损坏，尝试是否为旧版pako（逗号分隔数字字符串）
+          // 直接尝试把data当作原始JSON解析
+          try {
+            const directObj = JSON.parse(outer.compressed && outer.compressed.data ? outer.compressed.data : '{}');
+            if (directObj && directObj.meta) {
+              const rawStr = JSON.stringify(directObj);
+              return { outer, obj: directObj, plainStr: rawStr };
+            }
+          } catch(_) {}
+          return null;
+        }
         const obj = JSON.parse(plainStr);
         return { outer, obj, plainStr };
       }catch(e){ return null; }
@@ -30640,13 +30859,13 @@ window.__tpi_syncDateToMain = function(){
       if(!cb||!sel) return;
       // restore
       try{
-        const st=JSON.parse(localStorage.getItem('__tpi_auto_backup_cfg')||'{}');
+        const st=JSON.parse(__tpi_ls_get('__tpi_auto_backup_cfg', '{}'));
         if(typeof st.enabled==='boolean') cb.checked=st.enabled;
         if(st.freq) sel.value=st.freq;
       }catch(e){}
       const apply=()=>{
         const cfg={enabled:!!cb.checked, freq:sel.value};
-        try{ localStorage.setItem('__tpi_auto_backup_cfg', JSON.stringify(cfg)); }catch(e){}
+        try{ __tpi_ls_set('__tpi_auto_backup_cfg', JSON.stringify(cfg)); }catch(e){}
         if(__autoTimer){ clearInterval(__autoTimer); __autoTimer=null; }
         if(cfg.enabled){
           const ms=_freqToMs(cfg.freq);
@@ -30856,8 +31075,15 @@ console.log('☁️ [上传] 正在写入云端数据库（10s超时/3次重试/
           const rDataStr = (__remote.data || __remote.packed || __remote.payload || '');
           let rMeta = null;
           try{
-            const rObj = JSON.parse(String(rDataStr||''));
-            rMeta = rObj && rObj.meta ? rObj.meta : null;
+            // ✅ [修复] 用正确的unpack方法读取meta（之前直接JSON.parse会漏掉compressed内的meta）
+            const rUnpacked = window.__tpi_unpackCloudPacked ? window.__tpi_unpackCloudPacked(rDataStr) : null;
+            if (rUnpacked && rUnpacked.obj && rUnpacked.obj.meta) {
+              rMeta = rUnpacked.obj.meta;
+            } else {
+              // 兼容旧格式：直接解析
+              const rObj = JSON.parse(String(rDataStr||''));
+              rMeta = rObj && rObj.meta ? rObj.meta : null;
+            }
           }catch(e){ rMeta = null; }
 
           const rLM = String((rMeta && rMeta.lastModified) ? rMeta.lastModified : '');
@@ -30912,6 +31138,30 @@ console.log('☁️ [上传] 正在写入云端数据库（10s超时/3次重试/
         }
       } catch(idbError) {
         console.warn('⚠️ [IndexedDB] 保存失败(不影响云端同步):', idbError);
+      }
+
+      // ========== ✅ [快照系统] 上传成功后自动保存一份快照到LocalStorage ==========
+      try {
+        const __snap = __packed && __packed.meta ? {
+          id: 'snap_' + dateStr + '_' + Date.now(),
+          date: dateStr,
+          timestamp: __packed.meta.lastModified || new Date().toISOString(),
+          description: '云端上传自动快照',
+          checksum: __packed.meta.checksum || '',
+          deviceId: __packed.meta.deviceId || '',
+          packed: dataStr  // 保存完整packed字符串，确保可恢复
+        } : null;
+        if (__snap) {
+          const snapKey = 'tpi_upload_snapshots_' + dateStr;
+          let snaps = [];
+          try { snaps = JSON.parse(__tpi_ls_get(snapKey) || '[]'); } catch(_) { snaps = []; }
+          snaps.unshift(__snap);
+          if (snaps.length > 10) snaps = snaps.slice(0, 10); // 最多保留10个快照
+          __tpi_ls_set(snapKey, JSON.stringify(snaps));
+          console.log('📸 [快照系统] 上传快照已保存:', __snap.id);
+        }
+      } catch(snapErr) {
+        console.warn('⚠️ [快照系统] 快照保存失败(不影响同步):', snapErr);
       }
       
       console.log('✅ ═════════════════════════════════════════════════════');
@@ -30995,13 +31245,46 @@ showModal?.({
       console.log(`📝 [下载] 文档ID: ${docId}`);
 
       const doc = await __awDatabases().getDocument(__DB_ID, __COL_ID, docId);
+      const dataStr = doc.data || ''; // ✅ 修复: 定义dataStr供后续快照使用
+      const beforeKeys = typeof window.__tpi_ls_length === 'function' ? window.__tpi_ls_length() : 0; // ✅ 修复: 定义beforeKeys
 
       
 // 解析云端 data（按日/压缩/带校验）
       console.log(`📦 [下载] 文档数据大小: ${doc.data ? doc.data.length : 0} 字节`);
       const __unpacked = (window.__tpi_unpackCloudPacked ? window.__tpi_unpackCloudPacked(doc.data || '') : null);
       if (!__unpacked || !__unpacked.obj || !__unpacked.obj.meta) {
-        throw new Error('云端数据格式不兼容（不是 tpi_cloud_v3 packed）');
+        // ✅ [修复] 检测是否为pako v2兼容性问题导致的旧格式数据
+        // 提示用户当前云端数据格式已过期，需要重新上传修复
+        console.warn('⚠️ [下载] 云端数据格式不兼容，可能是旧版pako压缩数据。请先上传一次新数据再下载。');
+        const rawData = doc.data || '';
+        let canFallback = false;
+        // 尝试直接解析（旧版未压缩格式）
+        try {
+          const rawObj = JSON.parse(rawData);
+          if (rawObj && (rawObj.meta || rawObj.day || rawObj.globals)) {
+            canFallback = true;
+            const payloadObj2 = rawObj;
+            const remoteMeta2 = payloadObj2.meta || {};
+            const remoteDay2 = payloadObj2.day || payloadObj2;
+            const remoteGlobals2 = payloadObj2.globals || {};
+            console.log('✅ [下载] 检测到旧版格式，尝试兼容性恢复...');
+            if (remoteGlobals2 && typeof remoteGlobals2 === 'object') {
+              Object.keys(remoteGlobals2).forEach(k => { try{ __tpi_ls_set(k, remoteGlobals2[k]); }catch(e){} });
+            }
+            __tpi_setMainDate(dateStr);
+            if (remoteDay2 && typeof window.restoreUIFromData === 'function') {
+              window.restoreUIFromData(remoteDay2);
+            }
+            if (window.TPI && typeof window.TPI.loadFromLocalStorage === 'function') {
+              try { window.TPI.loadFromLocalStorage(); } catch(e) {}
+            }
+            showModal?.({type:'success', title:'✅ 下载成功（兼容模式）', message:'已使用兼容模式恢复数据。\n\n⚠️ 建议：请立即点击"☁️ 上传到Appwrite"重新上传，以升级云端数据格式，确保后续下载正常。', confirmText:'知道了'});
+            return;
+          }
+        } catch(_) {}
+        if (!canFallback) {
+          throw new Error('云端数据格式不兼容（不是 tpi_cloud_v3 packed）\n\n💡 解决方案：请先点击"☁️ 上传到Appwrite"重新上传当前数据，然后再尝试下载。');
+        }
       }
       // 校验完整性（SHA-256）
       const __ok = (window.__tpi_verifyChecksum ? await window.__tpi_verifyChecksum(__unpacked) : true);
@@ -31046,7 +31329,9 @@ showModal?.({
       try{
         if (remoteGlobals && typeof remoteGlobals === 'object'){
           Object.keys(remoteGlobals).forEach(k=>{
-            try{ __tpi_ls_set(k, remoteGlobals[k]); }catch(e){}
+            try{ 
+              __tpi_ls_set(k, remoteGlobals[k]); // ✅ 同时写入 localStorage 和 IndexedDB 镜像
+            }catch(e){}
           });
         }
       }catch(e){}
@@ -31222,7 +31507,7 @@ const __download_end_time = Date.now();
       console.log(`⏱️ [下载] 总耗时: ${__download_end_time - __download_start_time}ms`);
 
       // 计算更详细的统计信息
-      const afterKeys = localStorage.length;
+      const afterKeys = typeof window.__tpi_ls_length === 'function' ? window.__tpi_ls_length() : 0; // ✅ 修复: 使用安全包装函数
       const downloadTime = new Date().toLocaleString('zh-CN', { 
         year: 'numeric', month: '2-digit', day: '2-digit',
         hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false 
@@ -31239,6 +31524,28 @@ const __download_end_time = Date.now();
       } catch(idbError) {
         console.warn('⚠️ [IndexedDB] 保存失败(不影响数据恢复):', idbError);
       }
+
+      // ========== ✅ [快照系统] 下载成功后自动保存快照到LocalStorage ==========
+      try {
+        if (dataStr) {
+          const __dsnap = {
+            id: 'dl_snap_' + dateStr + '_' + Date.now(),
+            date: dateStr,
+            timestamp: new Date().toISOString(),
+            description: '云端下载自动快照',
+            packed: dataStr
+          };
+          const snapKey = 'tpi_download_snapshots_' + dateStr;
+          let snaps = [];
+          try { snaps = JSON.parse(__tpi_ls_get(snapKey) || '[]'); } catch(_) { snaps = []; }
+          snaps.unshift(__dsnap);
+          if (snaps.length > 5) snaps = snaps.slice(0, 5);
+          __tpi_ls_set(snapKey, JSON.stringify(snaps));
+          console.log('📸 [快照系统] 下载快照已保存:', __dsnap.id);
+        }
+      } catch(dSnapErr) {
+        console.warn('⚠️ [快照系统] 下载快照保存失败(忽略):', dSnapErr);
+      }
       
       console.log('📥 ═════════════════════════════════════════════════════');
       console.log('📥 [云同步] 下载成功');
@@ -31251,7 +31558,7 @@ const __download_end_time = Date.now();
       console.log('📥 ═════════════════════════════════════════════════════');
 
       
-      try{ window.__tpi_logSync && window.__tpi_logSync({id:(crypto?.randomUUID?crypto.randomUUID():('log_'+Date.now())), ts:Date.now(), type:'download', date: dateStr, ok:true, sizeChars: (dataStr?dataStr.length:0), checksum: (unpacked?.checksum||unpacked?.meta?.checksum||''), deviceId: (unpacked?.meta?.deviceId||''), lastModified: (unpacked?.meta?.lastModified||'')}); }catch(e){}
+      try{ window.__tpi_logSync && window.__tpi_logSync({id:(crypto?.randomUUID?crypto.randomUUID():('log_'+Date.now())), ts:Date.now(), type:'download', date: dateStr, ok:true, sizeChars: (dataStr?dataStr.length:0), checksum: (__unpacked?.outer?.checksum||__unpacked?.obj?.meta?.checksum||''), deviceId: (__unpacked?.obj?.meta?.deviceId||''), lastModified: (__unpacked?.obj?.meta?.lastModified||'')}); }catch(e){}
 showModal?.({
         type:'success',
         title:'✅ Appwrite 云端下载成功',
@@ -31287,6 +31594,73 @@ showModal?.({
 // 兼容/进阶：支持传入任意日期进行同步（历史日期同步）
   window.tpiSaveData = function(date){ return window.tpiSaveToday(date); };
   window.tpiLoadData = function(date){ return window.tpiLoadToday(date); };
+
+  // ========== ✅ [快照系统] 本地快照管理UI ==========
+  window.tpiShowLocalSnapshots = function() {
+    try {
+      const dateStr = (typeof __tpi_getSyncDate === 'function') ? __tpi_getSyncDate() : (document.getElementById('tpi-sync-date') ? document.getElementById('tpi-sync-date').value : '') || new Date().toISOString().slice(0,10);
+      const uploadSnaps = JSON.parse(__tpi_ls_get('tpi_upload_snapshots_' + dateStr) || '[]');
+      const downloadSnaps = JSON.parse(__tpi_ls_get('tpi_download_snapshots_' + dateStr) || '[]');
+      const allSnaps = [
+        ...uploadSnaps.map(s => ({...s, _type: '上传'})),
+        ...downloadSnaps.map(s => ({...s, _type: '下载'}))
+      ].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+
+      if (allSnaps.length === 0) {
+        showModal?.({ type:'info', title:'📸 本地快照管理', message: `📅 日期: ${dateStr}\n\n当前暂无本地快照。\n\n💡 每次成功上传/下载后会自动保存快照，最多保留 10 条。`, confirmText:'知道了' });
+        return;
+      }
+
+      // 构建快照列表文本
+      let listText = `📅 日期: ${dateStr}\n共 ${allSnaps.length} 条快照（最新在前）：\n\n`;
+      allSnaps.slice(0, 10).forEach((snap, i) => {
+        const ts = new Date(snap.timestamp).toLocaleString('zh-CN');
+        listText += `${i+1}. [${snap._type}] ${ts}\n   ID: ${snap.id}\n   ${snap.description || ''}\n\n`;
+      });
+      listText += '\n输入快照序号(1-' + Math.min(allSnaps.length, 10) + ')来恢复该快照，或输入0取消：';
+
+      const input = prompt(listText, '0');
+      if (!input || input === '0') return;
+      const idx = parseInt(input) - 1;
+      if (isNaN(idx) || idx < 0 || idx >= allSnaps.length) {
+        alert('❌ 无效序号');
+        return;
+      }
+      const snap = allSnaps[idx];
+      if (!snap.packed) {
+        alert('❌ 该快照数据不完整，无法恢复');
+        return;
+      }
+      if (!confirm(`确认恢复快照？\n\n[${snap._type}] ${new Date(snap.timestamp).toLocaleString('zh-CN')}\n${snap.description || ''}\n\n⚠️ 当前页面数据将被覆盖`)) return;
+
+      // 使用unpack恢复数据
+      const unpacked = window.__tpi_unpackCloudPacked ? window.__tpi_unpackCloudPacked(snap.packed) : null;
+      if (!unpacked || !unpacked.obj) {
+        alert('❌ 快照解析失败');
+        return;
+      }
+      const payloadObj = unpacked.obj;
+      const remoteGlobals = payloadObj.globals || {};
+      const remoteDay = payloadObj.day || null;
+
+      // 写回全局键
+      if (remoteGlobals && typeof remoteGlobals === 'object') {
+        Object.keys(remoteGlobals).forEach(k => { try{ __tpi_ls_set(k, remoteGlobals[k]); }catch(e){} });
+      }
+      // 恢复UI
+      if (typeof __tpi_setMainDate === 'function') __tpi_setMainDate(dateStr);
+      if (remoteDay && typeof window.restoreUIFromData === 'function') {
+        window.restoreUIFromData(remoteDay);
+      }
+      if (window.TPI && typeof window.TPI.loadFromLocalStorage === 'function') {
+        try { window.TPI.loadFromLocalStorage(); } catch(e) {}
+      }
+      showModal?.({ type:'success', title:'✅ 快照恢复成功', message: `已从本地快照恢复数据\n\n快照时间: ${new Date(snap.timestamp).toLocaleString('zh-CN')}\n类型: ${snap._type}`, confirmText:'知道了' });
+    } catch(e) {
+      console.error('[快照管理] 错误:', e);
+      alert('❌ 快照管理出错: ' + e.message);
+    }
+  };
 
   // 命名增强：明确"今日/所选日期"
   window.tpiLoadTodayData = window.tpiLoadToday;
@@ -32500,77 +32874,28 @@ document.getElementById('logout-btn').addEventListener('click', async () => {
   };
 
   // ===========================
-  // 3. 增强现有自动保存指示器
+  // 3. 自动保存指示器（已禁用悬浮标志，避免常驻干扰）
   // ===========================
   window.TPISaveIndicatorEnhancer = {
     init: function() {
-      // 如果已经存在AutoSaveManager,增强它
+      // 移除可能已存在的旧指示器
+      try {
+        const old = document.getElementById('auto-save-indicator');
+        if (old) old.remove();
+      } catch(e) {}
+      // 包装 scheduleSave，但不创建悬浮 DOM（改用控制台日志）
       if (window.AutoSaveManager) {
-        console.log('🔄 [保存增强] 检测到现有AutoSaveManager,增强中...');
-        
-        // 创建保存指示器
-        this.createSaveIndicator();
-        
-        // 包装原有的保存函数
         const originalScheduleSave = window.AutoSaveManager.scheduleSave;
-        if (originalScheduleSave) {
+        if (originalScheduleSave && !window.AutoSaveManager.__saveEnhanced) {
+          window.AutoSaveManager.__saveEnhanced = true;
           window.AutoSaveManager.scheduleSave = function() {
             originalScheduleSave.call(window.AutoSaveManager);
-            // 更新指示器
-            if (window.TPISaveIndicatorEnhancer) {
-              window.TPISaveIndicatorEnhancer.updateIndicator();
-            }
           };
         }
       }
     },
-    
-    createSaveIndicator: function() {
-      // 如果已存在则不重复创建
-      if (document.getElementById('auto-save-indicator')) return;
-      
-      const indicator = document.createElement('div');
-      indicator.id = 'auto-save-indicator';
-      indicator.style.cssText = `
-        position: fixed;
-        bottom: 20px;
-        left: 20px;
-        background: rgba(255, 255, 255, 0.95);
-        border: 1px solid #e5e7eb;
-        border-radius: 8px;
-        padding: 8px 16px;
-        font-size: 13px;
-        color: #6b7280;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-        z-index: 9999;
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        transition: all 0.3s;
-      `;
-      indicator.innerHTML = `
-        <span id="save-icon">💾</span>
-        <span id="save-text">自动保存已启用</span>
-      `;
-      document.body.appendChild(indicator);
-    },
-    
-    updateIndicator: function() {
-      const textEl = document.getElementById('save-text');
-      const iconEl = document.getElementById('save-icon');
-      
-      if (textEl) {
-        textEl.textContent = `最后保存：刚刚`;
-      }
-      
-      // 临时显示绿色勾
-      if (iconEl) {
-        iconEl.textContent = '✅';
-        setTimeout(() => {
-          iconEl.textContent = '💾';
-        }, 2000);
-      }
-    }
+    createSaveIndicator: function() { /* 已禁用，不创建悬浮标志 */ },
+    updateIndicator: function() { /* 已禁用 */ }
   };
 
   // ===========================
@@ -33705,7 +34030,15 @@ console.log('✅ [TPI优化] 函数增强包装器已加载');
     try {
       // 优先使用页面已有的数据收集函数
       if (typeof window.collectDailyData === 'function') {
-        return window.collectDailyData();
+        const rawData = window.collectDailyData();
+        // collectDailyData 返回 { [date]: dayData }，提取 dayData
+        if (rawData && typeof rawData === 'object') {
+          const dateKeys = Object.keys(rawData);
+          if (dateKeys.length > 0) {
+            return rawData[dateKeys[0]]; // 返回 dayData 而不是完整对象
+          }
+        }
+        return rawData;
       }
       
       // 备用：使用 _formState 函数
@@ -33735,7 +34068,7 @@ console.log('✅ [TPI优化] 函数增强包装器已加载');
       
       // 统计数据信息
       const dataSize = JSON.stringify(currentData).length;
-      const fieldCount = Object.keys(currentData).length;
+      const fieldCount = currentData && typeof currentData === 'object' ? Object.keys(currentData).length : 0;
       
       console.log(`📊 [Gist备份] 准备备份: ${date}, 字段数: ${fieldCount}, 大小: ${(dataSize/1024).toFixed(2)}KB`);
       
@@ -33910,14 +34243,18 @@ console.log('✅ [TPI优化] 函数增强包装器已加载');
       }
 
       // 恢复数据到页面
-      const dateData = backupData[date].data;
+      const dateData = backupData[date].data; // dayData (已在备份时正确提取)
       const backupInfo = backupData[date];
-      const fieldCount = Object.keys(dateData).length;
+      const fieldCount = dateData && typeof dateData === 'object' ? Object.keys(dateData).length : 0;
       const dataSize = JSON.stringify(dateData).length;
 
       showGistMsg('🔄 正在应用数据到页面...', false);
       
-      // 使用现有的数据恢复函数
+      // 1) 先同步日期到主输入框
+      const mainDateInput = document.getElementById('date-input');
+      if (mainDateInput) mainDateInput.value = date;
+
+      // 2) 使用现有的数据恢复函数
       if (typeof window.restoreUIFromData === 'function') {
         window.restoreUIFromData(dateData);
       } else if (typeof window.applyFormState === 'function') {
@@ -33926,10 +34263,24 @@ console.log('✅ [TPI优化] 函数增强包装器已加载');
         throw new Error('找不到数据恢复函数');
       }
 
-      // 触发重新计算
-      if (typeof window.__tpi_triggerRecalc === 'function') {
-        window.__tpi_triggerRecalc();
-      }
+      // 3) 触发重新计算（分数/评级/图表等）
+      try {
+        if (typeof window.__tpi_triggerRecalc === 'function') window.__tpi_triggerRecalc();
+        if (window.TPI && typeof window.TPI.calculateTPI === 'function') window.TPI.calculateTPI();
+      } catch(e) {}
+
+      // 4) 刷新 FutureRadar
+      try { window.__tpi_safeReloadFutureRadar && window.__tpi_safeReloadFutureRadar(); } catch(e) {}
+      // 5) 刷新 MiscLog
+      try { window.MiscLog && typeof window.MiscLog.render === 'function' && window.MiscLog.render(); } catch(e) {}
+      // 6) 刷新签到
+      try { window.__tpi_refreshCheckin && window.__tpi_refreshCheckin(); } catch(e) {}
+      // 7) 触发 change 事件
+      try {
+        document.querySelectorAll('input, select, textarea').forEach(el => {
+          try { el.dispatchEvent(new Event('change', { bubbles: true })); } catch(e) {}
+        });
+      } catch(e) {}
 
       // 保存到 IndexedDB
       if (window.TPIIndexedDB && window.TPIIndexedDB.saveData) {
@@ -34113,7 +34464,9 @@ console.log('✅ [TPI优化] 函数增强包装器已加载');
   };
 
   // ========== Service Worker 注册（用于离线支持）==========
-  if ('serviceWorker' in navigator) {
+  // ✅ [修复] 跳过Service Worker注册（单页HTML中使用blob:URL会被浏览器安全策略拒绝）
+  // 离线支持已通过 IndexedDB 队列机制实现，不依赖SW
+  if (false && 'serviceWorker' in navigator) {
     window.addEventListener('load', () => {
       // 创建内联 Service Worker
       const swCode = `
@@ -34183,9 +34536,7 @@ console.log('✅ [TPI优化] 函数增强包装器已加载');
 </script>
 
 
-</body>
-</html>
-
+<script>
 // 创建快照管理按钮（在保存按钮旁边）
 (function() {
     try {
@@ -34215,7 +34566,11 @@ console.log('✅ [TPI优化] 函数增强包装器已加载');
                 this.style.boxShadow = '0 4px 12px rgba(139, 92, 246, 0.25)';
             };
             snapshotBtn.onclick = function() {
-                window.TPISnapshotSystem.showSnapshotManager();
+                if (window.TPISnapshotSystem && typeof window.TPISnapshotSystem.showSnapshotManager === 'function') {
+                    window.TPISnapshotSystem.showSnapshotManager();
+                } else {
+                    console.warn('⚠️ TPISnapshotSystem 未就绪');
+                }
             };
             
             // 插入到保存按钮后面
@@ -34226,3 +34581,7 @@ console.log('✅ [TPI优化] 函数增强包装器已加载');
         console.warn('⚠️ [快照系统] 添加按钮失败:', error);
     }
 })();
+</script>
+
+</body>
+</html>
