@@ -30741,12 +30741,10 @@ window.tpiSaveToday = async function () {
 console.log('☁️ [上传] 正在写入云端数据库（10s超时/3次重试/冲突检测）...');
 
       // 准备写入数据（仍保持字段兼容：data/userId/date）
-      const docData = { 
-        data: dataStr, 
-        userId, 
-        date: dateStr,
-deviceId: (__packed && __packed.meta && __packed.meta.deviceId) ? __packed.meta.deviceId : '',
-        schema: 'tpi_cloud_v3'
+      const docData = {
+        data: dataStr,
+        userId,
+        date: dateStr
       };
 
       // 离线：直接入队
@@ -30759,54 +30757,87 @@ deviceId: (__packed && __packed.meta && __packed.meta.deviceId) ? __packed.meta.
       // 供离线队列调用的真实执行函数（不暴露敏感信息）
       window.__tpi_doUploadPacked = async function(queueItem){
         const p = queueItem && queueItem.payload ? queueItem.payload : queueItem;
-        const DB = p.__DB_ID, COL = p.__COL_ID, DID = p.docId, D = p.docData;
-        const run = async()=> {
-          // 先尝试 update，不存在再 create（并对“Unknown attribute”做自适应剔除重试，避免 Appwrite Schema 不匹配导致上传失败）
-          const __stripUnknownAttr = (obj, err)=>{
+        const DB = p.__DB_ID, COL = p.__COL_ID, DID = p.docId;
+        let D = Object.assign({}, (p.docData||{}));
+
+        // 仅发送 schema 允许的字段；其余信息已包含在 packed(meta) 内
+        // 这里默认允许：data/userId/date（若云端 schema 更严格，会在 Unknown attribute 兜底剔除）
+        const _sanitizeKnown = (obj)=>{
+          const out = {};
+          ['data','userId','date'].forEach(k=>{ if(obj && Object.prototype.hasOwnProperty.call(obj,k)) out[k]=obj[k]; });
+          // 如果 out 为空，则至少保留 data（避免误删导致空写入）
+          if(!Object.prototype.hasOwnProperty.call(out,'data') && obj && Object.prototype.hasOwnProperty.call(obj,'data')) out.data = obj.data;
+          return out;
+        };
+        D = _sanitizeKnown(D);
+
+        const _isNotFound = (e)=>{
+          const code = e && (e.code || e.status || e.statusCode);
+          const msg  = String((e && (e.message||e.toString())) || '');
+          return code === 404 || /not\s*found/i.test(msg) || /Document.*not\s*found/i.test(msg);
+        };
+        const _isAlreadyExists = (e)=>{
+          const code = e && (e.code || e.status || e.statusCode);
+          const msg  = String((e && (e.message||e.toString())) || '');
+          return code === 409 || /already\s*exists/i.test(msg);
+        };
+        const _unknownAttr = (e)=>{
+          const msg = String((e && (e.message||e.toString())) || '');
+          const m = msg.match(/Unknown attribute:\s*\"([^\"]+)\"/i);
+          return m ? m[1] : null;
+        };
+
+        const _update = async()=> __awDatabases().updateDocument(DB, COL, DID, D);
+        const _create = async()=> __awDatabases().createDocument(DB, COL, DID, D);
+
+        const run = async()=>{
+          // 尝试 update -> 404 再 create；Unknown attribute 自动剔除并重试；create 冲突则回落 update
+          let lastErr = null;
+          for(let i=0;i<6;i++){
             try{
-              const msg = (err && (err.message || err.toString())) ? String(err.message || err.toString()) : '';
-              const m = msg.match(/Unknown attribute:\s*\"([^\"]+)\"/i) || msg.match(/Unknown attribute:\s*'([^']+)'/i);
-              const key = m ? m[1] : null;
-              if (key && obj && Object.prototype.hasOwnProperty.call(obj, key)) {
-                console.warn('🧹 [上传] Appwrite Schema 不包含字段，已自动剔除并重试：', key);
-                const cloned = Object.assign({}, obj);
-                delete cloned[key];
-                return cloned;
+              await _update();
+              return 'updated';
+            }catch(e1){
+              lastErr = e1;
+              const unk = _unknownAttr(e1);
+              if(unk && Object.prototype.hasOwnProperty.call(D, unk)){
+                console.warn('⚠️ [上传] Appwrite Schema 不包含字段，已自动剔除并重试:', unk);
+                try{ delete D[unk]; }catch(_e){}
+                continue;
               }
-            }catch(_){}
-            return obj;
-          };
-
-          let payload = D;
-
-          // 先 update
-          try{
-            await __awDatabases().updateDocument(DB, COL, DID, payload);
-            return 'updated';
-          }catch(e1){
-            // 若是 Unknown attribute，剔除后再试一次 update
-            payload = __stripUnknownAttr(payload, e1);
-            if (payload !== D){
-              try{
-                await __awDatabases().updateDocument(DB, COL, DID, payload);
+              if(_isNotFound(e1)){
+                try{
+                  await _create();
+                  return 'created';
+                }catch(e2){
+                  lastErr = e2;
+                  const unk2 = _unknownAttr(e2);
+                  if(unk2 && Object.prototype.hasOwnProperty.call(D, unk2)){
+                    console.warn('⚠️ [上传] Appwrite Schema 不包含字段，已自动剔除并重试:', unk2);
+                    try{ delete D[unk2]; }catch(_e){}
+                    continue;
+                  }
+                  if(_isAlreadyExists(e2)){
+                    // 可能是并发/瞬时：退回 update
+                    await _update();
+                    return 'updated';
+                  }
+                  throw e2;
+                }
+              }
+              // 其它错误：若是 create 冲突的另一形态，尝试 update
+              if(_isAlreadyExists(e1)){
+                await _update();
                 return 'updated';
-              }catch(_e2){}
-            }
-            // 再 create
-            try{
-              await __awDatabases().createDocument(DB, COL, DID, payload);
-              return 'created';
-            }catch(e3){
-              // create 也可能因为 Unknown attribute 失败，再剔除后重试一次
-              const payload2 = __stripUnknownAttr(payload, e3);
-              if (payload2 !== payload){
-                await __awDatabases().createDocument(DB, COL, DID, payload2);
-                return 'created';
               }
-              throw e3;
+              throw e1;
             }
           }
+          throw lastErr || new Error('上传失败：未知错误');
         };
+
+        return await (window.__tpi_retry ? window.__tpi_retry(()=> window.__tpi_withTimeout(run(), 10000), 3, 600) : run());
+      };
         return await (window.__tpi_retry ? window.__tpi_retry(()=> window.__tpi_withTimeout(run(), 10000), 3, 600) : run());
       };
 
@@ -30817,12 +30848,21 @@ deviceId: (__packed && __packed.meta && __packed.meta.deviceId) ? __packed.meta.
         __remote = await (window.__tpi_withTimeout ? window.__tpi_withTimeout(getRemote(), 10000) : getRemote());
       }catch(e){ /* 文档不存在：忽略 */ }
 
-      if (__remote && __remote.lastModified && __remote.deviceId) {
+      if (__remote && (__remote.data || __remote.packed || __remote.payload)) {
         try{
-          const rLM = String(__remote.lastModified||'');
-          const lLM = String(docData.lastModified||'');
-          const rDev = String(__remote.deviceId||'');
-          const lDev = String(docData.deviceId||'');
+          // 仅从 remote.data(=packed string) 内读取 meta，不依赖云端 schema 顶层字段
+          const rDataStr = (__remote.data || __remote.packed || __remote.payload || '');
+          let rMeta = null;
+          try{
+            const rObj = JSON.parse(String(rDataStr||''));
+            rMeta = rObj && rObj.meta ? rObj.meta : null;
+          }catch(e){ rMeta = null; }
+
+          const rLM = String((rMeta && rMeta.lastModified) ? rMeta.lastModified : '');
+          const lLM = String((__packed && __packed.meta && __packed.meta.lastModified) ? __packed.meta.lastModified : '');
+          const rDev = String((rMeta && rMeta.deviceId) ? rMeta.deviceId : '');
+          const lDev = String((__packed && __packed.meta && __packed.meta.deviceId) ? __packed.meta.deviceId : '');
+
           if (rLM && lLM && rLM !== lLM && rDev && lDev && rDev !== lDev) {
             const remoteNewer = (new Date(rLM).getTime()||0) > (new Date(lLM).getTime()||0);
             if (remoteNewer) {
@@ -30838,6 +30878,9 @@ deviceId: (__packed && __packed.meta && __packed.meta.deviceId) ? __packed.meta.
                 return;
               }
             }
+          }
+        }catch(e){}
+      }
           }
         }catch(e){}
       }
