@@ -30071,6 +30071,18 @@ window.__tpi_syncDateToMain = function(){
       if (__isFailedToFetch(err) && __isFileOrigin()) {
         errorMsg = errorMsg + '（检测到 file:// 打开导致 CORS/网络被拦截；请用 http://localhost 方式打开，或在 Appwrite 控制台 Web 平台中添加当前域名）';
       }
+
+      // 额外诊断：Failed to fetch 通常是 CORS/域名未加入 Appwrite Web 平台 或 被网络/插件拦截
+      try{
+        if (typeof __isFailedToFetch === 'function' && __isFailedToFetch(err)) {
+          const origin = (location && location.origin) ? location.origin : '(unknown origin)';
+          errorMsg = 'Failed to fetch（通常为 CORS/域名未授权 或 网络拦截）\n' +
+            '请在 Appwrite Console → Project → Platforms → Web 添加当前域名：' + origin + '\n' +
+            '同时确认已添加 http://localhost:xxxx（本地调试）以及已启用 Email/Password Auth。\n' +
+            '如果你使用了广告拦截/隐私插件，也请临时关闭后重试。\n' +
+            '当前使用的 Appwrite Endpoint: ' + (window.APPWRITE_ENDPOINT_ACTIVE || window.APPWRITE_ENDPOINT || 'unknown');
+        }
+      }catch(e){}
       tpiShowMsg('tpi-login-msg', `❌ ${errorMsg}`, true);
     }
   };
@@ -30085,8 +30097,8 @@ window.__tpi_syncDateToMain = function(){
       // 调用 Appwrite 登录 API（创建邮箱会话）
       const session = await (__withEndpointFallback(async ({account}) => {
         // Appwrite SDK 13+ 使用 createEmailPasswordSession；旧版为 createEmailSession
-        if (account.createEmailPasswordSession) return await __awAccount().createEmailPasswordSession(username, password);
-        if (account.createEmailSession) return await __awAccount().createEmailSession(username, password);
+        if (account.createEmailPasswordSession) return await account.createEmailPasswordSession(username, password);
+        if (account.createEmailSession) return await account.createEmailSession(username, password);
         throw new Error('Appwrite SDK 缺少邮箱密码登录方法（createEmailPasswordSession/createEmailSession 均不存在）');
       }));
       console.log('✅ 登录成功:', session);
@@ -30733,8 +30745,7 @@ console.log('☁️ [上传] 正在写入云端数据库（10s超时/3次重试/
         data: dataStr, 
         userId, 
         date: dateStr,
-        lastModified: (__packed && __packed.meta && __packed.meta.lastModified) ? __packed.meta.lastModified : new Date().toISOString(),
-        deviceId: (__packed && __packed.meta && __packed.meta.deviceId) ? __packed.meta.deviceId : '',
+deviceId: (__packed && __packed.meta && __packed.meta.deviceId) ? __packed.meta.deviceId : '',
         schema: 'tpi_cloud_v3'
       };
 
@@ -30750,13 +30761,50 @@ console.log('☁️ [上传] 正在写入云端数据库（10s超时/3次重试/
         const p = queueItem && queueItem.payload ? queueItem.payload : queueItem;
         const DB = p.__DB_ID, COL = p.__COL_ID, DID = p.docId, D = p.docData;
         const run = async()=> {
-          // 先尝试 update，不存在再 create
+          // 先尝试 update，不存在再 create（并对“Unknown attribute”做自适应剔除重试，避免 Appwrite Schema 不匹配导致上传失败）
+          const __stripUnknownAttr = (obj, err)=>{
+            try{
+              const msg = (err && (err.message || err.toString())) ? String(err.message || err.toString()) : '';
+              const m = msg.match(/Unknown attribute:\s*\"([^\"]+)\"/i) || msg.match(/Unknown attribute:\s*'([^']+)'/i);
+              const key = m ? m[1] : null;
+              if (key && obj && Object.prototype.hasOwnProperty.call(obj, key)) {
+                console.warn('🧹 [上传] Appwrite Schema 不包含字段，已自动剔除并重试：', key);
+                const cloned = Object.assign({}, obj);
+                delete cloned[key];
+                return cloned;
+              }
+            }catch(_){}
+            return obj;
+          };
+
+          let payload = D;
+
+          // 先 update
           try{
-            await __awDatabases().updateDocument(DB, COL, DID, D);
+            await __awDatabases().updateDocument(DB, COL, DID, payload);
             return 'updated';
           }catch(e1){
-            await __awDatabases().createDocument(DB, COL, DID, D);
-            return 'created';
+            // 若是 Unknown attribute，剔除后再试一次 update
+            payload = __stripUnknownAttr(payload, e1);
+            if (payload !== D){
+              try{
+                await __awDatabases().updateDocument(DB, COL, DID, payload);
+                return 'updated';
+              }catch(_e2){}
+            }
+            // 再 create
+            try{
+              await __awDatabases().createDocument(DB, COL, DID, payload);
+              return 'created';
+            }catch(e3){
+              // create 也可能因为 Unknown attribute 失败，再剔除后重试一次
+              const payload2 = __stripUnknownAttr(payload, e3);
+              if (payload2 !== payload){
+                await __awDatabases().createDocument(DB, COL, DID, payload2);
+                return 'created';
+              }
+              throw e3;
+            }
           }
         };
         return await (window.__tpi_retry ? window.__tpi_retry(()=> window.__tpi_withTimeout(run(), 10000), 3, 600) : run());
@@ -32311,50 +32359,8 @@ document.getElementById('logout-btn').addEventListener('click', async () => {
 })();
 
 
-// ========== Appwrite 集成区 (请在此处粘贴) ==========
+// [Removed] Placeholder Appwrite integration block removed (was causing overrides/syntax errors)
 
-// 1. 初始化客户端 (替换为你的真实ID)
-var client = window.__appwriteClient || (window.__appwriteClient = new Appwrite.Client());
-  client.setEndpoint(APPWRITE_ENDPOINT)
-  .setProject('698d998e003c903490e1'); // ← 必须替换!
-
-var account = window.__appwriteAccount || (window.__appwriteAccount = new Appwrite.Account(client));
-var databases = window.__appwriteDatabases || (window.__appwriteDatabases = new Appwrite.Databases(client));
-const DB_ID = 'tpi_database';
-const COL_ID = 'daily_records';
-
-// 2. 页面加载时检查登录状态
-window.addEventListener('DOMContentLoaded', async () => {
-  try {
-    await __awAccount().get(); // 尝试获取当前用户
-    showMainInterface();
-  } catch {
-    showAuthInterface();
-  }
-});
-
-// 3. 绑定登录/注册事件
-document.getElementById('login-btn')?.addEventListener('click', handleLogin);
-document.getElementById('register-btn')?.addEventListener('click', handleRegister);
-document.getElementById('logout-btn')?.addEventListener('click', handleLogout);
-
-// 4. 绑定保存事件
-document.getElementById('save-to-cloud-btn')?.addEventListener('click', saveTodaysData);
-
-// 5. 实现核心函数 (此处省略具体实现，但需包含 create/update document 逻辑)
-async function handleLogin() { /* ... */ }
-async function handleRegister() { /* ... */ }
-async function handleLogout() { /* ... */ }
-async function saveTodaysData() { 
-  // 关键：遍历所有输入框，构建 data 对象
-  // 调用 __awDatabases().createDocument 或 updateDocument
-}
-function showMainInterface() { /* 切换显示主界面 */ }
-function showAuthInterface() { /* 切换显示登录界面 */ }
-
-// ========== Appwrite 集成区结束 ==========
-
-<script>
 
 /* ===========================
    TPI 深度优化脚本 v1.0 (增强版 - 不覆盖现有功能)
