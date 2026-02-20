@@ -31939,27 +31939,6 @@ const __download_end_time = Date.now();
 // 兼容/进阶：支持传入任意日期进行同步（历史日期同步）
   window.tpiSaveData = function(date){ return window.tpiSaveToday(date); };
   window.tpiLoadData = function(date){ return window.tpiLoadToday(date); };
-      const remoteDay = payloadObj.day || null;
-
-      // 写回全局键
-      if (remoteGlobals && typeof remoteGlobals === 'object') {
-        Object.keys(remoteGlobals).forEach(k => { try{ __tpi_ls_set(k, remoteGlobals[k]); }catch(e){} });
-      }
-      // 恢复UI
-      if (typeof __tpi_setMainDate === 'function') __tpi_setMainDate(dateStr);
-      if (remoteDay && typeof window.restoreUIFromData === 'function') {
-        window.restoreUIFromData(remoteDay);
-      }
-      if (window.TPI && typeof window.TPI.loadFromLocalStorage === 'function') {
-        // ✅ [Fix V12-Bug1] 不调用 loadFromLocalStorage（避免清除刚恢复的快照数据）
-        // try { window.TPI.loadFromLocalStorage(); } catch(e) {}
-      }
-      showModal?.({ type:'success', title:'✅ 快照恢复成功', message: `已从本地快照恢复数据\n\n快照时间: ${new Date(snap.timestamp).toLocaleString('zh-CN')}\n类型: ${snap._type}`, confirmText:'知道了' });
-    } catch(e) {
-      console.error('[快照管理] 错误:', e);
-      alert('❌ 快照管理出错: ' + e.message);
-    }
-  };
 
   // 命名增强：明确"今日/所选日期"
   window.tpiLoadTodayData = window.tpiLoadToday;
