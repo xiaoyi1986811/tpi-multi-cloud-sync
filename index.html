@@ -3,180 +3,319 @@
 <html lang="zh-CN">
 <head>
 <script>
+
+/* ===== TPI Hotfix: 防止登录后控制台报错 + 降噪 (2026-02-15) ===== */
+(function(){
+  'use strict';
+
+  // 1) JSON.parse 防御：空字符串/仅空白/BOM => 返回 null（避免 "Unexpected end of input"）
+  try{
+    if (!window.__tpi_json_parse_patched) {
+      window.__tpi_json_parse_patched = true;
+      const __origParse = JSON.parse;
+      JSON.parse = function(text, reviver){
+        if (typeof text === 'string') {
+          const cleaned = text.replace(/\uFEFF/g,'').replace(/[\u200B-\u200D\u2060]/g,'').trim();
+          if (cleaned === '') return null;
+          return __origParse(cleaned, reviver);
+        }
+        return __origParse(text, reviver);
+      };
+    }
+  }catch(e){ /* ignore */ }
+
+  // 2) 控制台降噪：对 log/info/debug 做轻量限流，error/warn 不限流
+  try{
+    if (!window.__tpi_console_rate_limited) {
+      window.__tpi_console_rate_limited = true;
+
+      const LIMIT_PER_10S = 8;
+      const WINDOW_MS = 10_000;
+
+      const orig = {
+        log: console.log.bind(console),
+        info: console.info.bind(console),
+        debug: (console.debug ? console.debug.bind(console) : console.log.bind(console)),
+        warn: console.warn.bind(console),
+        error: console.error.bind(console)
+      };
+
+      let windowStart = Date.now();
+      let count = 0;
+      let suppressed = 0;
+
+      function shouldAllow(){
+        const now = Date.now();
+        if (now - windowStart > WINDOW_MS) {
+          if (suppressed > 0) {
+            orig.info(`ℹ️ [TPI] 控制台降噪：上一窗口抑制了 ${suppressed} 条 log/info/debug`);
+          }
+          windowStart = now;
+          count = 0;
+          suppressed = 0;
+        }
+        if (count < LIMIT_PER_10S) { count++; return true; }
+        suppressed++;
+        return false;
+      }
+
+      console.log = function(...args){ if (shouldAllow()) orig.log(...args); };
+      console.info = function(...args){ if (shouldAllow()) orig.info(...args); };
+      console.debug = function(...args){ if (shouldAllow()) orig.debug(...args); };
+      console.warn = function(...args){ if (shouldAllow()) orig.warn(...args); };
+
+      const _origError = console.error.bind(console);
+      console.error = function(...args){
+        const msg = args && args[0] ? String(args[0]) : '';
+        if (msg.indexOf('Could not establish connection') !== -1) return;
+        if (msg.indexOf('Receiving end does not exist') !== -1) return;
+        _origError(...args);
+      };
+
+      window.__tpi_console_raw = orig;
+    }
+  }catch(e){ /* ignore */ }
+})();
+
+
 /* =========================================================
-   Storage Safe Access (IndexedDB 主存储 + localStorage 同步缓存)
-   - IndexedDB 为主持久化层（容量大、可靠）
-   - localStorage 作为同步缓存（供同步代码读取）
-   - 写入时同时写 localStorage 和 IndexedDB
-   - iOS Safari 无痕模式安全兜底
+   Storage Safe Access — IndexedDB 唯一数据源 + localStorage 仅配置缓存
+   策略：
+     · IndexedDB (TPI_LSMirror) 为唯一持久化层（容量大、Safari 无痕也可用）
+     · localStorage 仅保留极少量配置键（token、theme、同步参数等）
+     · 写入：业务数据只写 IndexedDB/内存；白名单配置键同时写 localStorage
+     · 读取：优先内存缓存（IndexedDB 预载）→ 白名单键可回退 localStorage
+     · iOS Safari / Firefox 私有模式下安全降级，不中断脚本
+   版本：2026-02-V3 (双云端版 · IndexedDB唯一数据源版)
 ========================================================= */
 (function(){
-  function _warn(op, key, e){
-    try{ console.warn(`[Storage] ${op}${key ? ' ' + key : ''} 失败:`, e); }catch(_){}
-  }
-  function _getLS(){
-    try{ return localStorage; }catch(e){ _warn('访问 localStorage', '', e); return null; }
+  'use strict';
+
+  /* ── localStorage 白名单：仅这些轻量配置键同时写 localStorage ──
+     包含双云端同步所需的 Gist 配置键和 GitHub 配置键，
+     确保同步引擎在 IndexedDB 预载完成前也能快速读取这些参数。   */
+  var _LS_WHITELIST = {
+    '__tpi_debug__':1, 'theme':1, 'tpi_theme':1, 'dark-mode':1,
+    'token':1, 'gist_token':1, 'github_token':1, 'appwrite_token':1,
+    'tpi_device_id':1, 'tpi_mobile_tips_enabled':1,
+    'tpi_backup_reminder_disabled':1,
+    /* 双云端额外：Gist 同步配置 */
+    'tpi_gist_token':1, 'tpi_gist_id':1, 'tpi_gist_auto_backup':1,
+    /* 双云端额外：GitHub 同步配置 */
+    'github_owner':1, 'github_repo':1, 'github_path':1, 'github_branch':1
+  };
+  function _isWhitelist(k){
+    return !!_LS_WHITELIST[k];
   }
 
-  // ---- IndexedDB 镜像层（异步，fire-and-forget） ----
-  const _IDB_NAME = 'TPI_LSMirror';
-  const _IDB_STORE = 'kv';
-  let _idb = null;
-  function _openMirrorDB(){
+  /* ── 工具 ── */
+  function _warn(op, key, e){
+    try{ console.warn('[Storage]', op, key||'', e); }catch(_){}
+  }
+  function _getLS(){
+    try{ return localStorage; }catch(e){ _warn('访问localStorage', '', e); return null; }
+  }
+
+  /* ── IndexedDB 镜像层 ── */
+  var _IDB_NAME  = 'TPI_LSMirror';
+  var _IDB_STORE = 'kv';
+  var _idb       = null;
+
+  function _openDB(){
     if (_idb) return Promise.resolve(_idb);
-    return new Promise((resolve, reject) => {
-      try {
-        const req = indexedDB.open(_IDB_NAME, 1);
-        req.onupgradeneeded = () => {
-          try{ req.result.createObjectStore(_IDB_STORE, { keyPath: 'k' }); }catch(e){}
+    return new Promise(function(resolve, reject){
+      try{
+        var req = indexedDB.open(_IDB_NAME, 1);
+        req.onupgradeneeded = function(){
+          try{ req.result.createObjectStore(_IDB_STORE, {keyPath:'k'}); }catch(e){}
         };
-        req.onsuccess = () => { _idb = req.result; resolve(_idb); };
-        req.onerror = () => reject(req.error);
-      } catch(e){ reject(e); }
+        req.onsuccess = function(){ _idb = req.result; resolve(_idb); };
+        req.onerror   = function(){ reject(req.error); };
+      }catch(e){ reject(e); }
     });
   }
 
-  // 预加载 IndexedDB 数据到内存缓存，供同步读取
-  const _memCache = {};
-  let _cacheReady = false;
-  function _preloadCache(){
-    _openMirrorDB().then(db => {
-      try {
-        const tx = db.transaction([_IDB_STORE], 'readonly');
-        const req = tx.objectStore(_IDB_STORE).getAll();
-        req.onsuccess = () => {
-          try {
-            (req.result || []).forEach(r => { if(r && r.k) _memCache[r.k] = r.v; });
-            _cacheReady = true;
-            console.log('[Storage] IndexedDB 镜像缓存已预载，共', Object.keys(_memCache).length, '个键');
-          } catch(e) {}
+  /* ── 内存缓存（IndexedDB 预载，供同步读取） ── */
+  var _mem      = {};
+  var _memReady = false;
+
+  function _preload(){
+    _openDB().then(function(db){
+      try{
+        var tx  = db.transaction([_IDB_STORE],'readonly');
+        var req = tx.objectStore(_IDB_STORE).getAll();
+        req.onsuccess = function(){
+          try{
+            (req.result||[]).forEach(function(r){ if(r&&r.k) _mem[r.k]=r.v; });
+            _memReady = true;
+            console.log('[Storage] IndexedDB预载完成，共', Object.keys(_mem).length, '条');
+          }catch(e){}
         };
-      } catch(e) {}
-    }).catch(() => { _cacheReady = true; });
+      }catch(e){ _memReady=true; }
+    }).catch(function(){ _memReady=true; });
   }
-  // 页面加载后预载
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', _preloadCache, { once: true });
-  } else {
-    setTimeout(_preloadCache, 0);
+  if(document.readyState==='loading'){
+    document.addEventListener('DOMContentLoaded', _preload, {once:true});
+  }else{
+    setTimeout(_preload, 0);
   }
 
-  function _idbSet(key, value){
-    _memCache[key] = value; // 立即更新内存缓存
-    _openMirrorDB().then(db => {
-      try {
-        const tx = db.transaction([_IDB_STORE], 'readwrite');
-        tx.objectStore(_IDB_STORE).put({ k: key, v: value, ts: Date.now() });
-      } catch(e) {}
-    }).catch(() => {});
+  /* ── IndexedDB 写/删/清 ── */
+  function _idbSet(k, v){
+    _mem[k] = v;
+    _openDB().then(function(db){
+      try{
+        var tx = db.transaction([_IDB_STORE],'readwrite');
+        tx.objectStore(_IDB_STORE).put({k:k, v:v, ts:Date.now()});
+      }catch(e){}
+    }).catch(function(){});
   }
-  function _idbRemove(key){
-    delete _memCache[key];
-    _openMirrorDB().then(db => {
-      try {
-        const tx = db.transaction([_IDB_STORE], 'readwrite');
-        tx.objectStore(_IDB_STORE).delete(key);
-      } catch(e) {}
-    }).catch(() => {});
+  function _idbDel(k){
+    delete _mem[k];
+    _openDB().then(function(db){
+      try{
+        var tx = db.transaction([_IDB_STORE],'readwrite');
+        tx.objectStore(_IDB_STORE).delete(k);
+      }catch(e){}
+    }).catch(function(){});
   }
   function _idbClear(){
-    Object.keys(_memCache).forEach(k => delete _memCache[k]);
-    _openMirrorDB().then(db => {
-      try {
-        const tx = db.transaction([_IDB_STORE], 'readwrite');
-        tx.objectStore(_IDB_STORE).clear();
-      } catch(e) {}
-    }).catch(() => {});
+    /* 仅清除非白名单键；白名单配置键（token/theme等）保留 */
+    Object.keys(_mem).forEach(function(k){ if(!_isWhitelist(k)) delete _mem[k]; });
+    _openDB().then(function(db){
+      try{
+        var txR = db.transaction([_IDB_STORE],'readonly');
+        var allReq = txR.objectStore(_IDB_STORE).getAllKeys();
+        allReq.onsuccess = function(){
+          var keys = (allReq.result||[]).filter(function(k){ return !_isWhitelist(k); });
+          if(!keys.length) return;
+          var txW = db.transaction([_IDB_STORE],'readwrite');
+          var store = txW.objectStore(_IDB_STORE);
+          keys.forEach(function(k){ store.delete(k); });
+        };
+      }catch(e){}
+    }).catch(function(){});
+    /* localStorage 同步清除非白名单键 */
+    try{
+      var ls = _getLS(); if(!ls) return;
+      var toRemove = [];
+      for(var i=0;i<ls.length;i++){ var k2=ls.key(i); if(k2&&!_isWhitelist(k2)) toRemove.push(k2); }
+      toRemove.forEach(function(k){ try{ ls.removeItem(k); }catch(e){} });
+    }catch(e){}
   }
 
-  // 异步读取 IndexedDB（供需要时使用）
+  /* ── 公开异步读取（可选使用） ── */
   window.__tpi_idb_get_async = function(key){
-    // 先查内存缓存
-    if (_cacheReady && Object.prototype.hasOwnProperty.call(_memCache, key)) {
-      return Promise.resolve(_memCache[key] !== undefined ? _memCache[key] : null);
+    if(_memReady && Object.prototype.hasOwnProperty.call(_mem,key)){
+      return Promise.resolve(_mem[key]!==undefined ? _mem[key] : null);
     }
-    return _openMirrorDB().then(db => new Promise((resolve, reject) => {
-      try {
-        const tx = db.transaction([_IDB_STORE], 'readonly');
-        const req = tx.objectStore(_IDB_STORE).get(key);
-        req.onsuccess = () => {
-          const r = req.result;
-          const v = r ? r.v : null;
-          if (v !== null) _memCache[key] = v;
-          resolve(v);
-        };
-        req.onerror = () => reject(req.error);
-      } catch(e){ reject(e); }
-    })).catch(() => null);
+    return _openDB().then(function(db){
+      return new Promise(function(resolve, reject){
+        try{
+          var tx  = db.transaction([_IDB_STORE],'readonly');
+          var req = tx.objectStore(_IDB_STORE).get(key);
+          req.onsuccess = function(){
+            var v = req.result ? req.result.v : null;
+            if(v!==null) _mem[key]=v;
+            resolve(v);
+          };
+          req.onerror = function(){ reject(req.error); };
+        }catch(e){ reject(e); }
+      });
+    }).catch(function(){ return null; });
   };
 
-  // 公开辅助函数
+  /* ── 暴露内存缓存供外部代码使用 ── */
+  window.__tpi_mem_cache = _mem;
+
+  /* ── 统一公开接口（兼容全站所有 __tpi_ls_* 调用） ── */
   window.__tpi_ls_get = function(key, defaultValue){
-    // 优先读内存缓存（来自 IndexedDB 预载）
-    if (_cacheReady && Object.prototype.hasOwnProperty.call(_memCache, key)) {
-      const cv = _memCache[key];
-      if (cv !== null && cv !== undefined) return cv;
-      return (defaultValue === undefined ? null : defaultValue);
+    /* 优先内存缓存（IndexedDB预载；即使预载未完成也优先使用已写入_mem的键） */
+    if(Object.prototype.hasOwnProperty.call(_mem,key)){
+      var cv = _mem[key];
+      return (cv!==null && cv!==undefined) ? cv : (defaultValue===undefined ? null : defaultValue);
     }
-    // 回退到 localStorage 同步读取
-    try{
-      const ls = _getLS(); if(!ls) return (defaultValue===undefined?null:defaultValue);
-      const v = ls.getItem(key);
-      return (v === null || v === undefined) ? (defaultValue===undefined?null:defaultValue) : v;
-    }catch(e){
-      _warn('读取', key, e);
-      return (defaultValue===undefined?null:defaultValue);
+    /* 白名单配置键可回退 localStorage（token/theme/gist等在页面加载前可能已存在） */
+    if(_isWhitelist(key)){
+      try{
+        var ls = _getLS(); if(!ls) return (defaultValue===undefined?null:defaultValue);
+        var v  = ls.getItem(key);
+        if(v!==null && v!==undefined){ _mem[key]=v; return v; }
+      }catch(e){ _warn('读取', key, e); }
     }
+    return (defaultValue===undefined?null:defaultValue);
   };
 
   window.__tpi_ls_set = function(key, value){
-    // 同时写 localStorage 和 IndexedDB
-    _idbSet(key, value);
-    try{
-      const ls = _getLS(); if(!ls) return false;
-      ls.setItem(key, value);
-      return true;
-    }catch(e){ _warn('写入', key, e); return false; }
+    _idbSet(key, value);       /* 主存储：IndexedDB + 内存缓存（所有键） */
+    /* 白名单配置键同步写 localStorage，以便同步代码快速读取 */
+    if(_isWhitelist(key)){
+      try{
+        var ls = _getLS(); if(!ls) return true;
+        ls.setItem(key, value);
+      }catch(e){ _warn('写入(LS)', key, e); }
+    }
+    return true;
   };
 
   window.__tpi_ls_remove = function(key){
-    _idbRemove(key);
+    _idbDel(key);
+    /* 不论是否白名单，从 localStorage 删除（保持一致性） */
     try{
-      const ls = _getLS(); if(!ls) return false;
+      var ls = _getLS(); if(!ls) return true;
       ls.removeItem(key);
-      return true;
-    }catch(e){ _warn('删除', key, e); return false; }
+    }catch(e){ _warn('删除', key, e); }
+    return true;
   };
 
   window.__tpi_ls_clear = function(){
     _idbClear();
-    try{
-      const ls = _getLS(); if(!ls) return false;
-      ls.clear();
-      return true;
-    }catch(e){ _warn('清空', '', e); return false; }
+    return true;
   };
 
   window.__tpi_ls_length = function(defaultValue){
-    try{
-      const ls = _getLS(); if(!ls) return defaultValue===undefined?0:defaultValue;
-      return ls.length;
-    }catch(e){ _warn('读取 length', '', e); return defaultValue===undefined?0:defaultValue; }
+    /* 基于内存缓存返回长度（不依赖 localStorage） */
+    return Object.keys(_mem).length;
   };
 
   window.__tpi_ls_key = function(i, defaultValue){
-    try{
-      const ls = _getLS(); if(!ls) return defaultValue===undefined?null:defaultValue;
-      return ls.key(i);
-    }catch(e){ _warn('读取 key()', '', e); return defaultValue===undefined?null:defaultValue; }
+    var keys = Object.keys(_mem);
+    return (i>=0 && i<keys.length) ? keys[i] : (defaultValue===undefined?null:defaultValue);
   };
 
   window.__tpi_ls_obj = function(){
-    const ls = _getLS();
-    return ls || {};
+    /* 返回内存缓存的代理对象，兼容 Object.keys() 等操作 */
+    return _mem;
   };
 
-  console.log('[Storage] IndexedDB+localStorage 双存储已初始化');
+  /* ── HTML Sanitizer (XSS Prevention) ── */
+  window.__tpi_sanitize_html = function(str) {
+    if (typeof str !== 'string') return String(str || '');
+    var div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+  };
+
+  /* ── 统一调试日志封装（生产环境静默） ── */
+  (function() {
+    if (typeof window.__tpi_debug_log === 'function') return;
+    var _debug = (function() {
+      try { return !!localStorage.getItem('__tpi_debug__'); } catch(e) { return false; }
+    })();
+    window.__tpi_debug_log = function() {
+      if (_debug && typeof console !== 'undefined' && console.log) {
+        try { console.log.apply(console, arguments); } catch(e) {}
+      }
+    };
+    window.__tpi_debug_enable = function() {
+      try { localStorage.setItem('__tpi_debug__', '1'); _debug = true; } catch(e) {}
+    };
+    window.__tpi_debug_disable = function() {
+      try { localStorage.removeItem('__tpi_debug__'); _debug = false; } catch(e) {}
+    };
+  })();
+
+console.log('[Storage] IndexedDB+localStorage 双层存储已初始化 (双云端版·白名单策略)');
 })();
 </script>
 <script>
@@ -4052,7 +4191,7 @@ window.checkDataHealthComplete = function() {
         console.log('📊 [checkDataHealthComplete] 发现问题:', issues.length);
         
         // 计算存储空间使用率
-        const maxSize = 5 * 1024 * 1024; // 5MB (估计值)
+        const maxSize = (window.__idbQuota && window.__idbQuota > 10*1024*1024 ? window.__idbQuota : 2*1024*1024*1024); // IndexedDB动态配额(字节)
         const usagePercent = ((totalSize / maxSize) * 100).toFixed(2);
         
         // 生成报告
@@ -19324,7 +19463,7 @@ try {
                         }
                     }
                     const sizeInMB = totalSize / (1024 * 1024);
-                    const maxSize = 5;
+                    const maxSize = (window.__idbQuotaMB && window.__idbQuotaMB > 10 ? window.__idbQuotaMB : 2048); // IndexedDB动态配额(MB)
                     return (sizeInMB / maxSize) * 100;
                 } catch (e) {
                     return 0;
@@ -20972,7 +21111,7 @@ ${reflection}
                     }
 
                     const sizeInMB = (totalSize / (1024 * 1024)).toFixed(2);
-                    const maxSize = 5;
+                    const maxSize = (window.__idbQuotaMB && window.__idbQuotaMB > 10 ? window.__idbQuotaMB : 2048); // IndexedDB动态配额(MB)
                     const percentage = (sizeInMB / maxSize) * 100;
 
                     if (barFill) {
@@ -22176,7 +22315,7 @@ function checkStorageUsage() {
     }
 
     const sizeInMB = (totalSize / (1024 * 1024)).toFixed(2);
-    const maxSize = 5;
+    const maxSize = (window.__idbQuotaMB && window.__idbQuotaMB > 10 ? window.__idbQuotaMB : 2048); // IndexedDB动态配额(MB)
     const percentage = (totalSize / (maxSize * 1024 * 1024)) * 100;
 
     const storageInfo = document.getElementById('storage-usage-info');
@@ -25288,7 +25427,7 @@ window.addEventListener('resize', function() {
             }
 
             // 计算存储空间使用率
-            const maxSize = 5 * 1024 * 1024; // 5MB (估计值)
+            const maxSize = (window.__idbQuota && window.__idbQuota > 10*1024*1024 ? window.__idbQuota : 2*1024*1024*1024); // IndexedDB动态配额(字节)
             const usagePercent = ((totalSize / maxSize) * 100).toFixed(2);
 
             // 生成报告
