@@ -7350,7 +7350,7 @@ window.exportAsCSV = function() {
          ⚙️ 未来事件雷达 - 设置
         </h3>
 </div>
-<div class="modal-body" style="display: flex; flex-direction: column; flex: 1; overflow: hidden; padding: 15px;">
+<div class="modal-body" style="display: flex; flex-direction: column; flex: 1; overflow-y: auto; padding: 15px;">
 <!-- 标签页导航 -->
 <div style="display: flex; gap: 8px; margin-bottom: 16px; border-bottom: 2px solid #e5e7eb;">
 <button class="settings-tab active tpi-u-dc3df4" id="settings-tab-push" onclick="FutureRadar.switchSettingsTab('push')">
@@ -7358,6 +7358,9 @@ window.exportAsCSV = function() {
          </button>
 <button class="settings-tab tpi-u-dc3df4" id="settings-tab-import" onclick="FutureRadar.switchSettingsTab('import')">
           📥 爬虫导入
+         </button>
+<button class="settings-tab tpi-u-dc3df4" id="settings-tab-fileimport" onclick="FutureRadar.switchSettingsTab('fileimport')">
+          📄 格式导入
          </button>
 </div>
 <!-- PushPlus配置标签页 -->
@@ -7410,6 +7413,61 @@ window.exportAsCSV = function() {
            🚀 解析并导入到 [临时·学术]
           </button>
 </div>
+</div>
+<!-- 格式导入标签页 -->
+<div class="settings-content" id="settings-content-fileimport" style="display:none">
+  <!-- 行1: 分类 + 格式选择 -->
+  <div style="display:flex; gap:10px; margin-bottom:10px; flex-wrap:wrap; align-items:flex-end;">
+    <div style="flex:1; min-width:120px;">
+      <label style="display:block; font-size:12px; font-weight:600; margin-bottom:4px; color:#374151;">导入目标分类</label>
+      <select id="fileimport-target" style="width:100%; padding:6px 10px; border:1px solid #d1d5db; border-radius:6px; font-size:13px; background:#fff; color:#374151; cursor:pointer;">
+        <option value="tempAcademic">🎓 临时·学术</option>
+        <option value="tempLife">🏠 临时·生活</option>
+        <option value="regularAcademic">📚 常规·学术</option>
+        <option value="regularLife">🌿 常规·生活</option>
+      </select>
+    </div>
+    <div style="flex:1; min-width:120px;">
+      <label style="display:block; font-size:12px; font-weight:600; margin-bottom:4px; color:#374151;">文件格式（可自动识别）</label>
+      <select id="fileimport-format" style="width:100%; padding:6px 10px; border:1px solid #d1d5db; border-radius:6px; font-size:13px; background:#fff; color:#374151; cursor:pointer;">
+        <option value="auto">🔍 自动识别（推荐）</option>
+        <option value="json">📋 JSON (.json)</option>
+        <option value="markdown">📝 Markdown (.md)</option>
+      </select>
+    </div>
+  </div>
+  <!-- 行2: 拖放区（无文件时大图标展开；有文件时折叠成紧凑条） -->
+  <div id="fileimport-dropzone"
+    onclick="document.getElementById('fileimport-fileinput').click()"
+    ondragover="event.preventDefault(); this.style.borderColor='#3b82f6'; this.style.background='#eff6ff';"
+    ondragleave="this.style.borderColor='#d1d5db'; this.style.background='#fafafa';"
+    ondrop="event.preventDefault(); this.style.borderColor='#d1d5db'; this.style.background='#fafafa'; FutureRadar.handleFormatFileSelect(event.dataTransfer.files);"
+    style="border:2px dashed #d1d5db; border-radius:8px; padding:22px 12px; text-align:center; background:#fafafa; cursor:pointer; margin-bottom:8px; transition:all 0.2s;">
+    <div id="fileimport-dropzone-icon" style="font-size:28px; margin-bottom:4px;">📂</div>
+    <div id="fileimport-dropzone-label" style="font-size:13px; font-weight:600; color:#374151;">点击选择文件 或 拖拽到此处</div>
+    <div id="fileimport-dropzone-sub" style="font-size:11px; color:#9ca3af; margin-top:3px;">支持 .json 和 .md 文件</div>
+    <input type="file" id="fileimport-fileinput" accept=".json,.md,.markdown,.txt" style="display:none"
+      onchange="FutureRadar.handleFormatFileSelect(this.files)">
+  </div>
+  <!-- 行3: 已加载文件状态（有文件时显示） -->
+  <div id="fileimport-status" style="display:none; font-size:12px; margin-bottom:6px; padding:7px 10px; border-radius:6px; background:#f0fdf4; border:1px solid #bbf7d0; color:#166534; line-height:1.4;">
+    <span id="fileimport-status-text"></span>
+    <button onclick="FutureRadar.clearFormatFile()" style="float:right; background:none; border:none; cursor:pointer; color:#6b7280; font-size:12px; padding:0; line-height:1;">✖ 清除</button>
+  </div>
+  <!-- 行4: 格式说明（紧凑） -->
+  <div style="font-size:11px; color:#6b7280; margin-bottom:8px; background:#f9fafb; padding:7px 10px; border-radius:6px; line-height:1.6; border:1px solid #e5e7eb;">
+    <strong>JSON：</strong>数组，每项含 <code>title</code>、<code>date</code>、<code>location</code>、<code>content</code>、<code>url</code><br>
+    <strong>Markdown：</strong><code>## 标题</code> 开头，下方 <code>- date: 2026-03-15</code> <code>- location: 北京</code> 补充信息
+  </div>
+  <!-- 行5: 导入按钮（固定在底部，始终可见） -->
+  <div style="display:flex; gap:10px; align-items:center; padding-top:2px;">
+    <button class="btn btn-success tpi-inline-02" onclick="FutureRadar.processFormatImport()" style="min-width:130px; font-weight:600;">
+      🚀 解析并导入
+    </button>
+    <button class="btn btn-secondary tpi-inline-02" onclick="FutureRadar.clearFormatFile()" style="font-size:12px;">
+      🗑️ 重置
+    </button>
+  </div>
 </div>
 </div>
 <div class="modal-footer">
@@ -8921,20 +8979,234 @@ const current = (this.sortMode && this.sortMode[key]) ? this.sortMode[key] : 'pr
     }
 
     switchSettingsTab(tabName) {
-        // 切换标签页
-        const tabs = ['push', 'import'];
+        const tabs = ['push', 'import', 'fileimport'];
         tabs.forEach(tab => {
-            const tabBtn = document.getElementById(`settings-tab-${tab}`);
-            const content = document.getElementById(`settings-content-${tab}`);
+            const tabBtn = document.getElementById('settings-tab-' + tab);
+            const tabContent = document.getElementById('settings-content-' + tab);
+            if (!tabBtn || !tabContent) return;
             if (tab === tabName) {
                 tabBtn.classList.add('active');
-                content.style.display = 'block';
+                tabContent.style.display = 'block';
             } else {
                 tabBtn.classList.remove('active');
-                content.style.display = 'none';
+                tabContent.style.display = 'none';
             }
         });
     }
+
+    /* -------- 格式导入：文件选择 -------- */
+    handleFormatFileSelect(files) {
+        if (!files || files.length === 0) return;
+        const file = files[0];
+        const statusEl = document.getElementById('fileimport-status');
+        const statusText = document.getElementById('fileimport-status-text');
+        const fmtSel = document.getElementById('fileimport-format');
+
+        // 自动识别格式
+        const name = file.name.toLowerCase();
+        if (fmtSel && fmtSel.value === 'auto') {
+            if (name.endsWith('.md') || name.endsWith('.markdown')) {
+                fmtSel.value = 'markdown';
+            } else {
+                fmtSel.value = 'json';
+            }
+        }
+
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const text = e.target.result;
+            this._fileimportRaw = text;
+            this._fileimportName = file.name;
+
+            // 显示状态条
+            if (statusEl && statusText) {
+                statusText.textContent = '📄 已加载：' + file.name + '（' + text.length + ' 字符）';
+                statusEl.style.display = 'block';
+            }
+
+            // 将拖放区折叠为紧凑条，避免按钮被挤出视野
+            const dz = document.getElementById('fileimport-dropzone');
+            const dzIcon = document.getElementById('fileimport-dropzone-icon');
+            const dzLabel = document.getElementById('fileimport-dropzone-label');
+            const dzSub = document.getElementById('fileimport-dropzone-sub');
+            if (dz) {
+                dz.style.padding = '8px 12px';
+                dz.style.borderStyle = 'solid';
+                dz.style.borderColor = '#86efac';
+                dz.style.background = '#f0fdf4';
+            }
+            if (dzIcon) dzIcon.style.display = 'none';
+            if (dzLabel) { dzLabel.style.fontSize = '12px'; dzLabel.textContent = '🔄 点击重新选择文件'; }
+            if (dzSub) dzSub.style.display = 'none';
+        };
+        reader.onerror = () => {
+            alert('文件读取失败，请重试');
+        };
+        reader.readAsText(file, 'UTF-8');
+
+        // 重置 file input，允许重复选同一文件
+        const fi = document.getElementById('fileimport-fileinput');
+        if (fi) fi.value = '';
+    }
+
+    clearFormatFile() {
+        this._fileimportRaw = null;
+        this._fileimportName = null;
+
+        // 隐藏状态条
+        const statusEl = document.getElementById('fileimport-status');
+        if (statusEl) statusEl.style.display = 'none';
+
+        // 还原拖放区到展开状态
+        const dz = document.getElementById('fileimport-dropzone');
+        const dzIcon = document.getElementById('fileimport-dropzone-icon');
+        const dzLabel = document.getElementById('fileimport-dropzone-label');
+        const dzSub = document.getElementById('fileimport-dropzone-sub');
+        if (dz) {
+            dz.style.padding = '22px 12px';
+            dz.style.borderStyle = 'dashed';
+            dz.style.borderColor = '#d1d5db';
+            dz.style.background = '#fafafa';
+        }
+        if (dzIcon) dzIcon.style.display = '';
+        if (dzLabel) { dzLabel.style.fontSize = '13px'; dzLabel.textContent = '点击选择文件 或 拖拽到此处'; }
+        if (dzSub) dzSub.style.display = '';
+
+        const fi = document.getElementById('fileimport-fileinput');
+        if (fi) fi.value = '';
+        const fmtSel = document.getElementById('fileimport-format');
+        if (fmtSel) fmtSel.value = 'auto';
+    }
+
+    /* -------- 格式导入：解析 + 写入 -------- */
+    processFormatImport() {
+        try {
+            const raw = this._fileimportRaw;
+            if (!raw || !raw.trim()) {
+                alert('请先选择要导入的 JSON 或 Markdown 文件');
+                return;
+            }
+
+            const fmtEl = document.getElementById('fileimport-format');
+            const targetEl = document.getElementById('fileimport-target');
+            if (!fmtEl || !targetEl) { alert('控件未就绪，请稍后再试'); return; }
+
+            const fmt = fmtEl.value;
+            const target = targetEl.value;
+
+            const validTargets = ['tempAcademic', 'tempLife', 'regularAcademic', 'regularLife'];
+            if (!validTargets.includes(target)) { alert('无效的目标分类'); return; }
+            if (!Array.isArray(this.data[target])) { alert('数据结构异常，请刷新页面'); return; }
+
+            // --- 自动判断格式 ---
+            let resolvedFmt = fmt;
+            if (fmt === 'auto') {
+                const fn = (this._fileimportName || '').toLowerCase();
+                if (fn.endsWith('.md') || fn.endsWith('.markdown')) {
+                    resolvedFmt = 'markdown';
+                } else {
+                    resolvedFmt = 'json';
+                }
+            }
+
+            let items = [];
+
+            if (resolvedFmt === 'json') {
+                let arr;
+                try {
+                    arr = JSON.parse(raw.trim());
+                } catch (jsonErr) {
+                    throw new Error('JSON 解析失败：' + jsonErr.message + '\n请确认文件是有效的 JSON 数组格式');
+                }
+                if (!Array.isArray(arr)) throw new Error('JSON 必须是数组格式 [...]，当前读到的是对象或其他类型');
+                arr.forEach(e => {
+                    if (!e || typeof e !== 'object') return;
+                    const title = e.title || e.name || e['活动名称'] || e['标题'] || e['课程'] || '';
+                    if (!title) return;
+                    items.push({
+                        title: String(title).trim(),
+                        date: this.parseDate(e.date || e.time || e['时间'] || e['日期'] || ''),
+                        location: String(e.location || e.address || e['地点'] || '').trim(),
+                        content: String(e.content || e.description || e['简介'] || e['描述'] || '').trim(),
+                        organizer: String(e.organizer || e['主办方'] || '').trim(),
+                        sourceUrl: String(e.sourceUrl || e.sourceURL || e.url || e.source || e['来源'] || e['网址'] || '').trim()
+                    });
+                });
+            } else {
+                // Markdown: 按 ## 切割
+                const normalized = raw.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+                const blocks = normalized.split(/(?=^##\s)/m).filter(b => b.trim());
+                if (blocks.length === 0) throw new Error('未找到任何以 ## 开头的事件标题');
+                blocks.forEach(block => {
+                    const lines = block.split('\n');
+                    const titleLine = lines[0].replace(/^##\s*/, '').trim();
+                    if (!titleLine) return;
+                    const meta = { title: titleLine, date: '', location: '', content: '', organizer: '', sourceUrl: '' };
+                    lines.slice(1).forEach(line => {
+                        // 匹配 - key: value 或 - 中文键: value
+                        const m = line.match(/^\s*[-*]\s*([^:：]+)[:\：]\s*(.+)$/);
+                        if (!m) return;
+                        const key = m[1].toLowerCase().trim().replace(/\s+/g, '');
+                        const val = m[2].trim();
+                        if (['date','日期','time','时间','日期时间'].includes(key)) meta.date = val;
+                        else if (['location','地点','address','地址'].includes(key)) meta.location = val;
+                        else if (['content','description','描述','内容','简介','摘要'].includes(key)) meta.content = val;
+                        else if (['organizer','主办方','主办','承办','host'].includes(key)) meta.organizer = val;
+                        else if (['url','sourceurl','source','链接','来源','网址','link'].includes(key)) meta.sourceUrl = val;
+                    });
+                    meta.date = this.parseDate(meta.date);
+                    items.push(meta);
+                });
+            }
+
+            if (items.length === 0) {
+                throw new Error('未解析到任何有效事件\n' +
+                    (resolvedFmt === 'json'
+                        ? '请确认每条记录包含 title 或 name 字段'
+                        : '请确认每个事件以 ## 标题 开头'));
+            }
+
+            // 写入数据
+            const now = Date.now();
+            items.forEach((item, idx) => {
+                this.data[target].push({
+                    id: 'fimp_' + now + '_' + idx + '_' + Math.random().toString(36).slice(2, 6),
+                    title: item.title,
+                    content: item.content,
+                    date: item.date,
+                    location: item.location,
+                    organizer: item.organizer,
+                    sourceUrl: item.sourceUrl,
+                    remindDays: 1,
+                    reminderActive: true,
+                    completed: false,
+                    priority: 1
+                });
+            });
+
+            // 持久化 + 刷新UI
+            this.saveData();
+
+            // 清理状态
+            this.clearFormatFile();
+
+            // 关闭弹窗（放在最后，保证 render 先执行完）
+            setTimeout(() => { this.closeSettingsModal(); }, 50);
+
+            const catNames = { tempAcademic:'临时·学术', tempLife:'临时·生活', regularAcademic:'常规·学术', regularLife:'常规·生活' };
+            const msg = '✅ 成功导入 ' + items.length + ' 条事件到【' + (catNames[target] || target) + '】';
+            if (typeof NotifySystem !== 'undefined') {
+                NotifySystem.showToast(msg);
+            } else {
+                this.showSimpleNotification(msg, 'success');
+            }
+        } catch (err) {
+            alert('导入失败\n\n' + err.message);
+        }
+    }
+
+    // 保留兼容旧方法名（切换为打开设置弹窗导入标签页）
+    onFormatImportTypeChange() { /* 已废弃，保留避免报错 */ }
 
     saveSettings() {
         // 保存PushPlus配置
