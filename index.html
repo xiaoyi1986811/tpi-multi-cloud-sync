@@ -379,7 +379,7 @@ console.log('[Storage] IndexedDB+localStorage 双层存储已初始化 (双云�
         rows.push(['🔄', '本地键变化', `${info.beforeKeys} → ${info.afterKeys} 个`]);
       }
       rows.push(['⏰', isUpload ? '上传时间' : '下载时间', info.time || new Date().toLocaleString('zh-CN')]);
-      rows.push(['☁️', '同步方式', 'TPI+ 后端 (Appwrite)']);
+      rows.push(['☁️', '同步方式', (info && (info.syncLabel||info.syncMethod||info.syncWay||info.methodLabel)) ? (info.syncLabel||info.syncMethod||info.syncWay||info.methodLabel) : 'TPI+ 后端 (Appwrite)']);
 
       const table = document.createElement('div');
       table.style.cssText = `display:flex;flex-direction:column;gap:8px;`;
@@ -32180,7 +32180,7 @@ console.log('☁️ [上传] 正在写入云端数据库（10s超时/3次重试/
         // 同时弹出丰富详情弹窗
         try {
           if (typeof window.__tpi_showRichNotif === 'function') {
-            window.__tpi_showRichNotif('upload', dateStr, dataSizeKB, {radarCount:_ul_radarCount,miscCount:_ul_miscCount,fieldCount:_ul_fieldCount,time:_ul_uploadTime});
+            window.__tpi_showRichNotif('upload', dateStr, dataSizeKB, {radarCount:_ul_radarCount,miscCount:_ul_miscCount,fieldCount:_ul_fieldCount,time:_ul_uploadTime, syncLabel:'TPI+ 后端 (Appwrite)'});
           }
         } catch(_) {}
       } catch(e) {}
@@ -32590,7 +32590,9 @@ const __download_end_time = Date.now();
             window.__tpi_showRichNotif('download', dateStr, dataSizeKB, {
               radarCount:_dl_radarCount, miscCount:_dl_miscCount, fieldCount:_dl_fieldCount,
               time:_dl_downloadTime, beforeKeys, afterKeys
-            });
+            ,
+              syncLabel:'TPI+ 后端 (Appwrite)'
+});
           }
         } catch(_) {}
       } catch(e) {}
@@ -34638,9 +34640,7 @@ console.log('✅ [TPI优化] 函数增强包装器已加载');
         try {
           const _gs_ul_time = new Date().toLocaleString('zh-CN',{year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false});
           if (typeof window.__tpi_showRichNotif === 'function') {
-            window.__tpi_showRichNotif('upload', date, (dataSize/1024).toFixed(2), {
-              fieldCount, radarCount: 0, miscCount: 0, time: _gs_ul_time
-            });
+            window.__tpi_showRichNotif('upload', date, (dataSize/1024).toFixed(2), {fieldCount, radarCount: 0, miscCount: 0, time: _gs_ul_time, syncLabel:'GiT (GitHub Gist)'});
           }
         } catch(_) {}
 
@@ -34803,9 +34803,7 @@ console.log('✅ [TPI优化] 函数增强包装器已加载');
       try {
         const _gs_dl_time = new Date().toLocaleString('zh-CN',{year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false});
         if (typeof window.__tpi_showRichNotif === 'function') {
-          window.__tpi_showRichNotif('download', date, (dataSize/1024).toFixed(2), {
-            fieldCount, radarCount: 0, miscCount: 0, time: _gs_dl_time
-          });
+          window.__tpi_showRichNotif('download', date, (dataSize/1024).toFixed(2), {fieldCount, radarCount: 0, miscCount: 0, time: _gs_dl_time, syncLabel:'GiT (GitHub Gist)'});
         }
       } catch(_) {}
 
@@ -35506,6 +35504,20 @@ window.__tpiDirectExport = function(fmt) {
 
           // 暴露一个全局关闭方法（方便你在控制台紧急关闭）
           window.__tpi_closeRichNotif = safeClose;
+
+          // 把原本“知道了 ✓”按钮也强制绑定到 safeClose（避免关闭后立刻又弹回）
+          try{
+            var btns = overlay.querySelectorAll('button');
+            btns && btns.forEach && btns.forEach(function(b){
+              if (!b || b.className === '__tpi-rich-close-x') return;
+              if (b.__tpi_bound_safeclose) return;
+              b.__tpi_bound_safeclose = true;
+              b.addEventListener('click', function(ev){
+                try{ ev.preventDefault(); ev.stopPropagation(); }catch(_){}
+                safeClose();
+              }, true);
+            });
+          }catch(_){ }
 
           // 右上角 X
           try{
