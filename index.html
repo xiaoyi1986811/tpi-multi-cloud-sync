@@ -35456,5 +35456,155 @@ window.__tpiDirectExport = function(fmt) {
 };
 </script>
 
+
+<script>
+/* ===== TPI Hotfix: Modal/Notif 强制可关闭补丁 (2026-02-22) ===== */
+(function(){
+  'use strict';
+
+  // 0) 一键清理（供调试/兜底）
+  window.__tpi_forceCloseAllOverlays = function(){
+    try{ var rn=document.getElementById('__tpi-rich-notif'); if(rn) rn.remove(); }catch(_){}
+    try{ document.querySelectorAll('.modal-overlay').forEach(function(n){ n.remove(); }); }catch(_){}
+  };
+
+  // 1) RichNotif：确保任何情况下都能关闭（按钮/点遮罩/ESC/右上角X），并防止“关闭后立刻又弹回”
+  try{
+    var orig = window.__tpi_showRichNotif;
+    if (typeof orig === 'function' && !orig.__tpi_close_patched) {
+      var state = (window.__tpi_richNotif_state = window.__tpi_richNotif_state || { lastKey:'', lastShownAt:0, lastClosedAt:0 });
+
+      var wrapped = function(type, dateStr, dataSizeKB, info){
+        try{
+          var key = String(type||'') + '|' + String(dateStr||'');
+          var now = Date.now();
+          // 如果刚刚关闭同一个弹窗（例如上传成功回调重复触发），则忽略这次展示
+          if (state.lastKey === key && (now - state.lastClosedAt) < 900) {
+            return;
+          }
+          state.lastKey = key;
+          state.lastShownAt = now;
+        }catch(_){}
+
+        // 先调用原始展示
+        orig(type, dateStr, dataSizeKB, info);
+
+        // 再补齐“强制可关闭能力”
+        setTimeout(function(){
+          var overlay = document.getElementById('__tpi-rich-notif');
+          if (!overlay) return;
+          if (overlay.__tpi_patched_close) return;
+          overlay.__tpi_patched_close = true;
+
+          var safeClose = function(){
+            var ov = document.getElementById('__tpi-rich-notif');
+            if (!ov) return;
+            try{ state.lastClosedAt = Date.now(); }catch(_){}
+            try{ ov.style.animation = '__tpiNotifFadeOut 0.2s ease forwards'; }catch(_){}
+            setTimeout(function(){ try{ ov.remove(); }catch(_){ } }, 220);
+          };
+
+          // 暴露一个全局关闭方法（方便你在控制台紧急关闭）
+          window.__tpi_closeRichNotif = safeClose;
+
+          // 右上角 X
+          try{
+            var box = overlay.firstElementChild;
+            if (box && !box.querySelector('.__tpi-rich-close-x')) {
+              var x = document.createElement('button');
+              x.className = '__tpi-rich-close-x';
+              x.type = 'button';
+              x.setAttribute('aria-label','关闭');
+              x.textContent = '✕';
+              x.style.cssText = [
+                'position:absolute','top:10px','right:10px',
+                'width:34px','height:34px','border-radius:10px',
+                'border:none','background:rgba(255,255,255,0.85)',
+                'cursor:pointer','font-size:16px','font-weight:700',
+                'box-shadow:0 6px 18px rgba(0,0,0,0.12)',
+                'display:flex','align-items:center','justify-content:center'
+              ].join(';') + ';';
+              try{ box.style.position = 'relative'; }catch(_){}
+              x.addEventListener('click', function(e){ try{ e.preventDefault(); e.stopPropagation(); }catch(_){} safeClose(); }, true);
+              box.appendChild(x);
+            }
+          }catch(_){}
+
+          // 点击遮罩关闭（捕获阶段，避免被别的监听器 stopPropagation）
+          overlay.addEventListener('click', function(e){
+            if (e.target === overlay) safeClose();
+          }, true);
+
+          // ESC 关闭（只对当前弹窗生效）
+          var onKey = function(e){
+            if (e.key === 'Escape') {
+              try{ e.preventDefault(); }catch(_){}
+              safeClose();
+              document.removeEventListener('keydown', onKey, true);
+            }
+          };
+          document.addEventListener('keydown', onKey, true);
+
+          // 兜底：2分钟后自动移除（防止极端情况下卡死遮罩）
+          setTimeout(function(){
+            var ov2 = document.getElementById('__tpi-rich-notif');
+            if (ov2) safeClose();
+          }, 120000);
+        }, 0);
+      };
+
+      wrapped.__tpi_close_patched = true;
+      orig.__tpi_close_patched = true;
+      window.__tpi_showRichNotif = wrapped;
+    }
+  }catch(e){}
+
+  // 2) showModal：任何情况下都能关闭（确认/点遮罩/ESC），并避免“堆叠多个遮罩导致看起来关不掉”
+  try{
+    var origShow = window.showModal;
+    if (typeof origShow === 'function' && !origShow.__tpi_close_patched) {
+      var wrappedShow = function(options){
+        try{ document.querySelectorAll('.modal-overlay').forEach(function(n){ n.remove(); }); }catch(_){}
+        var api = origShow(options || {});
+
+        // 给最新的 modal-overlay 加上“点遮罩关闭 + ESC关闭”
+        setTimeout(function(){
+          var overlays = document.querySelectorAll('.modal-overlay');
+          if (!overlays || !overlays.length) return;
+          var modal = overlays[overlays.length - 1];
+          if (modal.__tpi_patched_close) return;
+          modal.__tpi_patched_close = true;
+
+          var close = function(){
+            try{ if (api && typeof api.close === 'function') api.close(); else modal.remove(); }catch(_){}
+          };
+
+          // 点遮罩关闭（无论 showCancel 是 true/false）
+          modal.addEventListener('click', function(e){
+            if (e.target === modal) close();
+          }, true);
+
+          // ESC关闭
+          var onKey = function(e){
+            if (e.key === 'Escape') {
+              try{ e.preventDefault(); }catch(_){}
+              close();
+              document.removeEventListener('keydown', onKey, true);
+            }
+          };
+          document.addEventListener('keydown', onKey, true);
+        }, 0);
+
+        return api;
+      };
+
+      wrappedShow.__tpi_close_patched = true;
+      origShow.__tpi_close_patched = true;
+      window.showModal = wrappedShow;
+    }
+  }catch(e){}
+})();
+</script>
+
 </body>
 </html>
