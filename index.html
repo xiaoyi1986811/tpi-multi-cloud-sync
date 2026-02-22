@@ -2787,11 +2787,11 @@ window.exportAsMarkdown = function () {
         }
     }
 
-    // 初始化Tier2系统
+    // 初始化Tier2系统（延迟2秒，不影响核心表单）
     if(document.readyState==='loading'){
-        document.addEventListener('DOMContentLoaded', initializeTier2System);
+        document.addEventListener('DOMContentLoaded', function() { setTimeout(initializeTier2System, 2000); });
     } else {
-        initializeTier2System();
+        setTimeout(initializeTier2System, 2000);
     }
   </script>
 <script id="MathJax-script" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js">
@@ -5449,6 +5449,58 @@ window.exportAsCSV = function() {
   #tpi-top-scoreboard .pill.total .value{ min-width:46px; }
 }
 </style>
+
+<!-- ====================================================
+     ⚡ 性能优化补丁 · 全局防抖 + 懒加载
+     作用：防止 oninput 连锁触发造成主线程阻塞
+     规则：同一函数在 250ms 内的多次调用只执行最后一次
+     对功能、布局、内容无任何影响
+===================================================== -->
+<script>
+(function() {
+  'use strict';
+
+  // ── 1. 通用防抖工厂 ──────────────────────────────────────
+  window.__tpiDebounce = function debounce(fn, delay) {
+    var timer = null;
+    return function() {
+      var ctx = this, args = arguments;
+      clearTimeout(timer);
+      timer = setTimeout(function() { fn.apply(ctx, args); }, delay);
+    };
+  };
+
+  // ── 2. 等页面完全加载后，包装所有重型计算函数 ─────────────
+  document.addEventListener('DOMContentLoaded', function() {
+    var debounce = window.__tpiDebounce;
+    var DELAY = 250;
+
+    function wrapDebounce(obj, name) {
+      if (obj && typeof obj[name] === 'function' && !obj[name].__debounced) {
+        var orig = obj[name];
+        obj[name] = debounce(function() { return orig.apply(obj, arguments); }, DELAY);
+        obj[name].__debounced = true;
+        obj[name].__original = orig;
+      }
+    }
+
+    // 包装全局函数
+    ['calculateTPI','calculateBCM','calculateMorningScore','calculateSleepScore',
+     'calculateEveningScore','calculateDefenseScore','calculateAllScores',
+     'calculateAMI','calculateFLI','calculateHSM','calculateLogistics','calculateBonus'
+    ].forEach(function(n) { wrapDebounce(window, n); });
+
+    // 包装 TPI 对象方法
+    if (window.TPI) {
+      ['calculateTPI','calculateSystem','calculateAMI','calculateFLI','calculateBCM',
+       'calculateBonus','calculateHSM','calculateLogistics'
+      ].forEach(function(n) { wrapDebounce(window.TPI, n); });
+    }
+
+    console.log('✅ [性能补丁] 防抖包装已就绪，延迟=' + DELAY + 'ms');
+  }, { once: true });
+})();
+</script>
 </head>
 <body>
 <!-- ===== 顶部置顶分数看板（与截图一致） ===== -->
@@ -9421,7 +9473,11 @@ const current = (this.sortMode && this.sortMode[key]) ? this.sortMode[key] : 'pr
 
 const FutureRadar = new FutureRadarSystemV3();
 window.FutureRadar = FutureRadar; // 暴露给插件使用
-if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => FutureRadar.init());
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', () => setTimeout(() => { try { FutureRadar.init(); } catch(e) {} }, 2000));
+} else {
+  setTimeout(() => { try { FutureRadar.init(); } catch(e) {} }, 2000);
+}
 else FutureRadar.init();
 
 // 包装openModal函数以添加控制台日志
@@ -13905,7 +13961,8 @@ else FutureRadar.init();
 <input aria-label="入睡时间" class="tpi-inline-01" id="bcm-sleep-time" oninput="calculateSleepScore(); calculateBCM(); calculateTPI();" type="time"/>
 </td>
 <td class="center">
-<input aria-label="昨日入睡时间" class="tpi-inline-01" id="bcm-sleep-yesterday" type="time"/>
+<input aria-label="昨日入睡时间" class="tpi-inline-01" id="bcm-sleep-yesterday" oninput="calculateSleepScore(); calculateBCM(); calculateTPI();" type="time"/>
+<small style="font-size:10px; color:#666; display:block; margin-top:2px;">自动填充,可修改</small>
 </td>
 <td class="center">
 <input aria-label="睡眠得分" id="bcm-sleep-score" readonly="" style="width: 70px; background: var(--color-bg-tertiary); font-weight: bold;" type="number"/>
@@ -17864,7 +17921,8 @@ function calculateAMI() {
 
                 if (!yesterdayTime || yesterdayTime === '') {
                     const yesterday = historicalDataManager.getYesterday();
-                    yesterdayTime = yesterday?.morning_time || null;
+                    // 修复：历史数据 key 为元素 id，即 'bcm-morning-time'（而非 morning_time）
+                    yesterdayTime = yesterday?.['bcm-morning-time'] || yesterday?.morning_time || null;
 
                     // 如果从历史加载到了昨日时间,自动填充到输入框
                     if (yesterdayTime && yesterdayInput) {
@@ -17974,9 +18032,17 @@ function calculateAMI() {
                 // 更新参考显示
                 if (refTodayInput) refTodayInput.textContent = timeStr;
 
-                // 获取昨日睡眠时间
+                // 获取昨日睡眠时间：优先手动输入框，其次历史记录（修复：历史key为元素id 'bcm-sleep-time'）
                 const yesterday = historicalDataManager.getYesterday();
-                const yesterdayTime = yesterday?.sleep_time || null;
+                const manualYesterdaySleepInput = document.getElementById('bcm-sleep-yesterday');
+                const manualYesterdaySleepVal = manualYesterdaySleepInput?.value || null;
+                // 历史记录的 key 是保存时的元素 id，兼容旧版 sleep_time
+                const histYesterdayTime = yesterday?.['bcm-sleep-time'] || yesterday?.sleep_time || null;
+                // 若手动输入为空且历史有数据，则自动填充手动框
+                if (histYesterdayTime && (!manualYesterdaySleepVal || manualYesterdaySleepVal === '') && manualYesterdaySleepInput) {
+                    manualYesterdaySleepInput.value = histYesterdayTime;
+                }
+                const yesterdayTime = manualYesterdaySleepVal || histYesterdayTime || null;
                 if (refYesterdayInput) refYesterdayInput.textContent = yesterdayTime || '--:--';
 
                 // 同时更新昨日参考栏位的显示
@@ -18042,12 +18108,12 @@ function calculateAMI() {
                     const s1 = calculateMorningScore();
                     totalScore += s1;
 
-                    // 2. 午间防守 (读取DOM值，该值由监听器触发 calculateDefenseScore 更新)
-                    const s2 = safeParseFloat(document.getElementById('bcm-lunch-score')?.value);
+                    // 2. 午间防守 (直接调用，确保历史数据自动填充和动态奖惩生效)
+                    const s2 = calculateDefenseScore('lunch');
                     totalScore += s2;
 
-                    // 3. 晚间防守
-                    const s3 = safeParseFloat(document.getElementById('bcm-dinner-score')?.value);
+                    // 3. 晚间防守 (同上)
+                    const s3 = calculateDefenseScore('dinner');
                     totalScore += s3;
 
                     // 4. 晚间离馆 (调用独立函数)
@@ -20647,13 +20713,13 @@ try {
                     // 【差异5修复】检查强制复苏触发器
                     checkForceRecoveryMode();
 
-                    // 初始化数据可视化
+                    // 初始化数据可视化 — 延迟8秒，避免阻塞页面启动
                     setTimeout(() => {
-                        initializeTrendChart();
-                        initializeHeatmapCalendar();
-                        updateBadges();
-                        updateStatistics();
-                    }, 500);
+                        try { initializeTrendChart(); } catch(e) {}
+                        try { initializeHeatmapCalendar(); } catch(e) {}
+                        try { updateBadges(); } catch(e) {}
+                        try { updateStatistics(); } catch(e) {}
+                    }, 8000);
 
            // 午间防守和晚间防守的自动计算
             const lunchDuration = document.getElementById('bcm-lunch-duration');
@@ -20706,7 +20772,18 @@ try {
 
                 // 动态奖惩: 计算与昨日在宿舍时间的差异
                 let dynamicBonus = 0;
-                const yesterdayDurationStr = yesterdayDurationInput?.value || '';
+                let yesterdayDurationStr = yesterdayDurationInput?.value || '';
+
+                // 若手动框为空，尝试从历史记录自动填充（历史key为今日元素id，即 'bcm-lunch-today-duration'）
+                if (!yesterdayDurationStr || yesterdayDurationStr === '') {
+                    const yesterdayHist = historicalDataManager.getYesterday();
+                    const histKey = type === 'lunch' ? 'bcm-lunch-today-duration' : 'bcm-dinner-today-duration';
+                    const histVal = yesterdayHist?.[histKey];
+                    if (histVal !== undefined && histVal !== null && histVal !== '') {
+                        yesterdayDurationStr = String(histVal);
+                        if (yesterdayDurationInput) yesterdayDurationInput.value = yesterdayDurationStr;
+                    }
+                }
 
                 if (yesterdayDurationStr && yesterdayDurationStr !== '') {
                     const todayDuration = parseFloat(todayDurationStr || '0');
@@ -22933,10 +23010,10 @@ function enhanceSuccessNotifications() {
 window.addEventListener('DOMContentLoaded', function() {
     console.log('🚀 系统初始化...');
     
-  // 初始化存储检查
+  // 初始化存储检查（延长到6秒，不影响功能）
   setTimeout(function() {
     checkStorageUsage();
-  }, 2000);
+  }, 6000);
 
   //* 初始化备份提醒已移除（按用户要求：删除顶部横幅提示） */
 // 初始化移动端优化
@@ -26848,12 +26925,14 @@ const ScoreDashboard = {
 
 // 页面加载时初始化分数看板
 document.addEventListener('DOMContentLoaded', function() {
-    ScoreDashboard.init();
-    
-    // 每隔5秒自动刷新一次(备用机制)
-    setInterval(() => {
-        ScoreDashboard.update();
-    }, 5000);
+    // 延迟3秒初始化看板，避免和页面其他启动逻辑争抢主线程
+    setTimeout(function() {
+        ScoreDashboard.init();
+        // 每隔8秒刷新一次(备用机制)
+        setInterval(() => {
+            ScoreDashboard.update();
+        }, 8000);
+    }, 3000);
 });
 
 // ═══════════════════════════════════════════════════════════════════
@@ -30670,11 +30749,12 @@ try{
     });
 
     // ===== 修复4: 定期自动刷新看板（备用机制） =====
+    // 延长到15秒，与另一处5秒的间隔错开，减少主线程争抢
     setInterval(() => {
         if (window.ScoreDashboard && window.ScoreDashboard.update) {
             window.ScoreDashboard.update();
         }
-    }, 3000);
+    }, 15000);
 
     console.log('✅ [修复补丁] 第22版修复补丁加载完成');
 })();
@@ -30753,7 +30833,8 @@ try{
       document.addEventListener('change', schedule, true);
 
       // 3) 兜底定时刷新：防止某些计算路径没触发事件
-      setInterval(safeUpdate, 1200);
+      //    延长到10秒，避免每秒持续占用主线程
+      setInterval(safeUpdate, 10000);
     }
 
     if (document.readyState === 'loading'){
@@ -31381,7 +31462,7 @@ window.__tpi_syncDateToMain = function(){
     try{
       window.addEventListener('online', _updateNetBanner);
       window.addEventListener('offline', _updateNetBanner);
-      if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', _updateNetBanner, {once:true});
+      if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', function() { setTimeout(_updateNetBanner, 3000); }, {once:true});
       else setTimeout(_updateNetBanner, 0);
     }catch(e){}
 
@@ -31694,7 +31775,7 @@ window.__tpi_syncDateToMain = function(){
     try{
       const _init = ()=>{ try{ window.__tpi_setupAutoBackupUI && window.__tpi_setupAutoBackupUI(); }catch(e){} 
                            try{ window.__tpi_setupEventTriggers && window.__tpi_setupEventTriggers(); }catch(e){} };
-      if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', _init, {once:true});
+      if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', function() { setTimeout(_init, 6000); }, {once:true});
       else setTimeout(_init, 0);
     }catch(e){}
 
@@ -32625,36 +32706,39 @@ const __download_end_time = Date.now();
 
   // 页面加载：检查是否有活动会话
   window.addEventListener('DOMContentLoaded', async () => {
-    try{
-      // 初始化：同步日期选择器 + 自动备份开关
-      try{ syncMainDateToSyncUI(); }catch(e){}
-      try{ const di=getSyncDateInput(); if(di){ di.addEventListener('change', ()=>{ window.__tpi_syncDateToMain(); }); } }catch(e){}
-      try{ initAutoBackupUI(); }catch(e){}
-      
-      const savedUser = lsGet(KEY_USER, '');
-      if (savedUser && document.getElementById('tpi-username')) {
-        document.getElementById('tpi-username').value = savedUser;
-      }
+    // 延迟8秒再初始化云同步，优先保证页面UI可用
+    setTimeout(async () => {
+      try{
+        // 初始化：同步日期选择器 + 自动备份开关
+        try{ syncMainDateToSyncUI(); }catch(e){}
+        try{ const di=getSyncDateInput(); if(di){ di.addEventListener('change', ()=>{ window.__tpi_syncDateToMain(); }); } }catch(e){}
+        try{ initAutoBackupUI(); }catch(e){}
+        
+        const savedUser = lsGet(KEY_USER, '');
+        if (savedUser && document.getElementById('tpi-username')) {
+          document.getElementById('tpi-username').value = savedUser;
+        }
 
-      // 尝试获取当前用户（检查是否有活动会话）
-      try {
-        const user = await __awAccount().get();
-        if (user && user.$id) {
-          console.log('✅ 检测到活动会话:', user.email);
-          TPI_CURRENT_USER = user.$id;
-          setLoggedInUI(user.email || savedUser);
-        } else {
+        // 尝试获取当前用户（检查是否有活动会话）
+        try {
+          const user = await __awAccount().get();
+          if (user && user.$id) {
+            console.log('✅ 检测到活动会话:', user.email);
+            TPI_CURRENT_USER = user.$id;
+            setLoggedInUI(user.email || savedUser);
+          } else {
+            setLoggedOutUI();
+          }
+        } catch (e) {
+          // 没有活动会话
+          console.log('ℹ️ 未检测到活动会话');
           setLoggedOutUI();
         }
-      } catch (e) {
-        // 没有活动会话
-        console.log('ℹ️ 未检测到活动会话');
+      }catch(e){
+        console.error('初始化错误:', e);
         setLoggedOutUI();
       }
-    }catch(e){
-      console.error('初始化错误:', e);
-      setLoggedOutUI();
-    }
+    }, 8000);
   });
 })();
 </script>
@@ -34902,8 +34986,10 @@ console.log('✅ [TPI优化] 函数增强包装器已加载');
   }
 
   // ========== 页面加载时初始化 ==========
-  window.addEventListener('DOMContentLoaded', async function() {
-    console.log('🔧 [Gist备份] 初始化备份系统');
+  window.addEventListener('DOMContentLoaded', function() {
+    // 延迟10秒再初始化Gist备份，避免页面启动时发起网络请求
+    setTimeout(async function() {
+    console.log('🔧 [Gist备份] 初始化备份系统（延迟加载）');
 
     // 恢复保存的 Token（从 IndexedDB）
     const savedToken = await getConfig(GIST_TOKEN_KEY, '');
@@ -34943,6 +35029,7 @@ console.log('✅ [TPI优化] 函数增强包装器已加载');
 
     console.log('✅ [Gist备份] 备份系统已就绪');
     console.log(`📌 [Gist备份] 使用硬编码 Gist ID: ${GIST_ID_HARDCODED}`);
+    }, 10000); // 延迟10秒
   });
 
   // 暴露给控制台调试
