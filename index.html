@@ -7445,8 +7445,8 @@ window.exportAsCSV = function() {
     style="border:2px dashed #d1d5db; border-radius:8px; padding:22px 12px; text-align:center; background:#fafafa; cursor:pointer; margin-bottom:8px; transition:all 0.2s;">
     <div id="fileimport-dropzone-icon" style="font-size:28px; margin-bottom:4px;">📂</div>
     <div id="fileimport-dropzone-label" style="font-size:13px; font-weight:600; color:#374151;">点击选择文件 或 拖拽到此处</div>
-    <div id="fileimport-dropzone-sub" style="font-size:11px; color:#9ca3af; margin-top:3px;">支持 .json 和 .md 文件</div>
-    <input type="file" id="fileimport-fileinput" accept=".json,.md,.markdown,.txt" style="display:none"
+    <div id="fileimport-dropzone-sub" style="font-size:11px; color:#9ca3af; margin-top:3px;">支持 .json 和 .md 文件，可同时选择多个文件批量导入</div>
+    <input type="file" id="fileimport-fileinput" accept=".json,.md,.markdown,.txt" multiple style="display:none"
       onchange="FutureRadar.handleFormatFileSelect(this.files)">
   </div>
   <!-- 行3: 已加载文件状态（有文件时显示） -->
@@ -7803,6 +7803,8 @@ try {
     }
 
     loadData() {
+        console.warn('[LOADDATA] loadData()被调用');
+        console.trace('[LOADDATA] 调用栈');
         // 尝试加载 v3 数据
         const saved = __tpi_ls_get(this.storageKey);
         if (saved) {
@@ -7888,7 +7890,9 @@ try {
 
     // ================= UI 渲染核心 =================
     render() {
-        // 渲染四个板块
+        const _total = Object.values(this.data).reduce((s,a)=>s+(Array.isArray(a)?a.length:0),0);
+        console.warn('[RENDER] render()被调用，data总条数=' + _total);
+        console.trace('[RENDER] 调用栈');
         Object.keys(this.data).forEach(key => this.renderSection(key));
         this.updateBadges();
     }
@@ -8997,30 +9001,34 @@ const current = (this.sortMode && this.sortMode[key]) ? this.sortMode[key] : 'pr
     /* -------- 格式导入：文件选择 -------- */
     handleFormatFileSelect(files) {
         if (!files || files.length === 0) return;
-        const file = files[0];
         const statusEl = document.getElementById('fileimport-status');
         const statusText = document.getElementById('fileimport-status-text');
         const fmtSel = document.getElementById('fileimport-format');
 
-        // 自动识别格式
-        const name = file.name.toLowerCase();
-        if (fmtSel && fmtSel.value === 'auto') {
-            if (name.endsWith('.md') || name.endsWith('.markdown')) {
-                fmtSel.value = 'markdown';
-            } else {
-                fmtSel.value = 'json';
-            }
-        }
+        // ── 批量导入：支持多文件 ──
+        // 将所有文件存入数组，逐个读取后合并
+        this._fileimportRaw = null;
+        this._fileimportName = null;
+        this._fileimportBatch = []; // [{name, raw}, ...]
 
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            const text = e.target.result;
-            this._fileimportRaw = text;
-            this._fileimportName = file.name;
+        const fileArr = Array.from(files);
+        let loaded = 0;
+
+        const onAllLoaded = () => {
+            const totalChars = this._fileimportBatch.reduce((s, f) => s + f.raw.length, 0);
+            const names = this._fileimportBatch.map(f => f.name).join('、');
+            // 兼容旧逻辑：单文件时保留 _fileimportRaw/_fileimportName
+            if (this._fileimportBatch.length === 1) {
+                this._fileimportRaw = this._fileimportBatch[0].raw;
+                this._fileimportName = this._fileimportBatch[0].name;
+            }
 
             // 显示状态条
             if (statusEl && statusText) {
-                statusText.textContent = '📄 已加载：' + file.name + '（' + text.length + ' 字符）';
+                const label = fileArr.length === 1
+                    ? '📄 已加载：' + names + '（' + totalChars + ' 字符）'
+                    : '📦 已加载 ' + fileArr.length + ' 个文件：' + names + '（共 ' + totalChars + ' 字符）';
+                statusText.textContent = label;
                 statusEl.style.display = 'block';
             }
 
@@ -9036,13 +9044,34 @@ const current = (this.sortMode && this.sortMode[key]) ? this.sortMode[key] : 'pr
                 dz.style.background = '#f0fdf4';
             }
             if (dzIcon) dzIcon.style.display = 'none';
-            if (dzLabel) { dzLabel.style.fontSize = '12px'; dzLabel.textContent = '🔄 点击重新选择文件'; }
+            if (dzLabel) {
+                dzLabel.style.fontSize = '12px';
+                dzLabel.textContent = fileArr.length > 1
+                    ? '🔄 点击重新选择文件（已选 ' + fileArr.length + ' 个）'
+                    : '🔄 点击重新选择文件';
+            }
             if (dzSub) dzSub.style.display = 'none';
         };
-        reader.onerror = () => {
-            alert('文件读取失败，请重试');
-        };
-        reader.readAsText(file, 'UTF-8');
+
+        fileArr.forEach(file => {
+            // 自动识别格式（以第一个文件为准）
+            if (fmtSel && fmtSel.value === 'auto' && fileArr.indexOf(file) === 0) {
+                const name = file.name.toLowerCase();
+                if (name.endsWith('.md') || name.endsWith('.markdown')) {
+                    fmtSel.value = 'markdown';
+                } else {
+                    fmtSel.value = 'json';
+                }
+            }
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                this._fileimportBatch.push({ name: file.name, raw: e.target.result });
+                loaded++;
+                if (loaded === fileArr.length) onAllLoaded();
+            };
+            reader.onerror = () => { alert('文件读取失败：' + file.name); };
+            reader.readAsText(file, 'UTF-8');
+        });
 
         // 重置 file input，允许重复选同一文件
         const fi = document.getElementById('fileimport-fileinput');
@@ -9052,6 +9081,7 @@ const current = (this.sortMode && this.sortMode[key]) ? this.sortMode[key] : 'pr
     clearFormatFile() {
         this._fileimportRaw = null;
         this._fileimportName = null;
+        this._fileimportBatch = [];
 
         // 隐藏状态条
         const statusEl = document.getElementById('fileimport-status');
@@ -9078,11 +9108,16 @@ const current = (this.sortMode && this.sortMode[key]) ? this.sortMode[key] : 'pr
         if (fmtSel) fmtSel.value = 'auto';
     }
 
-    /* -------- 格式导入：解析 + 写入 -------- */
+    /* -------- 格式导入：解析 + 写入（精确单次渲染版） -------- */
     processFormatImport() {
         try {
-            const raw = this._fileimportRaw;
-            if (!raw || !raw.trim()) {
+            // ── 批量导入支持 ──
+            // 优先使用 _fileimportBatch（多文件），兼容旧的 _fileimportRaw（单文件）
+            const batch = (Array.isArray(this._fileimportBatch) && this._fileimportBatch.length > 0)
+                ? this._fileimportBatch
+                : (this._fileimportRaw ? [{ name: this._fileimportName || 'unknown', raw: this._fileimportRaw }] : []);
+
+            if (batch.length === 0) {
                 alert('请先选择要导入的 JSON 或 Markdown 文件');
                 return;
             }
@@ -9098,77 +9133,93 @@ const current = (this.sortMode && this.sortMode[key]) ? this.sortMode[key] : 'pr
             if (!validTargets.includes(target)) { alert('无效的目标分类'); return; }
             if (!Array.isArray(this.data[target])) { alert('数据结构异常，请刷新页面'); return; }
 
-            // --- 自动判断格式 ---
-            let resolvedFmt = fmt;
-            if (fmt === 'auto') {
-                const fn = (this._fileimportName || '').toLowerCase();
-                if (fn.endsWith('.md') || fn.endsWith('.markdown')) {
-                    resolvedFmt = 'markdown';
+            // ── 辅助：从单个文件的 raw 文本解析事件列表 ──
+            const parseRaw = (raw, fileName) => {
+                let resolvedFmt = fmt;
+                if (fmt === 'auto') {
+                    const fn = (fileName || '').toLowerCase();
+                    resolvedFmt = (fn.endsWith('.md') || fn.endsWith('.markdown')) ? 'markdown' : 'json';
+                }
+
+                const parsed = [];
+
+                if (resolvedFmt === 'json') {
+                    let arr;
+                    try { arr = JSON.parse(raw.trim()); }
+                    catch (jsonErr) { throw new Error('【' + fileName + '】JSON 解析失败：' + jsonErr.message); }
+                    if (!Array.isArray(arr)) throw new Error('【' + fileName + '】JSON 必须是数组格式 [...]');
+                    arr.forEach(e => {
+                        if (!e || typeof e !== 'object') return;
+                        const title = e.title || e.name || e['活动名称'] || e['标题'] || e['课程'] || '';
+                        if (!title) return;
+                        parsed.push({
+                            title: String(title).trim(),
+                            date: this.parseDate(e.date || e.time || e['时间'] || e['日期'] || ''),
+                            location: String(e.location || e.address || e['地点'] || '').trim(),
+                            content: String(e.content || e.description || e['简介'] || e['描述'] || '').trim(),
+                            organizer: String(e.organizer || e['主办方'] || '').trim(),
+                            sourceUrl: String(e.sourceUrl || e.sourceURL || e.url || e.source || e['来源'] || e['网址'] || '').trim()
+                        });
+                    });
                 } else {
-                    resolvedFmt = 'json';
+                    // Markdown: 按 ## 切割
+                    const normalized = raw.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+                    const blocks = normalized.split(/(?=^##\s)/m).filter(b => b.trim());
+                    if (blocks.length === 0) throw new Error('【' + fileName + '】未找到任何以 ## 开头的事件标题');
+                    blocks.forEach(block => {
+                        const lines = block.split('\n');
+                        const titleLine = lines[0].replace(/^##\s*/, '').trim();
+                        if (!titleLine) return;
+                        const meta = { title: titleLine, date: '', location: '', content: '', organizer: '', sourceUrl: '' };
+                        lines.slice(1).forEach(line => {
+                            const m = line.match(/^\s*[-*]\s*([^:：]+)[:\：]\s*(.+)$/);
+                            if (!m) return;
+                            const key = m[1].toLowerCase().trim().replace(/\s+/g, '');
+                            const val = m[2].trim();
+                            if (['date','日期','time','时间','日期时间'].includes(key)) meta.date = val;
+                            else if (['location','地点','address','地址'].includes(key)) meta.location = val;
+                            else if (['content','description','描述','内容','简介','摘要'].includes(key)) meta.content = val;
+                            else if (['organizer','主办方','主办','承办','host'].includes(key)) meta.organizer = val;
+                            else if (['url','sourceurl','source','链接','来源','网址','link'].includes(key)) meta.sourceUrl = val;
+                        });
+                        meta.date = this.parseDate(meta.date);
+                        parsed.push(meta);
+                    });
                 }
-            }
+                return parsed;
+            };
 
+            // ── 合并所有文件解析结果 ──
             let items = [];
-
-            if (resolvedFmt === 'json') {
-                let arr;
-                try {
-                    arr = JSON.parse(raw.trim());
-                } catch (jsonErr) {
-                    throw new Error('JSON 解析失败：' + jsonErr.message + '\n请确认文件是有效的 JSON 数组格式');
-                }
-                if (!Array.isArray(arr)) throw new Error('JSON 必须是数组格式 [...]，当前读到的是对象或其他类型');
-                arr.forEach(e => {
-                    if (!e || typeof e !== 'object') return;
-                    const title = e.title || e.name || e['活动名称'] || e['标题'] || e['课程'] || '';
-                    if (!title) return;
-                    items.push({
-                        title: String(title).trim(),
-                        date: this.parseDate(e.date || e.time || e['时间'] || e['日期'] || ''),
-                        location: String(e.location || e.address || e['地点'] || '').trim(),
-                        content: String(e.content || e.description || e['简介'] || e['描述'] || '').trim(),
-                        organizer: String(e.organizer || e['主办方'] || '').trim(),
-                        sourceUrl: String(e.sourceUrl || e.sourceURL || e.url || e.source || e['来源'] || e['网址'] || '').trim()
-                    });
-                });
-            } else {
-                // Markdown: 按 ## 切割
-                const normalized = raw.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
-                const blocks = normalized.split(/(?=^##\s)/m).filter(b => b.trim());
-                if (blocks.length === 0) throw new Error('未找到任何以 ## 开头的事件标题');
-                blocks.forEach(block => {
-                    const lines = block.split('\n');
-                    const titleLine = lines[0].replace(/^##\s*/, '').trim();
-                    if (!titleLine) return;
-                    const meta = { title: titleLine, date: '', location: '', content: '', organizer: '', sourceUrl: '' };
-                    lines.slice(1).forEach(line => {
-                        // 匹配 - key: value 或 - 中文键: value
-                        const m = line.match(/^\s*[-*]\s*([^:：]+)[:\：]\s*(.+)$/);
-                        if (!m) return;
-                        const key = m[1].toLowerCase().trim().replace(/\s+/g, '');
-                        const val = m[2].trim();
-                        if (['date','日期','time','时间','日期时间'].includes(key)) meta.date = val;
-                        else if (['location','地点','address','地址'].includes(key)) meta.location = val;
-                        else if (['content','description','描述','内容','简介','摘要'].includes(key)) meta.content = val;
-                        else if (['organizer','主办方','主办','承办','host'].includes(key)) meta.organizer = val;
-                        else if (['url','sourceurl','source','链接','来源','网址','link'].includes(key)) meta.sourceUrl = val;
-                    });
-                    meta.date = this.parseDate(meta.date);
-                    items.push(meta);
-                });
+            for (const f of batch) {
+                const parsed = parseRaw(f.raw, f.name);
+                items = items.concat(parsed);
             }
 
             if (items.length === 0) {
-                throw new Error('未解析到任何有效事件\n' +
-                    (resolvedFmt === 'json'
-                        ? '请确认每条记录包含 title 或 name 字段'
-                        : '请确认每个事件以 ## 标题 开头'));
+                throw new Error('未解析到任何有效事件\n请确认每条 JSON 记录含 title/name 字段，或 Markdown 事件以 ## 标题 开头');
             }
 
-            // 写入数据
+            // ── 去重：与目标分类中已有事件按 title+date 去重 ──
+            const existingKeys = new Set(
+                this.data[target].map(e => (e.title || '') + '|' + (e.date || ''))
+            );
+            const deduped = items.filter(item => {
+                const key = (item.title || '') + '|' + (item.date || '');
+                if (existingKeys.has(key)) return false;
+                existingKeys.add(key); // 批次内也去重
+                return true;
+            });
+            const skipped = items.length - deduped.length;
+
+            if (deduped.length === 0) {
+                alert('所有事件均已存在（' + items.length + ' 条全部重复），未写入任何数据。');
+                return;
+            }
+
+            // ── 写入数据 ──
             const now = Date.now();
-            items.forEach((item, idx) => {
+            deduped.forEach((item, idx) => {
                 this.data[target].push({
                     id: 'fimp_' + now + '_' + idx + '_' + Math.random().toString(36).slice(2, 6),
                     title: item.title,
@@ -9184,17 +9235,34 @@ const current = (this.sortMode && this.sortMode[key]) ? this.sortMode[key] : 'pr
                 });
             });
 
-            // 持久化 + 刷新UI
-            this.saveData();
+            // ── 精确保存：只持久化，不触发额外渲染 ──
+            // 使用底层存储函数，绕过 saveData() 的 render() 调用和哨兵事件，
+            // 确保整个导入流程只在最后 render 一次。
+            try {
+                __tpi_ls_set(this.storageKey, JSON.stringify(this.data));
+                if (this.pushConfig) __tpi_ls_set(this.pushKey, JSON.stringify(this.pushConfig));
+                if (this.sortMode) __tpi_ls_set(this.sortKey, JSON.stringify(this.sortMode));
+            } catch (_se) {
+                // 底层存储失败时降级，但仍只渲染一次
+                try {
+                    localStorage.setItem(this.storageKey, JSON.stringify(this.data));
+                } catch (_le) {}
+            }
 
-            // 清理状态
+            // ── 清理状态（不触发额外渲染） ──
             this.clearFormatFile();
 
-            // 关闭弹窗（放在最后，保证 render 先执行完）
+            // ── 唯一一次渲染 ──
+            this.render();
+
+            // 关闭弹窗（在 render 之后，用 setTimeout 确保 DOM 已更新）
             setTimeout(() => { this.closeSettingsModal(); }, 50);
 
+            // 通知
             const catNames = { tempAcademic:'临时·学术', tempLife:'临时·生活', regularAcademic:'常规·学术', regularLife:'常规·生活' };
-            const msg = '✅ 成功导入 ' + items.length + ' 条事件到【' + (catNames[target] || target) + '】';
+            let msg = '✅ 成功导入 ' + deduped.length + ' 条事件到【' + (catNames[target] || target) + '】';
+            if (batch.length > 1) msg += '（来自 ' + batch.length + ' 个文件）';
+            if (skipped > 0) msg += '，已跳过 ' + skipped + ' 条重复事件';
             if (typeof NotifySystem !== 'undefined') {
                 NotifySystem.showToast(msg);
             } else {
