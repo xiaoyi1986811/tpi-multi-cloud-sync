@@ -12270,7 +12270,7 @@ else FutureRadar.init();
 <input aria-label="上午得分" class="tpi-inline-04" readonly="" type="number"/>
 </td>
 <td>
-<textarea aria-label="上午备注" class="tpi-inline-02" placeholder="备注... (如选择'其他'状态需在此说明)" rows="3"></textarea>
+<textarea aria-label="上午备注" class="tpi-inline-02" placeholder="备注... (如选择'其他'状态需在此说明)" rows="10" style="width:100%;resize:vertical;min-height:200px;padding:8px;font-family:inherit;font-size:inherit;"></textarea>
 </td>
 </tr>
 <tr>
@@ -12455,7 +12455,7 @@ else FutureRadar.init();
 <input aria-label="下午得分" class="tpi-inline-04" readonly="" type="number"/>
 </td>
 <td>
-<textarea aria-label="下午备注" class="tpi-inline-02" placeholder="备注... (如选择'其他'状态需在此说明)" rows="3"></textarea>
+<textarea aria-label="下午备注" class="tpi-inline-02" placeholder="备注... (如选择'其他'状态需在此说明)" rows="10" style="width:100%;resize:vertical;min-height:200px;padding:8px;font-family:inherit;font-size:inherit;"></textarea>
 </td>
 </tr>
 <!-- 晚上1时段 -->
@@ -12647,7 +12647,7 @@ else FutureRadar.init();
 <input aria-label="晚上1得分" class="tpi-inline-04" readonly="" type="number"/>
 </td>
 <td>
-<textarea aria-label="晚上1备注" class="tpi-inline-02" placeholder="备注... (如选择'其他'状态需在此说明)" rows="3"></textarea>
+<textarea aria-label="晚上1备注" class="tpi-inline-02" placeholder="备注... (如选择'其他'状态需在此说明)" rows="10" style="width:100%;resize:vertical;min-height:200px;padding:8px;font-family:inherit;font-size:inherit;"></textarea>
 </td>
 </tr>
 <!-- 晚上2时段 -->
@@ -12839,7 +12839,7 @@ else FutureRadar.init();
 <input aria-label="晚上2得分" class="tpi-inline-04" readonly="" type="number"/>
 </td>
 <td>
-<textarea aria-label="晚上2备注" class="tpi-inline-02" placeholder="备注... (如选择'其他'状态需在此说明)" rows="3"></textarea>
+<textarea aria-label="晚上2备注" class="tpi-inline-02" placeholder="备注... (如选择'其他'状态需在此说明)" rows="10" style="width:100%;resize:vertical;min-height:200px;padding:8px;font-family:inherit;font-size:inherit;"></textarea>
 </td>
 </tr>
 <!-- 机动时段 -->
@@ -13029,7 +13029,7 @@ else FutureRadar.init();
 <input aria-label="机动得分" class="tpi-inline-04" readonly="" type="number"/>
 </td>
 <td>
-<textarea aria-label="机动备注" class="tpi-inline-02" placeholder="备注... (如选择'其他'状态需在此说明)" rows="3"></textarea>
+<textarea aria-label="机动备注" class="tpi-inline-02" placeholder="备注... (如选择'其他'状态需在此说明)" rows="10" style="width:100%;resize:vertical;min-height:200px;padding:8px;font-family:inherit;font-size:inherit;"></textarea>
 </td>
 </tr>
 <!-- 常驻任务 -->
@@ -14732,7 +14732,7 @@ else FutureRadar.init();
          🎯 核心理念
         </h5>
 <p>
-         Logistics (后勤与维护) 是日常杂事和后勤任务的管理系统。有效管理杂事是保证核心工作时间的基础。
+         Logistics (后勤与维护) 是日常杂事和后勤任务的管理系统。认真投入每一件事、如实记录耗时与等级，是保障核心工作有序推进的基础。
         </p>
 <h5 class="mt-3">
          📊 评分规则
@@ -14740,25 +14740,27 @@ else FutureRadar.init();
 <ul>
 <li>
 <strong>
-           状态分定义
+           基础分
           </strong>
-          ：完成=1分，未完成=0分
+          ：完成或豁免 = 1分，未完成 = 0分
          </li>
 <li>
 <strong>
-           基础分 = 状态分 × 2
+           耗时加分
           </strong>
-</li>
+          ：≤5分钟 = 0，5–20分钟 = 0.5，&gt;20分钟 = 1
+         </li>
 <li>
 <strong>
-           时间扣减 = (真实耗时 ÷ 10) × 等级系数
+           实得分 = 基础分 + 耗时加分 × 等级系数
           </strong>
-</li>
+          （加分制：认可投入，鼓励认真对待每一件事）
+         </li>
 <li>
 <strong>
-           实得分 = 基础分 - 时间扣减
+           单项最高分 = 2.5 分
           </strong>
-          （减分制：鼓励高效完成任务）
+          （完成 + 耗时 &gt;20分钟 + 关键等级）
          </li>
 </ul>
 <h5 class="mt-3">
@@ -14767,33 +14769,21 @@ else FutureRadar.init();
 <ul>
 <li>
 <strong>
-           0 - 琐事
+           0 - 普通
           </strong>
-          ：日常基础性事务，耗时短，重要性低（系数 0.1）
+          ：日常琐碎事务，重要性较低（系数 0.5）
          </li>
 <li>
 <strong>
-           1 - 常规
+           1 - 重要
           </strong>
-          ：日常必须处理的事务，具有一定重要性（系数 0.15）
+          ：需要一定精力，对日常运转有明显影响（系数 1.0）
          </li>
 <li>
 <strong>
-           2 - 重要
+           2 - 关键
           </strong>
-          ：需要较多时间和精力，对整体进展有明显影响（系数 0.2）
-         </li>
-<li>
-<strong>
-           3 - 紧急
-          </strong>
-          ：有明确时限要求，需要优先处理（系数 0.25）
-         </li>
-<li>
-<strong>
-           5 - 关键
-          </strong>
-          ：直接影响核心学术进展或重大事项的决策性任务（系数 0.3）
+          ：直接影响核心学术进展或重大事项（系数 1.5）
          </li>
 </ul>
 <h5 class="mt-3">
@@ -14818,13 +14808,16 @@ else FutureRadar.init();
         </h5>
 <ul>
 <li>
-          真实记录耗时（分钟）
+          真实记录耗时（分钟），系统将据此自动判定耗时加分档位
          </li>
 <li>
-          合理评估事务等级
+          根据事务实际重要性选择等级（普通 / 重要 / 关键）
          </li>
 <li>
-          可在备注中说明具体情况
+          豁免视同完成，计入基础分，但耗时留空则耗时加分为 0
+         </li>
+<li>
+          可在备注中说明具体情况或选择"其他"时的特殊说明
          </li>
 </ul>
 </div>
@@ -14847,11 +14840,13 @@ else FutureRadar.init();
             ⏳ 真实耗时
             <br/>
             (分钟)
+            <br/>
+            <span style="font-size:11px;color:#6b7280;">≤5/5-20/&gt;20</span>
            </th>
 <th class="center level-column" style="width: 120px;">
             🔥 等级
             <br/>
-            (0/1/2/3/5)
+            (0/1/2)
            </th>
 <th class="center tpi-inline-01">
             🧮 实得分
@@ -14890,20 +14885,14 @@ else FutureRadar.init();
 </td>
 <td class="center">
 <select aria-label="待办事项等级" class="logistics-level tpi-inline-01">
-<option value="0.1">
-              0-琐事 (0.1)
+<option value="0.5">
+              0-普通 (0.5)
              </option>
-<option value="0.15">
-              1-常规 (0.15)
+<option value="1.0">
+              1-重要 (1.0)
              </option>
-<option value="0.2">
-              2-重要 (0.2)
-             </option>
-<option value="0.25">
-              3-紧急 (0.25)
-             </option>
-<option value="0.3">
-              5-关键 (0.3)
+<option value="1.5">
+              2-关键 (1.5)
              </option>
 </select>
 </td>
@@ -14911,7 +14900,7 @@ else FutureRadar.init();
 <input aria-label="待办事项1得分" class="logistics-score tpi-inline-04" readonly="" type="number"/>
 </td>
 <td>
-<textarea aria-label="待办事项1备注" class="tpi-inline-02" placeholder="备注..." rows="3"></textarea>
+<textarea aria-label="待办事项1备注" class="tpi-inline-02" placeholder="备注..." rows="2" style="width:100%;resize:vertical;min-height:120px;padding:8px;font-family:inherit;font-size:inherit;"></textarea>
 </td>
 </tr>
 <tr>
@@ -14942,20 +14931,14 @@ else FutureRadar.init();
 </td>
 <td class="center">
 <select aria-label="待办事项2等级" class="logistics-level tpi-inline-01">
-<option value="0.1">
-              0-琐事 (0.1)
+<option value="0.5">
+              0-普通 (0.5)
              </option>
-<option value="0.15">
-              1-常规 (0.15)
+<option value="1.0">
+              1-重要 (1.0)
              </option>
-<option value="0.2">
-              2-重要 (0.2)
-             </option>
-<option value="0.25">
-              3-紧急 (0.25)
-             </option>
-<option value="0.3">
-              5-关键 (0.3)
+<option value="1.5">
+              2-关键 (1.5)
              </option>
 </select>
 </td>
@@ -14963,7 +14946,7 @@ else FutureRadar.init();
 <input aria-label="待办事项2得分" class="logistics-score tpi-inline-04" readonly="" type="number"/>
 </td>
 <td>
-<textarea aria-label="待办事项2备注" class="tpi-inline-02" placeholder="备注..." rows="3"></textarea>
+<textarea aria-label="待办事项2备注" class="tpi-inline-02" placeholder="备注..." rows="2" style="width:100%;resize:vertical;min-height:120px;padding:8px;font-family:inherit;font-size:inherit;"></textarea>
 </td>
 </tr>
 <tr>
@@ -14994,20 +14977,14 @@ else FutureRadar.init();
 </td>
 <td class="center">
 <select aria-label="待办事项3等级" class="logistics-level tpi-inline-01">
-<option value="0.1">
-              0-琐事 (0.1)
+<option value="0.5">
+              0-普通 (0.5)
              </option>
-<option value="0.15">
-              1-常规 (0.15)
+<option value="1.0">
+              1-重要 (1.0)
              </option>
-<option value="0.2">
-              2-重要 (0.2)
-             </option>
-<option value="0.25">
-              3-紧急 (0.25)
-             </option>
-<option value="0.3">
-              5-关键 (0.3)
+<option value="1.5">
+              2-关键 (1.5)
              </option>
 </select>
 </td>
@@ -15015,7 +14992,7 @@ else FutureRadar.init();
 <input aria-label="待办事项3得分" class="logistics-score tpi-inline-04" readonly="" type="number"/>
 </td>
 <td>
-<textarea aria-label="待办事项3备注" class="tpi-inline-02" placeholder="备注..." rows="3"></textarea>
+<textarea aria-label="待办事项3备注" class="tpi-inline-02" placeholder="备注..." rows="2" style="width:100%;resize:vertical;min-height:120px;padding:8px;font-family:inherit;font-size:inherit;"></textarea>
 </td>
 </tr>
 <tr>
@@ -15046,20 +15023,14 @@ else FutureRadar.init();
 </td>
 <td class="center">
 <select aria-label="待办事项4等级" class="logistics-level tpi-inline-01">
-<option value="0.1">
-              0-琐事 (0.1)
+<option value="0.5">
+              0-普通 (0.5)
              </option>
-<option value="0.15">
-              1-常规 (0.15)
+<option value="1.0">
+              1-重要 (1.0)
              </option>
-<option value="0.2">
-              2-重要 (0.2)
-             </option>
-<option value="0.25">
-              3-紧急 (0.25)
-             </option>
-<option value="0.3">
-              5-关键 (0.3)
+<option value="1.5">
+              2-关键 (1.5)
              </option>
 </select>
 </td>
@@ -15067,7 +15038,7 @@ else FutureRadar.init();
 <input aria-label="待办事项4得分" class="logistics-score tpi-inline-04" readonly="" type="number"/>
 </td>
 <td>
-<textarea aria-label="待办事项4备注" class="tpi-inline-02" placeholder="备注..." rows="3"></textarea>
+<textarea aria-label="待办事项4备注" class="tpi-inline-02" placeholder="备注..." rows="2" style="width:100%;resize:vertical;min-height:120px;padding:8px;font-family:inherit;font-size:inherit;"></textarea>
 </td>
 </tr>
 <tr>
@@ -15098,20 +15069,14 @@ else FutureRadar.init();
 </td>
 <td class="center">
 <select aria-label="待办事项5等级" class="logistics-level tpi-inline-01">
-<option value="0.1">
-              0-琐事 (0.1)
+<option value="0.5">
+              0-普通 (0.5)
              </option>
-<option value="0.15">
-              1-常规 (0.15)
+<option value="1.0">
+              1-重要 (1.0)
              </option>
-<option value="0.2">
-              2-重要 (0.2)
-             </option>
-<option value="0.25">
-              3-紧急 (0.25)
-             </option>
-<option value="0.3">
-              5-关键 (0.3)
+<option value="1.5">
+              2-关键 (1.5)
              </option>
 </select>
 </td>
@@ -15119,7 +15084,7 @@ else FutureRadar.init();
 <input aria-label="待办事项5得分" class="logistics-score tpi-inline-04" readonly="" type="number"/>
 </td>
 <td>
-<textarea aria-label="待办事项5备注" class="tpi-inline-02" placeholder="备注..." rows="3"></textarea>
+<textarea aria-label="待办事项5备注" class="tpi-inline-02" placeholder="备注..." rows="2" style="width:100%;resize:vertical;min-height:120px;padding:8px;font-family:inherit;font-size:inherit;"></textarea>
 </td>
 </tr>
 <tr>
@@ -15150,20 +15115,14 @@ else FutureRadar.init();
 </td>
 <td class="center">
 <select aria-label="待办事项6等级" class="logistics-level tpi-inline-01">
-<option value="0.1">
-              0-琐事 (0.1)
+<option value="0.5">
+              0-普通 (0.5)
              </option>
-<option value="0.15">
-              1-常规 (0.15)
+<option value="1.0">
+              1-重要 (1.0)
              </option>
-<option value="0.2">
-              2-重要 (0.2)
-             </option>
-<option value="0.25">
-              3-紧急 (0.25)
-             </option>
-<option value="0.3">
-              5-关键 (0.3)
+<option value="1.5">
+              2-关键 (1.5)
              </option>
 </select>
 </td>
@@ -15171,7 +15130,7 @@ else FutureRadar.init();
 <input aria-label="待办事项6得分" class="logistics-score tpi-inline-04" readonly="" type="number"/>
 </td>
 <td>
-<textarea aria-label="待办事项6备注" class="tpi-inline-02" placeholder="备注..." rows="3"></textarea>
+<textarea aria-label="待办事项6备注" class="tpi-inline-02" placeholder="备注..." rows="2" style="width:100%;resize:vertical;min-height:120px;padding:8px;font-family:inherit;font-size:inherit;"></textarea>
 </td>
 </tr>
 <tr>
@@ -15202,20 +15161,14 @@ else FutureRadar.init();
 </td>
 <td class="center">
 <select aria-label="待办事项7等级" class="logistics-level tpi-inline-01">
-<option value="0.1">
-              0-琐事 (0.1)
+<option value="0.5">
+              0-普通 (0.5)
              </option>
-<option value="0.15">
-              1-常规 (0.15)
+<option value="1.0">
+              1-重要 (1.0)
              </option>
-<option value="0.2">
-              2-重要 (0.2)
-             </option>
-<option value="0.25">
-              3-紧急 (0.25)
-             </option>
-<option value="0.3">
-              5-关键 (0.3)
+<option value="1.5">
+              2-关键 (1.5)
              </option>
 </select>
 </td>
@@ -15223,7 +15176,7 @@ else FutureRadar.init();
 <input aria-label="待办事项7得分" class="logistics-score tpi-inline-04" readonly="" type="number"/>
 </td>
 <td>
-<textarea aria-label="待办事项7备注" class="tpi-inline-02" placeholder="备注..." rows="3"></textarea>
+<textarea aria-label="待办事项7备注" class="tpi-inline-02" placeholder="备注..." rows="2" style="width:100%;resize:vertical;min-height:120px;padding:8px;font-family:inherit;font-size:inherit;"></textarea>
 </td>
 </tr>
 <tr>
@@ -15254,20 +15207,14 @@ else FutureRadar.init();
 </td>
 <td class="center">
 <select aria-label="待办事项8等级" class="logistics-level tpi-inline-01">
-<option value="0.1">
-              0-琐事 (0.1)
+<option value="0.5">
+              0-普通 (0.5)
              </option>
-<option value="0.15">
-              1-常规 (0.15)
+<option value="1.0">
+              1-重要 (1.0)
              </option>
-<option value="0.2">
-              2-重要 (0.2)
-             </option>
-<option value="0.25">
-              3-紧急 (0.25)
-             </option>
-<option value="0.3">
-              5-关键 (0.3)
+<option value="1.5">
+              2-关键 (1.5)
              </option>
 </select>
 </td>
@@ -15275,7 +15222,7 @@ else FutureRadar.init();
 <input aria-label="待办事项8得分" class="logistics-score tpi-inline-04" readonly="" type="number"/>
 </td>
 <td>
-<textarea aria-label="待办事项8备注" class="tpi-inline-02" placeholder="备注..." rows="3"></textarea>
+<textarea aria-label="待办事项8备注" class="tpi-inline-02" placeholder="备注..." rows="2" style="width:100%;resize:vertical;min-height:120px;padding:8px;font-family:inherit;font-size:inherit;"></textarea>
 </td>
 </tr>
 <tr>
@@ -15306,20 +15253,14 @@ else FutureRadar.init();
 </td>
 <td class="center">
 <select aria-label="待办事项9等级" class="logistics-level tpi-inline-01">
-<option value="0.1">
-              0-琐事 (0.1)
+<option value="0.5">
+              0-普通 (0.5)
              </option>
-<option value="0.15">
-              1-常规 (0.15)
+<option value="1.0">
+              1-重要 (1.0)
              </option>
-<option value="0.2">
-              2-重要 (0.2)
-             </option>
-<option value="0.25">
-              3-紧急 (0.25)
-             </option>
-<option value="0.3">
-              5-关键 (0.3)
+<option value="1.5">
+              2-关键 (1.5)
              </option>
 </select>
 </td>
@@ -15327,7 +15268,7 @@ else FutureRadar.init();
 <input aria-label="待办事项9得分" class="logistics-score tpi-inline-04" readonly="" type="number"/>
 </td>
 <td>
-<textarea aria-label="待办事项9备注" class="tpi-inline-02" placeholder="备注..." rows="3"></textarea>
+<textarea aria-label="待办事项9备注" class="tpi-inline-02" placeholder="备注..." rows="2" style="width:100%;resize:vertical;min-height:120px;padding:8px;font-family:inherit;font-size:inherit;"></textarea>
 </td>
 </tr>
 <tr>
@@ -15358,20 +15299,14 @@ else FutureRadar.init();
 </td>
 <td class="center">
 <select aria-label="待办事项10等级" class="logistics-level tpi-inline-01">
-<option value="0.1">
-              0-琐事 (0.1)
+<option value="0.5">
+              0-普通 (0.5)
              </option>
-<option value="0.15">
-              1-常规 (0.15)
+<option value="1.0">
+              1-重要 (1.0)
              </option>
-<option value="0.2">
-              2-重要 (0.2)
-             </option>
-<option value="0.25">
-              3-紧急 (0.25)
-             </option>
-<option value="0.3">
-              5-关键 (0.3)
+<option value="1.5">
+              2-关键 (1.5)
              </option>
 </select>
 </td>
@@ -15379,7 +15314,7 @@ else FutureRadar.init();
 <input aria-label="待办事项10得分" class="logistics-score tpi-inline-04" readonly="" type="number"/>
 </td>
 <td>
-<textarea aria-label="待办事项10备注" class="tpi-inline-02" placeholder="备注..." rows="3"></textarea>
+<textarea aria-label="待办事项10备注" class="tpi-inline-02" placeholder="备注..." rows="2" style="width:100%;resize:vertical;min-height:120px;padding:8px;font-family:inherit;font-size:inherit;"></textarea>
 </td>
 </tr>
 <tr class="summary-row">
@@ -18226,24 +18161,23 @@ function calculateAMI() {
 
                         if (!statusSelect || !timeInput || !levelSelect) return;
 
-                        // 1. 状态分 (完成=1, 豁免=1)
+                        // 1. 基础分：完成或豁免=1，未完成=0
                         const statusVal = statusSelect.value;
-                        let statusScore = 0;
-                        if (statusVal === '1') statusScore = 1;
-                        else if (statusVal === 'exempt') statusScore = 1;
+                        let baseScore = 0;
+                        if (statusVal === '1' || statusVal === 'exempt') baseScore = 1;
 
-                        // 🔧 修复12: 基础分 = 状态分 * 2 (双倍基础分)
-                        const baseScore = statusScore * 2;
-
-                        // 3. 时间扣减
+                        // 2. 耗时加分：≤5分钟=0，5-20分钟=0.5，>20分钟=1
                         const time = safeParseFloat(timeInput.value);
                         totalTime += time;
-                        const coeff = safeParseFloat(levelSelect.value) || 0.1;
+                        let timeBonus = 0;
+                        if (time > 20) timeBonus = 1;
+                        else if (time > 5) timeBonus = 0.5;
 
-                        const deduction = (time / 10) * coeff;
+                        // 3. 等级系数：普通=0.5，重要=1.0，关键=1.5
+                        const coeff = safeParseFloat(levelSelect.value) || 0.5;
 
-                        // 4. 实得分 (不低于0)
-                        const finalRowScore = Math.max(0, baseScore - deduction);
+                        // 4. 实得分 = 基础分 + 耗时加分 × 等级系数（加分制）
+                        const finalRowScore = baseScore + timeBonus * coeff;
 
                         if (scoreInput) scoreInput.value = finalRowScore.toFixed(1);
                         totalScore += finalRowScore;
