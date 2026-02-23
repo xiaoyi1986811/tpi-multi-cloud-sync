@@ -434,6 +434,24 @@ console.log('[Storage] IndexedDB+localStorage 双层存储已初始化 (双云�
         </div>
       `;
 
+      // 右上角关闭按钮（与“知道了”一致的关闭逻辑）
+      try{
+        header.style.position = 'relative';
+        const xbtn = document.createElement('button');
+        xbtn.type = 'button';
+        xbtn.setAttribute('aria-label','关闭');
+        xbtn.textContent = '×';
+        xbtn.style.cssText = `
+          position:absolute;top:12px;right:12px;
+          width:34px;height:34px;border:none;border-radius:10px;
+          background:rgba(255,255,255,0.75);color:#334155;
+          font-size:22px;line-height:34px;cursor:pointer;
+          box-shadow:0 6px 16px rgba(0,0,0,0.08);
+        `;
+        xbtn.onclick = btn.onclick;
+        header.appendChild(xbtn);
+      }catch(e){}
+
       const body = document.createElement('div');
       body.style.cssText = `padding:20px 24px;`;
 
@@ -480,6 +498,7 @@ console.log('[Storage] IndexedDB+localStorage 双层存储已初始化 (双云�
       const footer = document.createElement('div');
       footer.style.cssText = `padding:12px 24px 20px;display:flex;justify-content:flex-end;`;
       const btn = document.createElement('button');
+      btn.type = 'button';
       btn.textContent = '知道了 ✓';
       btn.style.cssText = `
         background:${color};color:white;border:none;padding:10px 28px;
@@ -489,9 +508,15 @@ console.log('[Storage] IndexedDB+localStorage 双层存储已初始化 (双云�
       `;
       btn.onmouseenter = () => { btn.style.transform = 'translateY(-1px)'; btn.style.boxShadow = `0 6px 16px ${color}50`; };
       btn.onmouseleave = () => { btn.style.transform = ''; btn.style.boxShadow = `0 4px 12px ${color}40`; };
-      btn.onclick = () => {
-        overlay.style.animation = '__tpiNotifFadeOut 0.2s ease forwards';
+      btn.onclick = (ev) => {
+        try{ ev && ev.preventDefault && ev.preventDefault(); }catch(_){}
+        try{ ev && ev.stopPropagation && ev.stopPropagation(); }catch(_){ }
+        try{ if (overlay && overlay.__tpi_onKey) document.removeEventListener('keydown', overlay.__tpi_onKey, true); }catch(_){ }
+        // 统一关闭：优先播放淡出动画，失败则立即移除
+        try{ overlay.style.animation = '__tpiNotifFadeOut 0.2s ease forwards'; }catch(_){}
         setTimeout(() => { try { overlay.remove(); } catch(_) {} }, 220);
+        // 兜底：确保没有残留
+        setTimeout(() => { try { if (document.getElementById('__tpi-rich-notif')) overlay.remove(); } catch(_) {} }, 800);
       };
       footer.appendChild(btn);
 
@@ -517,6 +542,12 @@ console.log('[Storage] IndexedDB+localStorage 双层存储已初始化 (双云�
         document.head.appendChild(style);
       }
 
+      // ESC 关闭
+      try{
+        const onKey = (e)=>{ if(e && (e.key==='Escape' || e.key==='Esc')) { btn.click(); } };
+        overlay.__tpi_onKey = onKey;
+        document.addEventListener('keydown', onKey, true);
+      }catch(e){}
       document.body.appendChild(overlay);
     } catch(e) {
       console.warn('[RichNotif] 显示通知失败:', e);
@@ -4365,8 +4396,8 @@ if (typeof window.showModal === 'undefined') {
                 ${message}
             </div>
             <div class="modal-footer" style="padding: 15px 20px; border-top: 1px solid #e5e7eb; display: flex; gap: 10px; justify-content: flex-end;">
-                ${showCancel ? `<button class="modal-cancel-btn" style="padding: 10px 20px; border: 1px solid #d1d5db; background: white; color: #6b7280; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 500; transition: all 0.2s;">${cancelText}</button>` : ''}
-                ${showConfirm ? `<button class="modal-confirm-btn" style="padding: 10px 20px; border: none; background: ${iconColor}; color: white; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 500; transition: all 0.2s;">${confirmText}</button>` : ''}
+                ${showCancel ? `<button type="button" class="modal-cancel-btn" style="padding: 10px 20px; border: 1px solid #d1d5db; background: white; color: #6b7280; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 500; transition: all 0.2s;">${cancelText}</button>` : ''}
+                ${showConfirm ? `<button type="button" class="modal-confirm-btn" style="padding: 10px 20px; border: none; background: ${iconColor}; color: white; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 500; transition: all 0.2s;">${confirmText}</button>` : ''}
             </div>
         `;
         
