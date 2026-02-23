@@ -434,6 +434,17 @@ console.log('[Storage] IndexedDB+localStorage 双层存储已初始化 (双云�
         </div>
       `;
 
+      // [Fix 2026-02-23] 统一关闭函数，提前定义在外层作用域，供右上角×和"知道了"按钮共同使用
+      // 原始代码将 xbtn.onclick = btn.onclick 写在 btn 声明之前，导致 xbtn 的 onclick 为 undefined
+      const doClose = (ev) => {
+        try{ ev && ev.preventDefault && ev.preventDefault(); }catch(_){}
+        try{ ev && ev.stopPropagation && ev.stopPropagation(); }catch(_){}
+        try{ if (overlay && overlay.__tpi_onKey) document.removeEventListener('keydown', overlay.__tpi_onKey, true); }catch(_){}
+        try{ overlay.style.animation = '__tpiNotifFadeOut 0.2s ease forwards'; }catch(_){}
+        setTimeout(() => { try { overlay.remove(); } catch(_) {} }, 220);
+        setTimeout(() => { try { if (document.getElementById('__tpi-rich-notif')) overlay.remove(); } catch(_) {} }, 800);
+      };
+
       // 右上角关闭按钮（与“知道了”一致的关闭逻辑）
       try{
         header.style.position = 'relative';
@@ -448,7 +459,7 @@ console.log('[Storage] IndexedDB+localStorage 双层存储已初始化 (双云�
           font-size:22px;line-height:34px;cursor:pointer;
           box-shadow:0 6px 16px rgba(0,0,0,0.08);
         `;
-        xbtn.onclick = btn.onclick;
+        xbtn.onclick = doClose;
         header.appendChild(xbtn);
       }catch(e){}
 
@@ -508,16 +519,7 @@ console.log('[Storage] IndexedDB+localStorage 双层存储已初始化 (双云�
       `;
       btn.onmouseenter = () => { btn.style.transform = 'translateY(-1px)'; btn.style.boxShadow = `0 6px 16px ${color}50`; };
       btn.onmouseleave = () => { btn.style.transform = ''; btn.style.boxShadow = `0 4px 12px ${color}40`; };
-      btn.onclick = (ev) => {
-        try{ ev && ev.preventDefault && ev.preventDefault(); }catch(_){}
-        try{ ev && ev.stopPropagation && ev.stopPropagation(); }catch(_){ }
-        try{ if (overlay && overlay.__tpi_onKey) document.removeEventListener('keydown', overlay.__tpi_onKey, true); }catch(_){ }
-        // 统一关闭：优先播放淡出动画，失败则立即移除
-        try{ overlay.style.animation = '__tpiNotifFadeOut 0.2s ease forwards'; }catch(_){}
-        setTimeout(() => { try { overlay.remove(); } catch(_) {} }, 220);
-        // 兜底：确保没有残留
-        setTimeout(() => { try { if (document.getElementById('__tpi-rich-notif')) overlay.remove(); } catch(_) {} }, 800);
-      };
+      btn.onclick = doClose;
       footer.appendChild(btn);
 
       box.appendChild(header);
