@@ -3,6 +3,73 @@
 <html lang="zh-CN">
 <head>
 <script>
+/* =========================================================
+   ✅ [Hotfix] 兼容旧ID/事件绑定：脚本ID与真实控件不一致时自动映射
+   目标：
+   - 不改布局/不改现有DOM结构
+   - 仅在获取元素时做“旧ID → 新ID”映射，避免监听绑定失败
+   - 同时确保 inline oninput 能找到对应函数（暴露到 window）
+   版本：2026-02-23
+========================================================= */
+(function(){
+  'use strict';
+  try{
+    const ID_MAP = {
+      // 午间防守 / 晚间防守（旧脚本ID → 页面真实ID）
+      'bcm-lunch-duration': 'bcm-lunch-today-duration',
+      'bcm-lunch-ref': 'bcm-lunch-yesterday-duration',
+      'bcm-dinner-duration': 'bcm-dinner-today-duration',
+      'bcm-dinner-ref': 'bcm-dinner-yesterday-duration'
+    };
+
+    // —— getElementById 映射（最常用）——
+    const _origGet = Document.prototype.getElementById;
+    Document.prototype.getElementById = function(id){
+      try{
+        if (id && ID_MAP[id]) {
+          const mapped = _origGet.call(this, ID_MAP[id]);
+          if (mapped) return mapped;
+        }
+      }catch(e){}
+      return _origGet.call(this, id);
+    };
+
+    // —— querySelector('#id') 映射（部分脚本可能使用）——
+    const _origQS = Document.prototype.querySelector;
+    Document.prototype.querySelector = function(sel){
+      try{
+        if (typeof sel === 'string' && sel.charAt(0) === '#') {
+          const id = sel.slice(1);
+          if (ID_MAP[id]) {
+            const mapped = _origGet.call(this, ID_MAP[id]);
+            if (mapped) return mapped;
+          }
+        }
+      }catch(e){}
+      return _origQS.call(this, sel);
+    };
+
+    // —— 暴露关键函数到 window，保证 inline oninput 可调用（若其定义未自动进入全局）——
+    function exposeGlobals(){
+      try{
+        if (typeof window.calculateDefenseScore !== 'function' && typeof calculateDefenseScore === 'function') {
+          window.calculateDefenseScore = calculateDefenseScore;
+        }
+      }catch(e){}
+    }
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', function(){ setTimeout(exposeGlobals, 0); }, { once:true });
+    } else {
+      setTimeout(exposeGlobals, 0);
+    }
+  }catch(e){
+    try{ console.warn('[TPI Hotfix] ID映射补丁加载失败：', e); }catch(_){}
+  }
+})();
+</script>
+
+<script>
 
 /* ===== TPI Hotfix: 防止登录后控制台报错 + 降噪 (2026-02-15) ===== */
 (function(){
@@ -456,8 +523,6 @@ console.log('[Storage] IndexedDB+localStorage 双层存储已初始化 (双云�
     }
   };
 })();
-</script>
-
 </script>
 
 <!-- [Removed] 云端为主(localStorage最小化策略)脚本：已切换为后端同步 -->
@@ -1118,8 +1183,7 @@ window.__tpi_legacy_loadTpiData_1 = function () {
     lines.push('');
     lines.push('');
     lines.push('');
-    return lines.join('
-');
+    return lines.join('\n');
   }
   // ✅ 对外暴露：用于按钮/菜单调用
   window.exportCurrentSnapshot = function(format){
@@ -13610,8 +13674,14 @@ else FutureRadar.init();
 <option value="1">
               ✅ 完成
              </option>
+<option value="0">
+              ⭕ 未完成
+             </option>
 <option value="exempt">
               🛡️ 豁免
+             </option>
+<option value="other">
+              🔍 其他
              </option>
 </select>
 </td>
@@ -13732,8 +13802,14 @@ else FutureRadar.init();
 <option value="1">
               ✅ 完成
              </option>
+<option value="0">
+              ⭕ 未完成
+             </option>
 <option value="exempt">
               🛡️ 豁免
+             </option>
+<option value="other">
+              🔍 其他
              </option>
 </select>
 </td>
