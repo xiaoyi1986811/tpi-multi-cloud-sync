@@ -7433,7 +7433,7 @@ window.exportAsCSV = function() {
 </div>
 <div>
 <label class="tpi-u-8ba16d">
-              ⏰ 当天精细提醒 (分钟)
+              ⏰ 当天精细提醒（提前分钟）
              </label>
 <select id="radar-remind-sameday" style="width:100%;">
 <option value="0">
@@ -7500,9 +7500,12 @@ window.exportAsCSV = function() {
 </div>
 <div class="modal-body" style="display: flex; flex-direction: column; flex: 1; overflow-y: auto; padding: 15px;">
 <!-- 标签页导航 -->
-<div style="display: flex; gap: 8px; margin-bottom: 16px; border-bottom: 2px solid #e5e7eb;">
+<div style="display: flex; gap: 8px; margin-bottom: 16px; border-bottom: 2px solid #e5e7eb; flex-wrap: wrap;">
 <button class="settings-tab active tpi-u-dc3df4" id="settings-tab-push" onclick="FutureRadar.switchSettingsTab('push')">
           🔔 PushPlus配置
+         </button>
+<button class="settings-tab tpi-u-dc3df4" id="settings-tab-worker" onclick="FutureRadar.switchSettingsTab('worker')">
+          ☁️ 后台推送Worker
          </button>
 <button class="settings-tab tpi-u-dc3df4" id="settings-tab-import" onclick="FutureRadar.switchSettingsTab('import')">
           📥 爬虫导入
@@ -7526,23 +7529,107 @@ window.exportAsCSV = function() {
            注册并获取您的专属Token
           </p>
 </div>
+<!-- ✅ 新增：测试推送按钮 -->
+<div style="margin-bottom: 16px;">
+  <button id="radar-test-push-btn" onclick="FutureRadar.testPush()" style="width:100%; padding: 10px; background: linear-gradient(135deg, #3b82f6, #1d4ed8); color: white; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.2s;">
+    📨 发送测试消息（验证是否通畅）
+  </button>
+  <p style="margin-top: 6px; font-size: 12px; color: #6b7280; text-align: center;">点击后若手机收到消息，说明配置正确</p>
+</div>
 <div style="background: #f3f4f6; padding: 12px; border-radius: 8px; font-size: 13px; color: #4b5563;">
 <div style="font-weight: 600; margin-bottom: 8px;">
            💡 功能说明
           </div>
 <ul style="margin: 0; padding-left: 20px;">
 <li>
-            每天首次打开系统时自动检查待办事项
+            每天首次打开页面时自动检查「提前N天」事件并推送
            </li>
 <li>
-            将符合提醒条件的事件推送到您的设备
+            页面保持打开时，每分钟自动检查「当天精细提醒」
            </li>
 <li>
-            重要事件会在剩余3天内强制提醒
+            ⭐ 重要事件在剩余 3 天内强制提醒（不受提前天数限制）
+           </li>
+           <li style="color: #dc2626; font-weight: 600;">
+            ⚠️ 当天精细提醒需要页面保持打开状态才能触发
            </li>
 </ul>
 </div>
 </div>
+<!-- ☁️ 后台推送 Worker 标签页 -->
+<div class="settings-content" id="settings-content-worker" style="display:none">
+
+  <!-- 状态区 -->
+  <div id="worker-status-banner" style="display:none; padding:10px 14px; border-radius:8px; margin-bottom:14px; font-size:13px; font-weight:600;"></div>
+
+  <!-- Worker URL 配置 -->
+  <div style="margin-bottom:14px;">
+    <label style="display:block; margin-bottom:6px; font-weight:600;">☁️ Cloudflare Worker 地址</label>
+    <input id="radar-worker-url" type="text"
+      placeholder="https://tpi-reminder-worker.你的账号.workers.dev"
+      style="width:100%; padding:8px; border:1px solid #d1d5db; border-radius:6px; font-size:13px;"/>
+    <p style="margin-top:6px; font-size:12px; color:#6b7280;">
+      部署 Worker 后将其 URL 填入此处，即可实现关闭网页也能收到推送
+    </p>
+  </div>
+
+  <!-- 操作按钮行 -->
+  <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:14px;">
+    <button onclick="FutureRadar.testWorkerConnection()"
+      style="padding:9px; background:linear-gradient(135deg,#3b82f6,#1d4ed8); color:#fff; border:none; border-radius:8px; font-weight:600; cursor:pointer; font-size:13px;">
+      🔗 测试连接
+    </button>
+    <button onclick="FutureRadar.triggerWorkerNow('daily')"
+      style="padding:9px; background:linear-gradient(135deg,#10b981,#059669); color:#fff; border:none; border-radius:8px; font-weight:600; cursor:pointer; font-size:13px;">
+      📋 立即触发每日推送
+    </button>
+    <button onclick="FutureRadar.triggerWorkerNow('sameday')"
+      style="padding:9px; background:linear-gradient(135deg,#f59e0b,#d97706); color:#fff; border:none; border-radius:8px; font-weight:600; cursor:pointer; font-size:13px;">
+      ⏰ 立即检查精细提醒
+    </button>
+    <button onclick="FutureRadar.saveWorkerConfig()"
+      style="padding:9px; background:linear-gradient(135deg,#8b5cf6,#6d28d9); color:#fff; border:none; border-radius:8px; font-weight:600; cursor:pointer; font-size:13px;">
+      💾 保存 Worker 配置
+    </button>
+  </div>
+
+  <!-- 说明区 -->
+  <div style="background:#f0fdf4; border:1px solid #bbf7d0; border-radius:8px; padding:12px; font-size:12px; color:#166534; margin-bottom:12px;">
+    <div style="font-weight:700; margin-bottom:6px;">✅ 配置后的推送能力</div>
+    <div style="display:grid; gap:4px;">
+      <div>📋 <strong>每天 07:30</strong>（北京时间）自动推送当天及近期所有待办事项</div>
+      <div>⏰ <strong>每 15 分钟</strong>检查当天精细提醒，无需网页保持打开</div>
+      <div>🔁 Gist 备份后数据自动同步，Worker 每次运行时读取最新事件</div>
+    </div>
+  </div>
+
+  <!-- 部署步骤 -->
+  <details style="border:1px solid #e5e7eb; border-radius:8px; overflow:hidden;">
+    <summary style="padding:10px 14px; background:#f9fafb; cursor:pointer; font-weight:600; font-size:13px; user-select:none;">
+      📖 如何部署 Cloudflare Worker？（点击展开）
+    </summary>
+    <div style="padding:14px; font-size:12px; color:#374151; line-height:1.8;">
+      <div style="margin-bottom:8px;"><strong>① 前提：</strong>注册 <a href="https://cloudflare.com" target="_blank" style="color:#3b82f6;">Cloudflare 账号</a>（免费），安装 Node.js</div>
+      <div style="margin-bottom:8px;"><strong>② 获取 GitHub Token：</strong>GitHub → Settings → Developer settings → Personal access tokens，创建勾选 <code>gist</code> 权限的 token</div>
+      <div style="margin-bottom:8px;"><strong>③ 执行以下命令：</strong></div>
+      <pre style="background:#1e1e1e; color:#d4d4d4; padding:10px; border-radius:6px; overflow-x:auto; font-size:11px; line-height:1.6;">npm install -g wrangler
+wrangler login
+
+# 创建 KV 命名空间（粘贴返回的 ID 到 wrangler.toml）
+npx wrangler kv:namespace create TPI_REMINDER_KV
+npx wrangler kv:namespace create TPI_REMINDER_KV --preview
+
+# 设置密钥
+npx wrangler secret put GITHUB_TOKEN
+npx wrangler secret put PUSHPLUS_TOKEN
+
+# 部署
+npx wrangler deploy</pre>
+      <div style="margin-top:8px; color:#6b7280;">Worker 文件（worker.js / wrangler.toml）已随本网页一同提供，解压后在文件夹内执行上述命令即可。</div>
+    </div>
+  </details>
+</div>
+
 <!-- 爬虫导入标签页 -->
 <div class="settings-content" id="settings-content-import" style="display:none">
 <p class="text-muted" style="margin-bottom: 12px;">
@@ -7943,6 +8030,78 @@ try {
         this.loadData();
         this.render();
         this.checkPushOnLoad();
+        this.startSameDayReminderTimer();
+    }
+
+    // ✅ 当天精细提醒定时器（每分钟检查一次）
+    startSameDayReminderTimer() {
+        const sentKey = 'tpi_radar_sameday_sent';
+
+        const checkSameDayReminders = async () => {
+            // ✅ 修复：每次调用时检查 token，而不是启动时一次性检查
+            if (!this.pushConfig.token) return;
+
+            const now = new Date();
+            const todayStr = this._getRealToday();
+            const nowMins = now.getHours() * 60 + now.getMinutes();
+
+            // 读取已发送记录（每天重置）
+            let sentRecord = {};
+            try {
+                const raw = __tpi_ls_get(sentKey);
+                if (raw) sentRecord = JSON.parse(raw);
+                if (sentRecord._date !== todayStr) sentRecord = { _date: todayStr };
+            } catch(e) { sentRecord = { _date: todayStr }; }
+
+            let toSend = [];
+
+            Object.keys(this.data).forEach(category => {
+                this.data[category].forEach(item => {
+                    if (item.completed || !item.reminderActive) return;
+                    if (item.date !== todayStr) return; // 只处理今天的事件
+
+                    const sameDayMins = parseInt(item.remindSameDayMins) || 0;
+                    if (sameDayMins <= 0) return;
+
+                    // ✅ 修复：正确解析所有时间模式
+                    const timeStr = item.timeStart || item.time || '';
+                    if (!timeStr) return;
+                    const timeParts = timeStr.match(/(\d{1,2}):(\d{2})/);
+                    if (!timeParts) return;
+
+                    const eventMins = parseInt(timeParts[1]) * 60 + parseInt(timeParts[2]);
+                    const diffMins = eventMins - nowMins;
+
+                    // 在 [0, sameDayMins] 分钟窗口内且未发送过
+                    if (diffMins >= 0 && diffMins <= sameDayMins) {
+                        const sentId = `${item.id}_${sameDayMins}`;
+                        if (sentRecord[sentId]) return;
+                        toSend.push({ item, diffMins, sentId });
+                    }
+                });
+            });
+
+            if (toSend.length === 0) return;
+
+            const lines = toSend.map(({ item, diffMins }) => {
+                const prefix = item.isImportant ? '⭐' : '⏰';
+                const timeDesc = diffMins === 0 ? '【现在开始！】' : `还有 ${diffMins} 分钟`;
+                const loc = item.location ? ` 📍${item.location}` : '';
+                return `${prefix} ${item.title}\n${timeDesc}，${item.timeStart || item.time}${loc}`;
+            });
+
+            const result = await this._sendPush(`⏰ TPI 当天提醒：${toSend.length} 个事件即将开始`, lines);
+            if (result.ok) {
+                toSend.forEach(({ sentId }) => { sentRecord[sentId] = true; });
+                __tpi_ls_set(sentKey, JSON.stringify(sentRecord));
+                this.showSimpleNotification(`⏰ 已推送 ${toSend.length} 个当天提醒`, 'success');
+            }
+        };
+
+        // 立即检查一次
+        checkSameDayReminders();
+        // 每分钟检查一次
+        setInterval(checkSameDayReminders, 60 * 1000);
     }
 
     reload() {
@@ -9131,7 +9290,7 @@ const current = (this.sortMode && this.sortMode[key]) ? this.sortMode[key] : 'pr
     }
 
     switchSettingsTab(tabName) {
-        const tabs = ['push', 'import', 'fileimport'];
+        const tabs = ['push', 'worker', 'import', 'fileimport'];
         tabs.forEach(tab => {
             const tabBtn = document.getElementById('settings-tab-' + tab);
             const tabContent = document.getElementById('settings-content-' + tab);
@@ -9144,6 +9303,15 @@ const current = (this.sortMode && this.sortMode[key]) ? this.sortMode[key] : 'pr
                 tabContent.style.display = 'none';
             }
         });
+        // 切换到 Worker 标签时回填 URL
+        if (tabName === 'worker') {
+            const urlInput = document.getElementById('radar-worker-url');
+            if (urlInput) {
+                const saved = __tpi_ls_get('tpi_radar_worker_url') || '';
+                urlInput.value = saved;
+                if (saved) this._workerStatusBanner('已配置 Worker：' + saved, 'info');
+            }
+        }
     }
 
     /* -------- 格式导入：文件选择 -------- */
@@ -9425,18 +9593,91 @@ const current = (this.sortMode && this.sortMode[key]) ? this.sortMode[key] : 'pr
     onFormatImportTypeChange() { /* 已废弃，保留避免报错 */ }
 
     saveSettings() {
-        // 保存PushPlus配置
         const token = document.getElementById('radar-push-token').value.trim();
+        const tokenChanged = token !== this.pushConfig.token;
         this.pushConfig.token = token;
-        __tpi_ls_set(this.pushKey, JSON.stringify(this.pushConfig));
-
-        if (typeof NotifySystem !== 'undefined') {
-            NotifySystem.showToast('✅ 配置已保存');
-        } else {
-            this.showSimpleNotification('✅ 配置已保存', 'success');
+        // ✅ 修复：token 变更时重置每日检查记录，确保新 token 立即生效
+        if (tokenChanged) {
+            this.pushConfig.lastCheck = '';
         }
-
+        __tpi_ls_set(this.pushKey, JSON.stringify(this.pushConfig));
+        this.showSimpleNotification('✅ 配置已保存', 'success');
         this.closeSettingsModal();
+        // ✅ 修复：保存后立即触发一次推送检查
+        if (tokenChanged && token) {
+            setTimeout(() => this.checkPushOnLoad(), 500);
+        }
+    }
+
+    // =============================================
+    //  ☁️ Cloudflare Worker 后台推送 - 相关方法
+    // =============================================
+
+    /** 显示 Worker 标签页的状态横幅 */
+    _workerStatusBanner(msg, type = 'info') {
+        const el = document.getElementById('worker-status-banner');
+        if (!el) return;
+        const styles = {
+            info:    'background:#eff6ff; border:1px solid #bfdbfe; color:#1e40af;',
+            success: 'background:#f0fdf4; border:1px solid #bbf7d0; color:#166534;',
+            error:   'background:#fef2f2; border:1px solid #fecaca; color:#991b1b;',
+            loading: 'background:#fffbeb; border:1px solid #fde68a; color:#92400e;',
+        };
+        el.style.cssText = `display:block; padding:10px 14px; border-radius:8px; margin-bottom:14px; font-size:13px; font-weight:600; ${styles[type] || styles.info}`;
+        el.textContent = msg;
+    }
+
+    /** 保存 Worker URL */
+    saveWorkerConfig() {
+        const url = (document.getElementById('radar-worker-url')?.value || '').trim();
+        if (!url) { this._workerStatusBanner('⚠️ 请先填写 Worker URL', 'error'); return; }
+        if (!url.startsWith('https://')) { this._workerStatusBanner('⚠️ URL 必须以 https:// 开头', 'error'); return; }
+        __tpi_ls_set('tpi_radar_worker_url', url);
+        this._workerStatusBanner('✅ Worker URL 已保存：' + url, 'success');
+        this.showSimpleNotification('✅ Worker 配置已保存', 'success');
+    }
+
+    /** 获取已保存的 Worker URL */
+    _getWorkerUrl() {
+        return __tpi_ls_get('tpi_radar_worker_url') || '';
+    }
+
+    /** 测试 Worker 连接 */
+    async testWorkerConnection() {
+        const url = document.getElementById('radar-worker-url')?.value?.trim() || this._getWorkerUrl();
+        if (!url) { this._workerStatusBanner('⚠️ 请先填写 Worker URL', 'error'); return; }
+        this._workerStatusBanner('🔄 正在连接 Worker...', 'loading');
+        try {
+            const resp = await fetch(url + '/status', { signal: AbortSignal.timeout(10000) });
+            if (!resp.ok) throw new Error('HTTP ' + resp.status);
+            const data = await resp.json();
+            this._workerStatusBanner(
+                `✅ Worker 连接正常！北京时间：${data.time_beijing}  |  今天：${data.today_beijing}  |  GitHub Token：${data.github_token_set ? '已配置✓' : '未配置✗'}  |  PushPlus Token：${data.pushplus_token_set ? '已配置✓' : '未配置✗'}`,
+                'success'
+            );
+        } catch (e) {
+            this._workerStatusBanner('❌ 连接失败：' + e.message + '（请检查 Worker URL 是否正确，或 Worker 是否已部署）', 'error');
+        }
+    }
+
+    /** 手动触发 Worker 推送（daily / sameday） */
+    async triggerWorkerNow(type) {
+        const url = document.getElementById('radar-worker-url')?.value?.trim() || this._getWorkerUrl();
+        if (!url) { this._workerStatusBanner('⚠️ 请先填写并保存 Worker URL', 'error'); return; }
+        const labelMap = { daily: '每日摘要推送', sameday: '当天精细提醒检查' };
+        this._workerStatusBanner(`🔄 正在触发 ${labelMap[type] || type}...`, 'loading');
+        try {
+            const resp = await fetch(`${url}/trigger/${type}`, { signal: AbortSignal.timeout(30000) });
+            const text = await resp.text();
+            if (resp.ok) {
+                this._workerStatusBanner(`✅ ${text}`, 'success');
+                this.showSimpleNotification('✅ ' + text, 'success');
+            } else {
+                this._workerStatusBanner('❌ Worker 返回错误：' + text, 'error');
+            }
+        } catch (e) {
+            this._workerStatusBanner('❌ 请求失败：' + e.message, 'error');
+        }
     }
 
     // 保留原有的openImportModal方法以兼容，但改为打开设置弹窗的导入标签页
@@ -9445,92 +9686,110 @@ const current = (this.sortMode && this.sortMode[key]) ? this.sortMode[key] : 'pr
         this.switchSettingsTab('import');
     }
 
+    // ✅ 统一推送工具函数 - 所有推送都走这里
+    async _sendPush(title, lines) {
+        if (!this.pushConfig.token) return { ok: false, reason: 'no_token' };
+        try {
+            const response = await fetch('https://www.pushplus.plus/send', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    token: this.pushConfig.token,
+                    title: title,
+                    content: lines.join('\n\n'),
+                    template: 'txt'
+                })
+            });
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            const result = await response.json();
+            // PushPlus 返回 code=200 表示成功
+            if (result.code !== 200) throw new Error(`PushPlus错误: ${result.msg || result.code}`);
+            return { ok: true };
+        } catch(e) {
+            console.error('❌ PushPlus推送失败:', e);
+            return { ok: false, reason: e.message };
+        }
+    }
+
+    // ✅ 获取真实今天日期（不受页面日期选择器影响）
+    _getRealToday() {
+        const d = new Date();
+        return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+    }
+
     async checkPushOnLoad() {
-        // 如果没有配置token,直接返回
-        if (!this.pushConfig.token) {
-            return;
-        }
+        if (!this.pushConfig.token) return;
 
-        const today = (typeof __tpi_getSelectedDate === 'function') ? __tpi_getSelectedDate() : (()=>{const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;})();
+        // ✅ 修复：用真实系统日期，不用页面选择的日期
+        const today = this._getRealToday();
 
-        // 如果今天已经检查过,跳过
-        if (this.pushConfig.lastCheck === today) {
-            return;
-        }
+        // 如果今天已经检查过，跳过（当天精细提醒由 startSameDayReminderTimer 单独处理）
+        if (this.pushConfig.lastCheck === today) return;
 
-        // 收集所有板块中开启提醒且未完成的事件
+        // 收集所有需要提醒的事件
         let msgs = [];
-        let eventCount = 0;
-
         Object.keys(this.data).forEach(category => {
             this.data[category].forEach(i => {
-                eventCount++;
-                if (!i.completed && i.reminderActive) {
-                    const d = this.daysLeft(i.date, i.dateEnd);
-                    // 逻辑：到达用户设定的提醒天数 OR 属于重要事件且剩余3天内(强制提醒)
-                    // 连续性事件进行中时不提醒
-                    const isInProgress = i.dateEnd && new Date(i.date) <= new Date() && new Date(i.dateEnd) >= new Date();
-                    if (!isInProgress && ((d >= 0 && d <= i.remindDays) || (i.isImportant && d <= 3 && d >= 0))) {
-                        let prefix = '';
-                        if (i.isImportant) prefix += '⭐';
-                        if (d <= 1) prefix += '🔥';
-                        else if (d <= 3) prefix += '⚠️';
-                        
-                        // 连续性事件显示日期范围
-                        let dateInfo = i.dateEnd ? `${i.date}→${i.dateEnd}` : i.date;
-                        msgs.push(`${prefix} ${i.title} [${dateInfo}] [剩${d}天]`);
-                    }
+                if (i.completed || !i.reminderActive) return;
+                const d = this.daysLeft(i.date, i.dateEnd);
+                // ✅ 修复：用 parseInt 确保数字比较正确
+                const remindDays = parseInt(i.remindAdvanceDays || i.remindDays || 1);
+                // 连续性事件进行中时不提醒
+                const isInProgress = i.dateEnd && new Date(i.date) <= new Date() && new Date(i.dateEnd) >= new Date();
+                // 触发条件：剩余天数在提前提醒范围内，或重要事件3天内强制提醒
+                if (!isInProgress && d >= 0 && (d <= remindDays || (i.isImportant && d <= 3))) {
+                    let prefix = '';
+                    if (i.isImportant) prefix += '⭐';
+                    if (d === 0) prefix += '🔥 【今天】';
+                    else if (d === 1) prefix += '🔥 【明天】';
+                    else if (d <= 3) prefix += '⚠️ ';
+                    const dateInfo = i.dateEnd ? `${i.date}→${i.dateEnd}` : i.date;
+                    const timeInfo = i.timeStart ? ` ${i.timeStart}` : '';
+                    msgs.push(`${prefix} ${i.title}\n📅 ${dateInfo}${timeInfo} | 还剩 ${d} 天`);
                 }
             });
         });
 
-        if (msgs.length > 0) {
-            try {
+        // 标记今天已检查（不管有没有事件，防止重复推）
+        this.pushConfig.lastCheck = today;
+        __tpi_ls_set(this.pushKey, JSON.stringify(this.pushConfig));
 
-                const response = await fetch('http://www.pushplus.plus/send', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({
-                        token: this.pushConfig.token,
-                        title: `TPI 提醒: ${msgs.length}个待办`,
-                        content: msgs.join('\n\n'),
-                        template: 'txt'
-                    })
-                });
+        if (msgs.length === 0) return;
 
-                // 检查响应状态
-                if (response.ok) {
-                    const result = await response.json();
-
-                    // 更新最后检查时间
-                    this.pushConfig.lastCheck = today;
-                    __tpi_ls_set(this.pushKey, JSON.stringify(this.pushConfig));
-
-                    // 显示成功提示
-                    if (typeof NotifySystem !== 'undefined') {
-                        NotifySystem.showToast(`🔔 已推送${msgs.length}个提醒到您的设备`);
-                    } else {
-                        this.showSimpleNotification(`✅ 已推送${msgs.length}个提醒`, 'success');
-                    }
-                } else {
-                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-                }
-
-            } catch(e) {
-                console.error('❌ Pushplus推送失败:', e);
-
-                // 显示友好的错误提示
-                if (e.message.includes('Failed to fetch') || e.message.includes('NetworkError')) {
-                    this.showSimpleNotification('⚠️ 网络连接失败,无法发送提醒', 'warning');
-                } else if (e.message.includes('HTTP 400')) {
-                    this.showSimpleNotification('⚠️ Pushplus token无效,请检查配置', 'error');
-                } else {
-                    this.showSimpleNotification('⚠️ 推送服务暂时不可用', 'warning');
-                }
-            }
+        const result = await this._sendPush(`📋 TPI 每日提醒：${msgs.length} 个待办事项`, msgs);
+        if (result.ok) {
+            this.showSimpleNotification(`🔔 已推送 ${msgs.length} 个提醒到手机`, 'success');
         } else {
-            this.pushConfig.lastCheck = today;
-            __tpi_ls_set(this.pushKey, JSON.stringify(this.pushConfig));
+            this.showSimpleNotification(`⚠️ 推送失败：${result.reason}`, 'error');
+        }
+    }
+
+    // ✅ 测试推送（点击按钮手动触发）
+    async testPush() {
+        const token = document.getElementById('radar-push-token')?.value?.trim();
+        if (!token) {
+            alert('请先填写 PushPlus Token');
+            return;
+        }
+        const btn = document.getElementById('radar-test-push-btn');
+        if (btn) { btn.disabled = true; btn.textContent = '发送中...'; }
+
+        const oldToken = this.pushConfig.token;
+        this.pushConfig.token = token; // 临时使用输入框中的 token
+
+        const result = await this._sendPush('✅ TPI 推送测试', [
+            '🎉 推送功能正常！',
+            `⏰ 测试时间：${new Date().toLocaleString('zh-CN')}`,
+            '📌 如果您收到这条消息，说明提醒功能已成功配置。'
+        ]);
+
+        this.pushConfig.token = oldToken; // 恢复
+        if (btn) { btn.disabled = false; btn.textContent = '📨 发送测试消息'; }
+
+        if (result.ok) {
+            this.showSimpleNotification('✅ 测试消息已发出，请检查手机', 'success');
+        } else {
+            this.showSimpleNotification(`❌ 发送失败：${result.reason}`, 'error');
         }
     }
 
@@ -15842,6 +16101,8 @@ if (document.readyState === 'loading') {
   </div>
 </div>
 <!-- 数据统计 -->
+</div>
+</div>
 </div>
 </section>
 </div>
