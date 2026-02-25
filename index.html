@@ -7587,6 +7587,11 @@ window.exportAsCSV = function() {
       style="padding:9px; background:linear-gradient(135deg,#f59e0b,#d97706); color:#fff; border:none; border-radius:8px; font-weight:600; cursor:pointer; font-size:13px;">
       ⏰ 立即检查精细提醒
     </button>
+    <button onclick="FutureRadar.triggerWorkerNow('test')"
+      style="padding:9px; background:linear-gradient(135deg,#06b6d4,#0891b2); color:#fff; border:none; border-radius:8px; font-weight:600; cursor:pointer; font-size:13px;">
+      🧪 测试推送通道
+    </button>
+
     <button onclick="FutureRadar.saveWorkerConfig()"
       style="padding:9px; background:linear-gradient(135deg,#8b5cf6,#6d28d9); color:#fff; border:none; border-radius:8px; font-weight:600; cursor:pointer; font-size:13px;">
       💾 保存 Worker 配置
@@ -9660,11 +9665,11 @@ const current = (this.sortMode && this.sortMode[key]) ? this.sortMode[key] : 'pr
         }
     }
 
-    /** 手动触发 Worker 推送（daily / sameday） */
+    /** 手动触发 Worker 推送（daily / sameday / test） */
     async triggerWorkerNow(type) {
         const url = document.getElementById('radar-worker-url')?.value?.trim() || this._getWorkerUrl();
         if (!url) { this._workerStatusBanner('⚠️ 请先填写并保存 Worker URL', 'error'); return; }
-        const labelMap = { daily: '每日摘要推送', sameday: '当天精细提醒检查' };
+        const labelMap = { daily: '每日摘要推送', sameday: '当天精细提醒检查', test: '推送通道测试' };
         this._workerStatusBanner(`🔄 正在触发 ${labelMap[type] || type}...`, 'loading');
         try {
             const resp = await fetch(`${url}/trigger/${type}`, { signal: AbortSignal.timeout(30000) });
