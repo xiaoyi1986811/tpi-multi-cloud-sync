@@ -7550,6 +7550,14 @@ window.exportAsCSV = function() {
     </p>
   </div>
 
+  
+  <div style="display:flex; align-items:center; gap:8px; margin: 6px 0 12px;">
+    <input type="checkbox" id="radar-worker-force" style="width:16px; height:16px; cursor:pointer;"/>
+    <label for="radar-worker-force" style="font-size:12px; color:#374151; cursor:pointer;">
+      强制重发（跳过去重，仅用于测试/补发）
+    </label>
+  </div>
+
   <!-- 操作按钮行 -->
   <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:14px;">
     <button onclick="FutureRadar.testWorkerConnection()"
@@ -9669,7 +9677,9 @@ const current = (this.sortMode && this.sortMode[key]) ? this.sortMode[key] : 'pr
         const labelMap = { daily: '每日摘要推送', sameday: '当天精细提醒检查', test: '推送通道测试' };
         this._workerStatusBanner(`🔄 正在触发 ${labelMap[type] || type}...`, 'loading');
         try {
-            const resp = await fetch(`${url}/trigger/${type}`, { signal: AbortSignal.timeout(30000) });
+            const force = !!document.getElementById('radar-worker-force')?.checked;
+            const q = force ? '?force=1' : '';
+            const resp = await fetch(`${url}/trigger/${type}${q}`, { signal: AbortSignal.timeout(30000) });
             const text = await resp.text();
             if (resp.ok) {
                 this._workerStatusBanner(`✅ ${text}`, 'success');
