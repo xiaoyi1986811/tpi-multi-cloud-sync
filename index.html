@@ -1,8 +1,40 @@
 <!DOCTYPE html>
-
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8"/>
+<!-- 性能优化: DNS预解析和预连接 -->
+<link crossorigin="" href="https://cdn.jsdelivr.net" rel="preconnect"/>
+<link href="https://cdn.jsdelivr.net" rel="dns-prefetch"/>
+<!-- 性能优化 -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<!-- 安全增强元标签 -->
+<meta content="nosniff" http-equiv="X-Content-Type-Options"/>
+<meta content="SAMEORIGIN" http-equiv="X-Frame-Options"/>
+<meta content="1; mode=block" http-equiv="X-XSS-Protection"/>
+<meta content="strict-origin-when-cross-origin" http-equiv="Referrer-Policy"/>
+<!-- Netlify部署优化 -->
+<meta content="tpi-system" name="netlify-deploy"/>
+<link href="https://mytpi.netlify.app/" rel="canonical"/>
+<!-- 社交媒体优化 (Open Graph) -->
+<meta content="TPI全维效能管理系统 第22版" property="og:title"/>
+<meta content="学术生产力跟踪系统 | 本地数据存储" property="og:description"/>
+<meta content="website" property="og:type"/>
+<meta content="zh_CN" property="og:locale"/>
+<meta content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=5.0, user-scalable=yes, viewport-fit=cover" name="viewport"/>
+<meta content="TPI全维效能管理系统 第22版 - 跨设备同步 | 支持电脑/手机/平板访问" name="description"/>
+<meta content="TPI,效能管理,学术生产力,时间管理,习惯追踪,跨设备同步" name="keywords"/>
+<meta content="TPI System" name="author"/>
+<!-- 移动端优化 -->
+<meta content="yes" name="apple-mobile-web-app-capable"/>
+<meta content="black-translucent" name="apple-mobile-web-app-status-bar-style"/>
+<meta content="TPI效能" name="apple-mobile-web-app-title"/>
+<meta content="yes" name="mobile-web-app-capable"/>
+<meta content="telephone=no, email=no, address=no" name="format-detection"/>
+<meta content="#2563eb" name="theme-color"/>
+<!-- PWA Manifest支持 -->
+<link id="pwa-manifest" rel="manifest"/>
+
 <script>
 /* =========================================================
    ✅ [Hotfix] 兼容旧ID/事件绑定：脚本ID与真实控件不一致时自动映射
@@ -387,6 +419,7 @@ console.log('[Storage] IndexedDB+localStorage 双层存储已初始化 (双云�
 })();
 </script>
 <script>
+'use strict';
 /* =========================================================
    ✅ [Fix V13] 丰富同步通知系统 — 上传/下载成功后显示详细信息弹窗
 ========================================================= */
@@ -562,6 +595,7 @@ console.log('[Storage] IndexedDB+localStorage 双层存储已初始化 (双云�
 <!-- [Removed] 云端为主(localStorage最小化策略)脚本：已切换为后端同步 -->
 
 <script>
+'use strict';
 // ✅ 强制浅色模式（已取消深色模式）：不影响任何业务逻辑/同步/导出
 (function(){
   function forceLight(){
@@ -597,6 +631,7 @@ console.log('[Storage] IndexedDB+localStorage 双层存储已初始化 (双云�
 })();
 </script>
 <script>
+'use strict';
 /* =========================================================
    清空表单函数 - 用于切换日期时清空所有输入
 ========================================================= */
@@ -715,6 +750,7 @@ window.__tpi_clearAllForm = function() {
 };
 </script>
 <script>
+'use strict';
 /* =========================================================
    日期初始化脚本 - 最优先执行
    确保页面打开时日期输入框显示当天真实日期
@@ -752,6 +788,7 @@ console.log('✅ 日期初始化脚本已加载');
 <script src="https://cdn.jsdelivr.net/npm/pako@2.1.0/dist/pako.min.js"></script>
 
 <script>
+'use strict';
 /* =========================================================
    云端为主 · 数据导出与备份 · 修改版
    - exportAsJSON: 仅导出配置（不导出数据，数据在云端）
@@ -1226,6 +1263,7 @@ window.__tpi_legacy_loadTpiData_1 = function () {
 console.log('✅ 独裁补丁 v3 已在 <head> 强制加载');
 </script>
 <script>
+'use strict';
 /* =========================================================
    独裁补丁 v5 · collectDailyData 和 restoreUIFromData
    放置位置：<head> 内
@@ -2031,6 +2069,7 @@ window.getTpiDayDataAsync = async function(dateStr) {
 
 </script>
 <script>
+'use strict';
 /* =========================================================
    [Replaced] GitHub 同步脚本已移除（已切换到 TPI+ 后端 /register /login /save /load）
    - 为避免旧按钮/旧调用残留导致报错，这里仅保留最小空实现（不会访问 GitHub）
@@ -2177,50 +2216,8 @@ window.getTpiDayDataAsync = async function(dateStr) {
 })();
 </script>
 <script>
-/* =========================================================
-   独裁补丁 v4 · Markdown 专用导出
-========================================================= */
-
-window.exportAsMarkdown = function () {
-    // ✅ 加固：导出“当前页面即时快照”（包含未点保存的输入/勾选与规则生成内容）
-    if (window.exportCurrentSnapshot) return window.exportCurrentSnapshot('markdown');
-    alert('❌ 导出组件未就绪：exportCurrentSnapshot 不存在');
-};
-</script>
-<!-- 性能优化: DNS预解析和预连接 -->
-<link crossorigin="" href="https://cdn.jsdelivr.net" rel="preconnect"/>
-<link href="https://cdn.jsdelivr.net" rel="dns-prefetch"/>
-<!-- 性能优化 -->
-<link href="https://fonts.googleapis.com" rel="preconnect"/>
-<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
-<!-- 安全增强元标签 -->
-<meta content="nosniff" http-equiv="X-Content-Type-Options"/>
-<meta content="SAMEORIGIN" http-equiv="X-Frame-Options"/>
-<meta content="1; mode=block" http-equiv="X-XSS-Protection"/>
-<meta content="strict-origin-when-cross-origin" name="referrer"/>
-<!-- Netlify部署优化 -->
-<meta content="tpi-system" name="netlify-deploy"/>
-<link href="https://mytpi.netlify.app/" rel="canonical"/>
-<!-- 社交媒体优化 (Open Graph) -->
-<meta content="TPI全维效能管理系统 第22版" property="og:title"/>
-<meta content="学术生产力跟踪系统 | 本地数据存储" property="og:description"/>
-<meta content="website" property="og:type"/>
-<meta content="zh_CN" property="og:locale"/>
-<meta content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=5.0, user-scalable=yes, viewport-fit=cover" name="viewport"/>
-<meta content="TPI全维效能管理系统 第22版 - 跨设备同步 | 支持电脑/手机/平板访问" name="description"/>
-<meta content="TPI,效能管理,学术生产力,时间管理,习惯追踪,跨设备同步" name="keywords"/>
-<meta content="TPI System" name="author"/>
-<!-- 移动端优化 -->
-<meta content="yes" name="apple-mobile-web-app-capable"/>
-<meta content="black-translucent" name="apple-mobile-web-app-status-bar-style"/>
-<meta content="TPI效能" name="apple-mobile-web-app-title"/>
-<meta content="yes" name="mobile-web-app-capable"/>
-<meta content="telephone=no, email=no, address=no" name="format-detection"/>
-<meta content="#2563eb" name="theme-color"/>
-<!-- PWA Manifest支持 -->
-<link id="pwa-manifest" rel="manifest"/>
-<script>
-   // 动态生成PWA Manifest
+   'use strict';
+// 动态生成PWA Manifest
         const manifest = {
             name: "TPI全维效能管理系统 第22版",
             short_name: "TPI 第22版",
@@ -2248,7 +2245,8 @@ window.exportAsMarkdown = function () {
   </script>
 <title>TPI全维效能管理系统 第22版 草稿22</title>
 <script>
-   // 获取当前日期
+   'use strict';
+// 获取当前日期
         const getCurrentDate = () => {
             const today = new Date();
             const year = today.getFullYear();
@@ -2694,6 +2692,7 @@ window.exportAsMarkdown = function () {
 <script id="MathJax-script" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js">
 </script>
 <script>
+'use strict';
 /* =========================================================
    独裁最终接管补丁 · vFinal
    目标：
@@ -2758,6 +2757,7 @@ window.__tpi_legacy_exportDataComplete_2 = function () {
 };
 </script>
 <script>
+'use strict';
 /* =========================================================
    终极 DOM 接管补丁 · vULTIMATE
    目标：
@@ -4342,7 +4342,8 @@ console.log('✅ window.InputValidator.showToast:', typeof window.InputValidator
 })();
   </script>
 <script>
-   // ═══════════════════════════════════════════════════════════════════
+   'use strict';
+// ═══════════════════════════════════════════════════════════════════
 // 🔥 关键修复：数据导出函数 - 必须在HEAD中定义，确保按钮加载前函数已存在
 // ═══════════════════════════════════════════════════════════════════
 
@@ -5425,6 +5426,7 @@ window.exportAsCSV = function() {
 <div id="tpi-top-scoreboard-spacer" aria-hidden="true"></div>
 
 <script>
+'use strict';
 /* =========================================================
    顶部分数看板：置顶 + 自动下移 quick-nav + 自动测量占位高度
    - 目标：分数看板必须置顶（最上方固定），同时不遮挡 quick-nav
@@ -5504,7 +5506,8 @@ window.exportAsCSV = function() {
 <div class="loading-spinner">
 </div>
 <script>
-     // 自动隐藏加载屏幕
+     'use strict';
+// 自动隐藏加载屏幕
     (function() {
         window.addEventListener('load', function() {
             const loadingOverlay = document.getElementById('loading-overlay');
@@ -20041,6 +20044,7 @@ const __exp = (function(){
    </button>
 </div>
 <script>
+'use strict';
 /* =========================================================
    [Removed] GitHub Gist 云端同步模块
    - 已切换为 TPI+ 后端 /register /login /save /load
@@ -20053,7 +20057,8 @@ const __exp = (function(){
 })();
 </script>
 <script>
-   // ==================== Firebase配置相关代码已移除 ====================
+   'use strict';
+// ==================== Firebase配置相关代码已移除 ====================
 
 // ==================== 问题2: localStorage容量管理 ====================
 // 检查存储空间使用情况
@@ -23955,7 +23960,8 @@ if (document.readyState === 'loading') {
   </script>
 <!-- ==================== 实时计算触发器增强 ==================== -->
 <script>
-   /**
+   'use strict';
+/**
  * 实时计算触发器增强模块
  * 功能：确保所有影响分数的输入都能触发实时计算
  * 策略：使用事件委托，不修改现有HTML，完全非侵入式
@@ -25842,6 +25848,7 @@ console.log('');
 
 </script>
 <script>
+'use strict';
 /* =========================================================
    [Removed] GitHub Repo 同步/合并脚本（tpi_db.json 等）
    - 已切换为 TPI+ 后端同步
@@ -28437,6 +28444,7 @@ try{
 
 
 <script>
+'use strict';
 /* =========================================================
    TPI+ Appwrite 后端化核心脚本
    - 使用 Appwrite BaaS 替代自定义后端
@@ -32520,6 +32528,7 @@ console.log('✅ [TPI优化] 函数增强包装器已加载');
 </script>
 
 <script>
+'use strict';
 /* ================================================================
    __tpiDirectExport — 全量 DOM 扫描导出引擎 V7
    适配：双云端同步版 V4
