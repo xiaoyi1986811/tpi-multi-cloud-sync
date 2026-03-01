@@ -17,12 +17,12 @@
 <meta content="tpi-system" name="netlify-deploy"/>
 <link href="https://mytpi.netlify.app/" rel="canonical"/>
 <!-- 社交媒体优化 (Open Graph) -->
-<meta content="TPI全维效能管理系统 第22版" property="og:title"/>
+<meta content="TPI全维效能管理系统 第23版（优化版）" property="og:title"/>
 <meta content="学术生产力跟踪系统 | 本地数据存储" property="og:description"/>
 <meta content="website" property="og:type"/>
 <meta content="zh_CN" property="og:locale"/>
 <meta content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=5.0, user-scalable=yes, viewport-fit=cover" name="viewport"/>
-<meta content="TPI全维效能管理系统 第22版 - 跨设备同步 | 支持电脑/手机/平板访问" name="description"/>
+<meta content="TPI全维效能管理系统 第23版 - 跨设备同步 | 支持电脑/手机/平板访问" name="description"/>
 <meta content="TPI,效能管理,学术生产力,时间管理,习惯追踪,跨设备同步" name="keywords"/>
 <meta content="TPI System" name="author"/>
 <!-- 移动端优化 -->
@@ -2219,8 +2219,8 @@ window.getTpiDayDataAsync = async function(dateStr) {
    'use strict';
 // 动态生成PWA Manifest
         const manifest = {
-            name: "TPI全维效能管理系统 第22版",
-            short_name: "TPI 第22版",
+            name: "TPI全维效能管理系统 第23版",
+            short_name: "TPI 第23版",
             description: "Total Performance Index - 全维效能管理系统",
             start_url: "./",
             display: "standalone",
@@ -2243,7 +2243,7 @@ window.getTpiDayDataAsync = async function(dateStr) {
         const manifestURL = URL.createObjectURL(manifestBlob);
         document.getElementById('pwa-manifest').setAttribute('href', manifestURL);
   </script>
-<title>TPI全维效能管理系统 第22版 草稿22</title>
+<title>TPI全维效能管理系统 第23版（逻辑自洽版）</title>
 <script>
    'use strict';
 // 获取当前日期
@@ -2255,8 +2255,8 @@ window.getTpiDayDataAsync = async function(dateStr) {
             return `${year}-${month}-${day}`;
         };
         
-        // 系统版本号 (第22版 草稿7)
-        window.TPI_VERSION = '第22版（GitHub云端同步版，草稿22）';
+        // 系统版本号 (第23版 草稿7)
+        window.TPI_VERSION = '第23版（多云端同步版·全面逻辑自洽·SSOT统一·AMI折算封顶·BCM攀登移出·FLI线性化·Bonus循环修复·Sys封顶25·MA7双模·熔断210）';
         window.TPI_DATA_VERSION = '4.2';
         window.TPI_BUILD_DATE = getCurrentDate(); // 动态获取当前日期
         window.TPI_FIX_DATE = '2026-01-31'; // 修复日期
@@ -2279,7 +2279,7 @@ window.getTpiDayDataAsync = async function(dateStr) {
                             : '三十';
             const lunarStr = `农历${lunarMonth}${lunarDay}${lunar.isLeap ? '(闰)' : ''}`;
             
-            document.title = `TPI全维效能管理系统 第22版 (${window.TPI_BUILD_DATE} ${weekday} ${lunarStr})`;
+            document.title = `TPI全维效能管理系统 第23版 (${window.TPI_BUILD_DATE} ${weekday} ${lunarStr})`;
             
             // 同时更新页面中的日期显示元素（如果存在）
             const dateDisplay = document.getElementById('current-date-display');
@@ -5533,9 +5533,9 @@ window.exportAsCSV = function() {
     })();
     </script>
 <div class="loading-text">
-     第22版：加载中...</div>
+     第23版：加载中...</div>
 <div class="loading-version">
-     第22版</div>
+     第23版</div>
 </div>
 <!-- ⚠️ v21 增强:网络状态指示器 -->
 <!-- ⚠️ v21 增强:帮助按钮 -->
@@ -6182,10 +6182,10 @@ window.exportAsCSV = function() {
            121-155 推进 (Steady)
           </option>
 <option value="excellent">
-           156-200 卓越 (Excellence)
+           156-209 卓越 (Excellence)
           </option>
 <option value="overload">
-           &gt; 201 过载 (Overload)
+           ≥ 210 过载 (Overload)
           </option>
 </select>
 </div>
@@ -6194,7 +6194,7 @@ window.exportAsCSV = function() {
           ⚠️ 能量平衡协议触发!
          </strong>
 <br/>
-         当日TPI &gt; 200,次日强制进入
+         当日TPI ≥ 210,次日强制进入
          <strong>
           [🅱️ 复苏]
          </strong>
@@ -6206,12 +6206,16 @@ window.exportAsCSV = function() {
         </div>
 <div class="mt-4">
 <label class="tpi-u-752502" for="ma7-score">
-          📈 7日均分 (MA7):
+          📈 7日均分 MA7（严格版）:
          </label>
 <input aria-label="7日均分" id="ma7-score" max="999" min="0" onblur="TPI.updateStreakWarning()" oninput="TPI.updateStreakWarning()" placeholder="0" step="0.1" style="width: 100px; text-align: center; font-weight: 600;" type="number"/>
 <span class="text-muted" style="margin-left: var(--spacing-2); font-size: var(--font-size-sm);">
-          (若 ≥120 则状态判定为稳健)
+          (分母固定7天，无数据天计0 | ≥120为稳健)
          </span>
+</div>
+<div class="mt-2" style="font-size: var(--font-size-sm); color: var(--color-text-secondary);">
+  📊 MA7（有效版）：<strong id="ma7-effective-score" style="color: var(--color-primary);">—（仅含有记录天数）</strong>
+  <span class="text-muted">— 新用户或数据不完整时使用，反映真实表现水平</span>
 </div>
 <!-- 连胜/连败追踪 -->
 <div class="mt-4" style="display: flex; gap: var(--spacing-6); flex-wrap: wrap; justify-content: center;">
@@ -6224,7 +6228,7 @@ window.exportAsCSV = function() {
           </span>
 <input aria-label="连胜天数" id="streak-days" max="10000" min="0" onblur="TPI.updateStreakWarning()" oninput="TPI.updateStreakWarning()" placeholder="0" step="1" style="width: 60px; text-align: center; margin: 0 4px;" type="number"/>
 <span class="tpi-u-0c74b1">
-           日 TPI≥120
+           日 TPI≥100
           </span>
 </div>
 <div>
@@ -6405,7 +6409,7 @@ window.exportAsCSV = function() {
          <sub>
           E
          </sub>
-         总分计算公式 (模板第22版)
+         总分计算公式 (模板第23版)
         </h4>
 <p>
          $$\text{TPI}_{\text{E}} = \text{AMI}_{\text{Total}} + \text{FLI} + \text{Sys}_{\text{Net}} + \text{Bonus}$$
@@ -6515,7 +6519,7 @@ window.exportAsCSV = function() {
           </strong>
           ：
           <span style="background: #fee; padding: 2px 6px; border-radius: 3px; font-weight: 600;">
-           该触发优先于由TPI&gt;200触发的模式切换
+           该触发优先于由TPI≥210触发的模式切换
           </span>
           （即 Sys&lt;12 的保护机制优先级最高）
          </li>
@@ -6577,7 +6581,7 @@ window.exportAsCSV = function() {
            </li>
 <li>
 <strong>
-             156-200 分
+             156-209 分
             </strong>
             ：💎
             <strong>
@@ -6591,7 +6595,7 @@ window.exportAsCSV = function() {
            </li>
 <li>
 <strong>
-             201+ 分
+             ≥ 210 分
             </strong>
             ：🔥
             <strong>
@@ -6609,7 +6613,7 @@ window.exportAsCSV = function() {
 </ul>
 <p>
 <strong>
-            🔋 能量平衡协议 (Energy Balance Protocol v17)
+            🔋 能量平衡协议 (Energy Balance Protocol v23)
            </strong>
 </p>
 <ul>
@@ -6621,7 +6625,7 @@ window.exportAsCSV = function() {
             <sub>
              E
             </sub>
-            &gt; 200。
+            ≥ 210（第23版调整，配合Sys封顶提升至25分）。
            </li>
 <li>
 <strong>
@@ -7869,7 +7873,7 @@ window.exportAsCSV = function() {
 <strong>
              🚨 自动触发器
             </strong>
-            ：连续 2 日 $\text{TPI}_{\text{E}} &lt; 95$ 或昨日 TPI &gt; 200
+            ：连续 2 日 $\text{TPI}_{\text{E}} &lt; 95$ 或昨日 TPI ≥ 210
             <strong>
              或
             </strong>
@@ -8290,7 +8294,7 @@ window.exportAsCSV = function() {
             <strong>
              连续稳定奖（梯度奖励）
             </strong>
-            ：连续 TPI ≥ 120 达到 7日(+3分)/14日(+5分)/21日(+7分)。奖励持续性，仅在里程碑日奖励。
+            ：连续 TPI ≥ 100 达到 7日(+2分)/14日(+3分)/21日(+5分)。奖励持续性，仅在里程碑日自动判定。
            </li>
 </ul>
 <h4>
@@ -8406,7 +8410,7 @@ window.exportAsCSV = function() {
             💎 卓越表现奖 (+4)
            </span>
 <small class="text-muted" style="display: block; font-size: 0.75rem; line-height: 1.3;">
-            本日 TPI ≥ 160
+            AMI + FLI + Sys_Net ≥ 148（不含Bonus，防止循环依赖）— 自动判定
            </small>
 </div>
 </label>
@@ -8438,6 +8442,31 @@ window.exportAsCSV = function() {
   </div>
 </label>
 
+<!-- 【优化方向三】BCM跃升奖励（从BCM模块移来，自动判定）-->
+<label onmouseout="this.style.background='transparent'" onmouseover="this.style.background='rgba(0,0,0,0.03)'" style="display: flex; align-items: flex-start; gap: var(--spacing-2); cursor: pointer; padding: 4px; border-radius: 4px; transition: background 0.2s;">
+  <input aria-label="BCM大跃升" class="tpi-u-mt-4px" name="bonus-item" onchange="TPI.calculateBonus(); TPI.calculateSystem()" type="checkbox" value="bcm_climb_high"/>
+  <div>
+    <span class="tpi-u-fw-600">🏔️ BCM大跃升 (+2)</span>
+    <small class="text-muted" style="display: block; font-size: 0.75rem; line-height: 1.3;">今日BCM比昨日提升≥10分（且今日BCM≥12，防止刷分）— 自动判定</small>
+  </div>
+</label>
+
+<label onmouseout="this.style.background='transparent'" onmouseover="this.style.background='rgba(0,0,0,0.03)'" style="display: flex; align-items: flex-start; gap: var(--spacing-2); cursor: pointer; padding: 4px; border-radius: 4px; transition: background 0.2s;">
+  <input aria-label="BCM小跃升" class="tpi-u-mt-4px" name="bonus-item" onchange="TPI.calculateBonus(); TPI.calculateSystem()" type="checkbox" value="bcm_climb_low"/>
+  <div>
+    <span class="tpi-u-fw-600">📈 BCM小跃升 (+1)</span>
+    <small class="text-muted" style="display: block; font-size: 0.75rem; line-height: 1.3;">今日BCM比昨日提升≥5分（且今日BCM≥12，防止刷分）— 自动判定</small>
+  </div>
+</label>
+
+<label onmouseout="this.style.background='transparent'" onmouseover="this.style.background='rgba(0,0,0,0.03)'" style="display: flex; align-items: flex-start; gap: var(--spacing-2); cursor: pointer; padding: 4px; border-radius: 4px; transition: background 0.2s;">
+  <input aria-label="BCM连续稳定" class="tpi-u-mt-4px" name="bonus-item" onchange="TPI.calculateBonus(); TPI.calculateSystem()" type="checkbox" value="bcm_streak"/>
+  <div>
+    <span class="tpi-u-fw-600">🔒 BCM连续稳定 (+2)</span>
+    <small class="text-muted" style="display: block; font-size: 0.75rem; line-height: 1.3;">连续3日BCM≥18分 — 自动判定</small>
+  </div>
+</label>
+
 <label onmouseout="this.style.background='transparent'" onmouseover="this.style.background='rgba(0,0,0,0.03)'" style="display: flex; align-items: flex-start; gap: var(--spacing-2); cursor: pointer; padding: 4px; border-radius: 4px; transition: background 0.2s;">
 <input aria-label="连续稳定7日" class="tpi-u-mt-4px" name="bonus-item" onchange="TPI.calculateBonus(); TPI.calculateSystem()" type="checkbox" value="streak7"/>
 <div>
@@ -8445,7 +8474,7 @@ window.exportAsCSV = function() {
             📊 连续稳定(7日) (+2)
            </span>
 <small class="text-muted" style="display: block; font-size: 0.75rem; line-height: 1.3;">
-            TPI ≥ 120 (第7日获得)
+            TPI ≥ 100 连续7日（第7日自动判定）
            </small>
 </div>
 </label>
@@ -8456,7 +8485,7 @@ window.exportAsCSV = function() {
             📊 连续稳定(14日) (+3)
            </span>
 <small class="text-muted" style="display: block; font-size: 0.75rem; line-height: 1.3;">
-            TPI ≥ 120 (第14日获得)
+            TPI ≥ 100 连续14日（第14日自动判定）
            </small>
 </div>
 </label>
@@ -8467,7 +8496,7 @@ window.exportAsCSV = function() {
             📊 连续稳定(21日) (+5)
            </span>
 <small class="text-muted" style="display: block; font-size: 0.75rem; line-height: 1.3;">
-            TPI ≥ 120 (第21日获得)
+            TPI ≥ 100 连续21日（第21日自动判定）
            </small>
 </div>
 </label>
@@ -11911,20 +11940,20 @@ window.exportAsCSV = function() {
 </li>
 <li>
 <strong>
-             碎片磨耳（每个0.5分）：
+             碎片磨耳（线性梯度，满分10分）：
             </strong>
 <ul>
 <li>
-              底线要求：至少完成 2 个时段的磨耳朵
+              🎯 0个→0分 / 1个→3分 / 2个→8分 / 3个及以上→10分（封顶）
              </li>
 <li>
-              每个时段 0.5-1 分
+              时段划分：🌅 早上 / ☀️ 中午 / 🌆 傍晚 / 🌙 晚上（共4个）
              </li>
 <li>
-              时段划分：🌅 早上 / ☀️ 中午 / 🌆 傍晚 / 🌙 晚上
+              <strong>复苏模式</strong>：1个即视为达标（8分）；2个及以上满分
              </li>
 <li>
-              状态说明：0.5=中断/未完成；1.0=完整完成
+              建议每天至少完成2个时段，获得8分基础分
              </li>
 </ul>
 </li>
@@ -12023,18 +12052,18 @@ window.exportAsCSV = function() {
 </p>
 </td>
 <td class="center">
-<select aria-label="核心学习状态" class="status-select tpi-inline-01" onchange="TPI.calculateAMI()">
+<select aria-label="核心学习状态" class="status-select tpi-inline-01" onchange="TPI.calculateFLI(); TPI.calculateSystem()">
 <option value="0">
-              ⭕ 未完成
+              ⭕ 未完成（0分）
              </option>
 <option value="1">
-              ✅ 完成
+              ✅ 完成（+10分）
              </option>
 <option value="exempt">
-              🛡️ 豁免
+              🛡️ 豁免（+10分）
              </option>
 <option value="other">
-              🔍 其他
+              🔍 其他（请备注）
              </option>
 </select>
 </td>
@@ -12050,9 +12079,9 @@ window.exportAsCSV = function() {
 <td class="row-header">
             💎 碎片磨耳
             <br/>
-            (底线2个)
+            (0→0 / 1→3 / 2→8 / 3+→10)
             <br/>
-            (每个0.5分)
+            (复苏模式:1个达标)
            </td>
 <td>
 <label class="tpi-inline-03">
@@ -13188,10 +13217,10 @@ class ModeManager {
         const yesterday = historicalDataManager.getYesterday();
         if (!yesterday) return null;
 
-        // 触发器1: TPI>200 → 强制复苏
-        if (yesterday.tpi_total > 200) {
-            console.warn('⚠️ 昨日TPI>200，今日应进入复苏模式');
-            this.showTriggerWarning('TPI>200', '昨日TPI超过200分，建议今日进入复苏模式以保护系统');
+        // 触发器1: TPI>CONSTANTS.TPI_OVERLOAD_THRESHOLD(210) → 强制复苏
+        if (yesterday.tpi_total > CONSTANTS.TPI_OVERLOAD_THRESHOLD) {
+            console.warn(`⚠️ 昨日TPI>${CONSTANTS.TPI_OVERLOAD_THRESHOLD}，今日应进入复苏模式`);
+            this.showTriggerWarning(`TPI>${CONSTANTS.TPI_OVERLOAD_THRESHOLD}`, `昨日TPI超过${CONSTANTS.TPI_OVERLOAD_THRESHOLD}分，建议今日进入复苏模式以保护系统`);
             return 'recovery';
         }
 
@@ -13459,75 +13488,115 @@ const TPI = (function() {
 
             // ==================== 常量定义 ====================
         const CONSTANTS = {
-                // 评分阈值 (v14 Final)
+                // ==================== 系统阈值 ====================
                 SYS_NET_SAFETY_THRESHOLD: 12, // <12 触发强制复苏
-                SYS_NET_MAX_SCORE: 18,        // Sys Net 封顶分
+                SYS_NET_MAX_SCORE: 25,        // 【优化】Sys Net 封顶从18→25，提升生活系统权重
 
-                // TPI 分级
-                TPI_OVERLOAD_THRESHOLD: 200, // 熔断
-                TPI_HIGH_PERFORMANCE: 156,   // 卓越
-                TPI_STEADY: 121,             // 稳定
-                TPI_BASELINE: 95,            // 基础维持
+                // ==================== TPI 分级阈值 ====================
+                TPI_OVERLOAD_THRESHOLD: 210, // 【优化】熔断阈值从200→210（配合封顶调整）
+                TPI_HIGH_PERFORMANCE: 156,   // 卓越 ≥156
+                TPI_STEADY: 121,             // 推进 121-155
+                TPI_BASELINE: 95,            // 维持 95-120
 
-                // 评分系数
-                AMI_BASE_RATE: 2.5,
-                AMI_OUTPUT_CAP: 100,  // 差异76修复：移除此上限限制（在calculateAMI中处理）
+                // ==================== AMI 基础分 ====================
+                AMI_BASE_RATE: 2.5,          // 基础在场：每小时2.5分
+                AMI_BASE_DAILY_CAP: 30,      // 【新增】基础在场分日上限（对应12小时）
+                AMI_OUTPUT_CAP_STANDARD: 120, // 【新增】Type C及以下产出分封顶（方案A）
+                AMI_OUTPUT_CAP_TYPED: 150,    // 【新增】含Type D产出分封顶
+                AMI_TOTAL_FOLD_THRESHOLD: 160, // 【新增】AMI总分折算起点：超160后超额部分×0.5
+                AMI_TOTAL_MAX: 220,           // 【新增】AMI总分绝对上限（折算后）
 
-                // 【批次1+2修复】单价配置（严格按模板第22版）
-                // 差异7修复：阅读单价 Level I/II/III
-                READ_PRICE_LEVEL_I: 0.7,     // Level I: 视野与博雅
-                READ_PRICE_LEVEL_II: 1.0,    // Level II: 研读与批判
-                READ_PRICE_LEVEL_III: 1.8,   // Level III: 攻坚与解码
+                // ==================== 阅读单价（每页）====================
+                // 单一真相来源：所有阅读计分均引用此处
+                READ_PRICE_LEVEL_I: 0.7,     // Level I：视野与博雅
+                READ_PRICE_LEVEL_II: 1.0,    // Level II：研读与批判
+                READ_PRICE_LEVEL_III: 1.8,   // Level III：攻坚与解码
 
-                // 差异8修复：写作单价 Type A/B/C/D/S (模板第22版)
-                WRITE_PRICE_TYPE_A: 1.0,     // Type A: 整理与加工
-                WRITE_PRICE_TYPE_B: 2.0,     // Type B: 批判与建构 (原1.8,现2.0)
-                WRITE_PRICE_TYPE_C: 2.2,     // Type C: 正式写作/输出 (新增)
-                WRITE_PRICE_TYPE_D: 2.8,     // Type D: 核心攻坚
-                WRITE_PRICE_TYPE_S: 3.0,     // Type S: 结晶制（差异10修复）
+                // ==================== 写作单价（每100字）====================
+                // 单一真相来源：所有写作计分均引用此处，废除函数内硬编码
+                WRITE_PRICE_TYPE_A: 0.7,     // Type A：整理与秩序重建 (Tier 1)
+                WRITE_PRICE_TYPE_B: 1.0,     // Type B：批判性建构 (Tier 2)
+                WRITE_PRICE_TYPE_C: 1.8,     // Type C：正式写作/输出 (Tier 3)
+                WRITE_PRICE_TYPE_D: 2.8,     // Type D：核心攻坚（每100当量）
+                WRITE_PRICE_TYPE_S: 1.8,     // Type S：思维结晶（归属Tier 3，与Type C同价）
 
-                // 差异11修复：现场L评分
-                ONSITE_PRICE_NORMAL: 2.0,    // 常态 (Input/Passive)
-                ONSITE_PRICE_OUTPUT: 3.0,    // 绝地 (Output/Active)
+                // ==================== 现场L单价（每小时）====================
+                ONSITE_PRICE_NORMAL: 2.0,    // 常态（Input/Passive）
+                ONSITE_PRICE_OUTPUT: 3.0,    // 绝地（Output/Active）
 
-                // 差异9修复：Type D当量
-                TYPE_D_EQUIVALENT: 400,      // 400标准字/小时
+                // ==================== Type D 换算 ====================
+                TYPE_D_EQUIVALENT: 400,      // 400标准字/小时当量
 
-                // 差异14修复：点火程序分值
-                IGNITION_BONUS: 2.0,
+                // ==================== 点火程序 ====================
+                IGNITION_BONUS: 2.0,         // 点火程序总奖励分
 
-                // 【批次A修复】精度与显示控制
-                // 差异37修复：浮点数精度（四舍五入至0.5）
-                FLOAT_PRECISION_STEP: 0.5,       // 精度步长
-                // 差异38/70修复：空值显示标记
-                EMPTY_VALUE_MARK: '/',           // 空值显示为"/"
-                // 差异39修复：时间单位转换
-                MIN_TIME_UNIT_MINUTES: 15,       // <15分钟忽略不计
-                // 差异68修复：有效时长上限保护
-                MAX_DAILY_HOURS: 16,             // 单日最高16小时
+                // ==================== 精度与显示 ====================
+                FLOAT_PRECISION_STEP: 0.5,   // 四舍五入步长
+                EMPTY_VALUE_MARK: '/',        // 空值显示标记
+                MIN_TIME_UNIT_MINUTES: 15,    // 最小计时单位（<15分钟忽略）
+                MAX_DAILY_HOURS: 16,          // 单日有效时长上限
 
-                // 差异49修复：碎片信息流单价
-                FRAGMENT_INFO_PRICE: 0.2,        // 碎片信息流单价
+                // ==================== 碎片信息流 ====================
+                FRAGMENT_INFO_PRICE: 0.2,    // 碎片信息流单价
 
-                // 差异62修复：Type C单位定义
-                TYPE_C_PRICE_PER_HOUR: 1.2,      // Type C: 1.2分/小时
+                // ==================== BCM 封顶 ====================
+                BCM_RAW_CAP: 20,             // BCM基础分封顶（V3调整：24→20，约占非AMI权重12%）
 
-                // BCM 时间阈值 (Minutes from 00:00) - 第22版标准
-                // 统一缓冲条款：所有截止时间自动 +15分钟 buffer
-                MORNING_LEGEND: 8 * 60 + 30, // 08:30 (实际含15分钟缓冲 → 08:45)
-                MORNING_LATE: 9 * 60 + 0,    // 09:00 (实际含15分钟缓冲 → 09:15)
-                MORNING_FAIL: 9 * 60 + 30,   // 09:30 (实际含15分钟缓冲 → 09:45)
+                // ==================== BCM 时间阈值（含15分钟缓冲）====================
+                MORNING_LEGEND: 8 * 60 + 30, // 08:30（含缓冲→08:45）
+                MORNING_LATE: 9 * 60 + 0,    // 09:00（含缓冲→09:15）
+                MORNING_FAIL: 9 * 60 + 30,   // 09:30（含缓冲→09:45）
 
-                // 晚间离馆 - 第22版标准 (23:15/23:45/00:15)
-                EVENING_LEGEND: 23 * 60 + 15,  // 23:15 (传奇档)
-                EVENING_SOLID: 23 * 60 + 45,   // 23:45 (稳健档)
-                EVENING_FLEX_END: 24 * 60 + 15,// 00:15 (弹性档结束)
+                // 晚间离馆
+                EVENING_LEGEND: 23 * 60 + 15,   // 23:15 传奇档
+                EVENING_SOLID: 23 * 60 + 45,    // 23:45 稳健档
+                EVENING_FLEX_END: 24 * 60 + 15, // 00:15 弹性档结束
 
-                SLEEP_PERFECT: 0,            // 00:00 (处理跨天需特殊逻辑)
+                // 睡眠
+                SLEEP_PERFECT: 0,            // 00:00
                 SLEEP_LATE: 30,              // 00:30
                 SLEEP_FAIL: 60,              // 01:00
 
-                BUFFER_MINUTES: 15           // 全局缓冲时间 (第22版)
+                BUFFER_MINUTES: 15,          // 全局缓冲时间
+
+                // ==================== BCM攀登（移入Bonus触发条件）====================
+                BCM_CLIMB_THRESHOLD_HIGH: 10,  // BCM提升≥10分触发大跃升
+                BCM_CLIMB_THRESHOLD_LOW: 5,    // BCM提升≥5分触发小跃升
+                BCM_CLIMB_MIN_BASE: 12,        // 触发攀登奖励所需今日BCM最低值（防操控）
+
+                // ==================== FLI 分值 ====================
+                FLI_CORE_FULL: 10,           // FLI核心学习满分
+                FLI_FRAGMENT_FULL: 10,       // FLI碎片磨耳满分
+                FLI_FRAGMENT_PARTIAL: 3,     // 碎片磨耳1个得分（方向四线性化）
+                FLI_FRAGMENT_STANDARD: 6,    // 碎片磨耳2个得分（V3: 8→6，更平滑线性梯度）
+                FLI_FRAGMENT_EXTRA: 9,       // 碎片磨耳3个及以上得分（V3: 10→9）
+
+                // ==================== Bonus 项目分值（单一真相来源）====================
+                BONUS_FLOW: 2,               // 超级心流（V3: 3→2）
+                BONUS_WARRIOR: 2,            // 攻坚勇士（V3: 4→2）
+                BONUS_BALANCE: 2,            // 完美作息（V3: 3→2）
+                BONUS_EXCELLENT: 2,          // 卓越表现（V3: 4→2）
+                BONUS_EXCELLENT_THRESHOLD: 148, // 卓越表现触发阈值（AMI+FLI+Sys_Net）
+                BONUS_RETURN: 2,             // 状态回升（V3: 4→2）
+                BONUS_RETURN_MIN_IMPROVE: 20, // 状态回升最低提升幅度
+                BONUS_RETURN_MAX_IMPROVE: 50, // 状态回升最高提升幅度（防从极低值刷分）
+                BONUS_STREAK21: 3,           // 连续稳定21日（V3: 5→3）
+                BONUS_STREAK14: 2,           // 连续稳定14日（V3: 3→2）
+                BONUS_STREAK7: 1,            // 连续稳定7日（V3: 2→1）
+                BONUS_RECOVERY: 1,           // 快速恢复（V3: 2→1）
+                BONUS_MICRO_VICTORIES: 1,    // 微小胜利（V3: 保持1）
+                BONUS_DEEP_REVIEW: 1,        // 高强度稳定日（V3: 3→1）
+                BONUS_STEADY: 1,             // 抗干扰稳态（V3: 2→1）
+                BONUS_BCM_CLIMB_HIGH: 2,     // 【新增】BCM大跃升（移自BCM模块）
+                BONUS_BCM_CLIMB_LOW: 1,      // 【新增】BCM小跃升（移自BCM模块）
+                BONUS_BCM_STREAK: 1,         // BCM连续3日≥18分（V3: 2→1）
+                BONUS_TOTAL_CAP: 5,          // Bonus总上限（V3: 10→5，降低权重）
+
+                // ==================== 连续稳定达标线 ====================
+                STREAK_MIN_TPI: 100,         // 连续稳定最低TPI达标线
+                // ==================== Logistics 封顶（V3新增）====================
+                LOGISTICS_ROW_CAP: 2.0,      // 单项任务得分上限（V3: 原2.5→2.0）
+                LOGISTICS_TOTAL_CAP: 7,       // Logistics总分上限（V3新增，约占4-5%）
             };
 
             // ==================== 状态管理 ====================
@@ -13863,11 +13932,11 @@ const TPI = (function() {
                         reminderMessage = '🅰️ 常态研究模式：按部就班，查阅 AMI 矩阵的常态单价进行计算。目标分 ≥90。';
                         break;
            case 'recovery':
-                // 同步第22版：复苏模式动态达标线 (查表法)
+                // 同步第23版：复苏模式动态达标线 (查表法)
                 // 0时段→70, 1时段→60, 2时段→50, 3时段→40, 4时段→暂停
                 reminderMessage = '🅱️ 复苏/冷启动模式：允许低产。动态达标线 (查表法): 0休→70, 1休→60, 2休→50, 3休→40, 4休→暂停。';
                 break;
-                   case 'stoic': // 第22版标准
+                   case 'stoic': // 第23版标准
                 // AMI×1.2补偿，公式：TPI = min(120, 95 + (raw - 95) * 0.5)
                 reminderMessage = '©️ 斯多葛/止损模式：接受流失事实。AMI×1.2补偿，总分超出95分部分减半计入，最高120分。';
                 break;
@@ -13970,7 +14039,7 @@ const TPI = (function() {
                         scales: {
                             y: {
                                 beginAtZero: true,
-                                max: 200,
+                                max: 230,
                                 title: {
                                     display: true,
                                     text: 'TPI得分'
@@ -14186,19 +14255,19 @@ const TPI = (function() {
                     icon: '👑',
                     category: 'peak',
                     categoryName: '长期坚持',
-                    description: '30天内平均TPI≥120分',
+                    description: `30天内平均TPI≥${CONSTANTS.STREAK_MIN_TPI}分`,
                     checkUnlock: (current, history) => {
                         if (history.length < 30) return false;
                         const recent30 = history.slice(-30);
                         const avg = recent30.reduce((sum, item) => sum + (item.tpi || 0), 0) / 30;
-                        return avg >= 120;
+                        return avg >= CONSTANTS.STREAK_MIN_TPI;
                     },
                     getProgress: (current, history) => {
                         const days = Math.min(history.length, 30);
                         if (days === 0) return '暂无数据';
                         const recent = history.slice(-days);
                         const avg = recent.reduce((sum, item) => sum + (item.tpi || 0), 0) / days;
-                        return `${days}天平均: ${avg.toFixed(1)}分 / 目标: 120分`;
+                        return `${days}天平均: ${avg.toFixed(1)}分 / 目标: ${CONSTANTS.STREAK_MIN_TPI}分`;
                     }
                 },
                 {
@@ -14254,17 +14323,17 @@ const TPI = (function() {
                     icon: '⭐',
                     category: 'peak',
                     categoryName: '卓越表现',
-                    description: '7天TPI全部≥120分',
+                    description: `7天TPI全部≥${CONSTANTS.STREAK_MIN_TPI}分`,
                     checkUnlock: (current, history) => {
                         if (history.length < 7) return false;
                         const recent7 = history.slice(-7);
-                        return recent7.every(item => item.tpi >= 120);
+                        return recent7.every(item => item.tpi >= CONSTANTS.STREAK_MIN_TPI);
                     },
                     getProgress: (current, history) => {
                         const days = Math.min(history.length, 7);
                         if (days === 0) return '暂无数据';
                         const recent = history.slice(-days);
-                        const qualifiedDays = recent.filter(item => item.tpi >= 120).length;
+                        const qualifiedDays = recent.filter(item => item.tpi >= CONSTANTS.STREAK_MIN_TPI).length;
                         return `${qualifiedDays}/${days}天达标 / 需要: 7/7天`;
                     }
                 },
@@ -14303,16 +14372,16 @@ const TPI = (function() {
                     icon: '🔥',
                     category: 'resilience',
                     categoryName: '毅力挑战',
-                    description: '连续21天TPI≥120分',
+                    description: `连续21天TPI≥${CONSTANTS.STREAK_MIN_TPI}分`,
                     checkUnlock: (current, history) => {
                         if (history.length < 21) return false;
                         const recent21 = history.slice(-21);
-                        return recent21.every(item => item.tpi >= 120);
+                        return recent21.every(item => item.tpi >= CONSTANTS.STREAK_MIN_TPI);
                     },
                     getProgress: (current, history) => {
                         let streak = 0;
                         for (let i = history.length - 1; i >= 0; i--) {
-                            if (history[i].tpi >= 120) streak++;
+                            if (history[i].tpi >= CONSTANTS.STREAK_MIN_TPI) streak++;
                             else break;
                         }
                         return `当前连续: ${streak}天 / 目标: 21天`;
@@ -14452,11 +14521,11 @@ ${badge.description}
                 const weeklyAvgTPI = recentWeek.length > 0 ?
                     recentWeek.reduce((sum, item) => sum + (item.tpi || 0), 0) / recentWeek.length : 0;
 
-                // 检查是否有完美周（连续7天 TPI >= 120 v13卓越线）
+                // 检查是否有完美周（连续7天 TPI >= CONSTANTS.STREAK_MIN_TPI）
                 let perfectWeek = false;
                 if (history.length >= 7) {
                     const recent7Days = history.slice(-7);
-                    perfectWeek = recent7Days.every(item => (item.tpi || 0) >= 120);
+                    perfectWeek = recent7Days.every(item => (item.tpi || 0) >= CONSTANTS.STREAK_MIN_TPI);
                 }
 
                 return {
@@ -14560,7 +14629,7 @@ ${badge.description}
                     totalPages: weekData.reduce((sum, item) => sum + (item.totalPages || 0), 0),
                  achievements: [
                         weekData.length >= 5 ? '本周工作5天以上' : '本周工作天数不足',
-                        stats.avgTPI >= 120 ? '平均TPI达到卓越标准' : (stats.avgTPI >= 95 ? '平均TPI维持稳健' : '平均TPI需提升'),
+                        stats.avgTPI >= CONSTANTS.TPI_STEADY ? '平均TPI达到推进/卓越标准' : (stats.avgTPI >= CONSTANTS.TPI_BASELINE ? '平均TPI维持稳健' : '平均TPI需提升'),
                         stats.consecutiveDays >= 3 ? `连续${stats.consecutiveDays}天达标(>95)` : '连续达标天数不足'
                     ].filter(a => a),
                     improvements: [
@@ -14659,14 +14728,14 @@ ${badge.description}
                     totalPages: monthData.reduce((sum, item) => sum + (item.totalPages || 0), 0),
                    achievements: [
                         monthData.length >= 20 ? '本月工作20天以上' : `本月工作${monthData.length}天`,
-                        stats.avgTPI >= 120 ? '平均TPI达到卓越标准' : (stats.avgTPI >= 95 ? '平均TPI稳健' : '状态需调整'),
-                        stats.maxTPI >= 156 ? '创造月度卓越高分(>156)' : null,
+                        stats.avgTPI >= CONSTANTS.TPI_STEADY ? '平均TPI达到推进/卓越标准' : (stats.avgTPI >= CONSTANTS.TPI_BASELINE ? '平均TPI稳健' : '状态需调整'),
+                        stats.maxTPI >= CONSTANTS.TPI_HIGH_PERFORMANCE ? `创造月度卓越高分(>=${CONSTANTS.TPI_HIGH_PERFORMANCE})` : null,
                         stats.consecutiveDays >= 7 ? `最长连续达标${stats.consecutiveDays}天` : null
                     ].filter(a => a),
                     trends: [
-                        stats.avgTPI >= 95 ? '整体表现稳健' : '整体表现需修复',
+                        stats.avgTPI >= CONSTANTS.TPI_BASELINE ? '整体表现稳健' : '整体表现需修复',
                         monthData.length >= 20 ? '工作天数充足' : '工作天数不足',
-                        stats.weeklyAvgTPI >= 120 ? '周均表现优异' : '周均表现平稳'
+                        stats.weeklyAvgTPI >= CONSTANTS.TPI_STEADY ? '周均表现优异' : '周均表现平稳'
                     ].filter(t => t)
                 };
 
@@ -14964,74 +15033,59 @@ function calculateAMI() {
                     let rowWriteScore = 0;
                     const writeInputs = row.querySelectorAll('.writing-output-vertical-input');
 
-                    // 第22版写作单价 (严格同步MD标准):
-        // Type A(0.7) - 整理 / Type B(1.0) - 建构 / Type C(1.8) - 正式 / Type D(3.0) - 攻坚
-        // 注意：此处直接使用数值覆盖旧常量，确保逻辑绝对正确
-        const typePrices = [
-            0.7, // Type A: 整理与秩序重建 (Tier 1)
-            1.0, // Type B: 批判性建构 (Tier 2)
-            1.8  // Type C: 正式写作 (Tier 3)
-        ];
-
+                    // 【优化方向一】写作单价统一引用CONSTANTS，消除硬编码
                     // Type A/B/C: 字数 / 100 * 对应单价 * F
+                    const typePrices = [
+                        CONSTANTS.WRITE_PRICE_TYPE_A, // Type A: 0.7 整理与秩序重建
+                        CONSTANTS.WRITE_PRICE_TYPE_B, // Type B: 1.0 批判性建构
+                        CONSTANTS.WRITE_PRICE_TYPE_C  // Type C: 1.8 正式写作
+                    ];
+
                     [0, 1, 2].forEach(idx => {
                         let w = safeParseFloat(writeInputs[idx]?.value);
-                        // 差异13修复：97字满百进位
+                        // 97字满百进位
                         if (w % 100 >= 97) w = Math.ceil(w/100)*100;
                         totalWords += w;
                         rowWriteScore += (w / 100) * typePrices[idx] * focus;
                     });
 
-                  // Type D: 核心攻坚 - 差异9,51,75修复
-                    // 差异9: Type D当量定义为400字/小时
-                    // 差异51: Type D单价为2.8（不是3.0）
-                    // 差异75: <12视为小时自动×400
+                    // Type D: 核心攻坚 - 单价引用CONSTANTS.WRITE_PRICE_TYPE_D (2.8)
+                    // <12视为小时数，自动×TYPE_D_EQUIVALENT(400)换算为当量字数
                     let typeDRaw = safeParseFloat(writeInputs[3]?.value);
                     let typeDVal = 0;
-                    let typeDScore = 0;  // Type D单独计分
+                    let typeDScore = 0;
 
                     if (typeDRaw > 0) {
-                        // 🧠 智能逻辑：
-                        // 若输入值 < 12，视为"小时数"，自动按 K=400 换算为当量字数
-                        // 若输入值 >= 12，视为"字数/当量"，直接使用
                         if (typeDRaw < 12) {
-                            typeDVal = typeDRaw * CONSTANTS.TYPE_D_EQUIVALENT; // 400
+                            typeDVal = typeDRaw * CONSTANTS.TYPE_D_EQUIVALENT;
                         } else {
                             typeDVal = typeDRaw;
                         }
-
-// 差异13修复：取整逻辑 (97字满百进位)
-            if (typeDVal % 100 >= 97) typeDVal = Math.ceil(typeDVal/100)*100;
-            totalWords += typeDVal;
-          // 同步第22版：Type D 单价调整为 2.8
-                    typeDScore = (typeDVal / 100) * 2.8 * focus;
-            rowWriteScore += typeDScore;
-            outputScoreTypeD += typeDScore; // 单独累加Type D得分
+                        // 97字满百进位
+                        if (typeDVal % 100 >= 97) typeDVal = Math.ceil(typeDVal/100)*100;
+                        totalWords += typeDVal;
+                        // 单价引用CONSTANTS，不再硬编码2.8
+                        typeDScore = (typeDVal / 100) * CONSTANTS.WRITE_PRICE_TYPE_D * focus;
+                        rowWriteScore += typeDScore;
+                        outputScoreTypeD += typeDScore;
                         typeDCount++;
-
-                        // 差异52修复：Type D权重级差标识
-                        const typeDGap = CONSTANTS.WRITE_PRICE_TYPE_D - CONSTANTS.WRITE_PRICE_TYPE_C; // 0.6
-
-                        // 如果Type D产出较多，给予高级认可
-                        if (typeDVal > 1000) {
-                        }
                     }
 
-                   // Type S: 思维结晶制 - 第22版：归属 Tier 3 (单价 1.8)
-        let typeSVal = safeParseFloat(writeInputs[4]?.value);
-        if (typeSVal > 0) {
-            const typeSPrice = 1.8; // 标准单价
-            rowWriteScore += (typeSVal / 100) * typeSPrice * focus;
-            totalWords += typeSVal;
-        }
-            // 5. 现场 L - 第22版：常态(2.0/h) / 输出型(3.0/h)
+                    // Type S: 思维结晶 - 单价引用CONSTANTS.WRITE_PRICE_TYPE_S (1.8，与Type C同级)
+                    let typeSVal = safeParseFloat(writeInputs[4]?.value);
+                    if (typeSVal > 0) {
+                        if (typeSVal % 100 >= 97) typeSVal = Math.ceil(typeSVal/100)*100;
+                        rowWriteScore += (typeSVal / 100) * CONSTANTS.WRITE_PRICE_TYPE_S * focus;
+                        totalWords += typeSVal;
+                    }
+            // 5. 现场 L - 单价引用CONSTANTS
             const onsiteTypeSelect = row.querySelector('select[aria-label*="现场类型"]');
             const typeLHours = safeParseFloat(writeInputs[5]?.value);
             if (typeLHours > 0) {
-                let onsitePrice = 2.0; // 默认常态单价
+                let onsitePrice = CONSTANTS.ONSITE_PRICE_NORMAL; // 默认常态单价
                 if (onsiteTypeSelect && onsiteTypeSelect.value) {
                     const onsiteType = onsiteTypeSelect.value;
-                    if (onsiteType.includes('输出') || onsiteType.includes('绝地')) onsitePrice = 3.0;
+                    if (onsiteType.includes('输出') || onsiteType.includes('绝地')) onsitePrice = CONSTANTS.ONSITE_PRICE_OUTPUT;
                 }
                 rowWriteScore += typeLHours * onsitePrice * focus;
             }
@@ -15045,28 +15099,32 @@ function calculateAMI() {
                     outputScore += (rowReadScore + rowWriteScore);
                 });
 
-                // 第22版封顶规则：Type C及以下任务封顶100分，Type D任务封顶150分
-                const outputScoreOther = outputScore - outputScoreTypeD;  // Type C及以下的产出分
-                let cappedOutputOther = outputScoreOther;
-                let cappedOutputTypeD = outputScoreTypeD;
+                // 【优化方向二】AMI封顶规则重构（折算式封顶，方案A）
+                // 基础在场分封顶：AMI_BASE_DAILY_CAP（30分）
+                const cappedBaseScore = Math.min(baseScore, CONSTANTS.AMI_BASE_DAILY_CAP);
 
-                if (outputScoreOther > 100) {
-                    cappedOutputOther = 100;
-                }
-
-                if (outputScoreTypeD > 150) {
-                    cappedOutputTypeD = 150;
-                }
-
+                // 产出分分层封顶：
+                // Type C及以下封顶 AMI_OUTPUT_CAP_STANDARD(120)
+                // 含Type D封顶 AMI_OUTPUT_CAP_TYPED(150)
+                const outputScoreOther = outputScore - outputScoreTypeD;
+                const cappedOutputOther = Math.min(outputScoreOther, CONSTANTS.AMI_OUTPUT_CAP_STANDARD);
+                const cappedOutputTypeD = Math.min(outputScoreTypeD, CONSTANTS.AMI_OUTPUT_CAP_TYPED - CONSTANTS.AMI_OUTPUT_CAP_STANDARD);
                 const cappedOutputScore = cappedOutputOther + cappedOutputTypeD;
 
-                if (cappedOutputScore < outputScore) {
-                }
-
+                // AMI原始总分 = 封顶后基础分 + 封顶后产出分 + 点火 + 扫描奖励
                 const ignitionBonus = calculateIgnitionBonus();
                 const scanBonus = document.getElementById('ami-scan-reading')?.checked ? 1 : 0;
+                const amiRaw = cappedBaseScore + cappedOutputScore + ignitionBonus + scanBonus;
 
-                const amiTotal = baseScore + cappedOutputScore + ignitionBonus + scanBonus;
+                // 【优化方向二·折算式封顶】AMI总分超过AMI_TOTAL_FOLD_THRESHOLD(160)后，超额部分×0.5
+                // 最终不超过AMI_TOTAL_MAX(220)
+                let amiTotal;
+                if (amiRaw <= CONSTANTS.AMI_TOTAL_FOLD_THRESHOLD) {
+                    amiTotal = amiRaw;
+                } else {
+                    const excess = amiRaw - CONSTANTS.AMI_TOTAL_FOLD_THRESHOLD;
+                    amiTotal = Math.min(CONSTANTS.AMI_TOTAL_MAX, CONSTANTS.AMI_TOTAL_FOLD_THRESHOLD + excess * 0.5);
+                }
 
                 const setVal = (id, val) => { const el = document.getElementById(id); if(el) el.textContent = val; };
                 setVal('total-hours', totalHours.toFixed(1));
@@ -15081,7 +15139,7 @@ function calculateAMI() {
                 state.typeDCount = typeDCount;
                 state.flowCount = flowCount;
 
-                // 差异65修复：任务重叠检测
+                // 任务重叠检测
                 detectTimeOverlaps();
 
                 checkAutoBonuses();
@@ -15222,11 +15280,11 @@ function calculateAMI() {
             }
 
             /**
-             * 计算FLI总分 (修复：复苏模式逻辑)
+             * 计算FLI总分（优化：碎片磨耳线性化，消除1个→0.5分、2个→10分的激励断层）
              */
             function calculateFLI() {
                 const coreStatus = safeParseFloat(document.querySelector('#fli select[aria-label="核心学习状态"]')?.value || 0);
-                const coreScore = coreStatus * 10;
+                const coreScore = coreStatus * CONSTANTS.FLI_CORE_FULL;
                 const fliCoreScoreElem = document.getElementById('fli-core-score');
                 if (fliCoreScoreElem) fliCoreScoreElem.value = coreScore.toFixed(1);
 
@@ -15234,21 +15292,32 @@ function calculateAMI() {
                 let fragmentCount = 0;
                 fragmentBoxes.forEach(box => { if (box.checked) fragmentCount++; });
 
-                // 🔧 修复2: 复苏模式下FLI外语达标线降至1个
+                // 【优化方向四】碎片磨耳线性化计分：
+                // 复苏模式达标线降至1个（原逻辑保留）
                 const selectedMode = state.selectedMode || document.querySelector('input[name="daily-mode"]:checked')?.value || 'normal';
-                let fragmentThreshold = 2; // 正常模式需要2个
 
-                if (selectedMode === 'recovery') {
-                    fragmentThreshold = 1; // 🛡️ 复苏模式降至1个
-                }
-
-                // 修复：直接按个计分，不设扣分阈值 (逻辑更直观)
-                // 但需要判断是否达标
+                // 线性化梯度：0个→0分、1个→3分、2个→8分、3个及以上→10分（封顶）
+                // 复苏模式：1个即视为达标，给8分；2个及以上给10分
                 let fragmentScore = 0;
-                if (fragmentCount >= fragmentThreshold) {
-                    fragmentScore = 10; // 达标给满分
+                if (selectedMode === 'recovery') {
+                    if (fragmentCount >= 2) {
+                        fragmentScore = CONSTANTS.FLI_FRAGMENT_FULL;       // 10分
+                    } else if (fragmentCount === 1) {
+                        fragmentScore = CONSTANTS.FLI_FRAGMENT_STANDARD;   // 6分（复苏模式达标，V3调整）
+                    } else {
+                        fragmentScore = 0;
+                    }
                 } else {
-                    fragmentScore = fragmentCount * 0.5; // 未达标按个数给分
+                    // 正常模式线性梯度
+                    if (fragmentCount >= 3) {
+                        fragmentScore = CONSTANTS.FLI_FRAGMENT_EXTRA;      // 9分（V3调整）
+                    } else if (fragmentCount === 2) {
+                        fragmentScore = CONSTANTS.FLI_FRAGMENT_STANDARD;   // 6分（V3调整）
+                    } else if (fragmentCount === 1) {
+                        fragmentScore = CONSTANTS.FLI_FRAGMENT_PARTIAL;    // 3分
+                    } else {
+                        fragmentScore = 0;
+                    }
                 }
 
                 const fragmentScoreElem = document.getElementById('fli-fragment-score');
@@ -15267,10 +15336,10 @@ function calculateAMI() {
             // ==================== BCM 计算 ====================
 
             /**
-             * 计算晨间入馆得分 (第22版标准)
+             * 计算晨间入馆得分 (第23版标准)
              */
             /**
-             * 计算晨间入馆得分 (第22版标准)
+             * 计算晨间入馆得分 (第23版标准)
              */
             function calculateMorningScore() {
                 const input = document.getElementById('bcm-morning-time');
@@ -15305,7 +15374,7 @@ function calculateAMI() {
                 if (refTodayDisplay) refTodayDisplay.textContent = timeStr;
                 if (refYesterdayDisplay) refYesterdayDisplay.textContent = yesterdayTime || '--:--';
 
-                // 第22版晨间入馆评分标准(含15分钟缓冲)
+                // 第23版晨间入馆评分标准(含15分钟缓冲)
                 // 👑 传奇 (< 08:45): +5分
                 if (timeStr < '08:45') {
                     score = 5;
@@ -15344,7 +15413,7 @@ function calculateAMI() {
             }
 
             /**
-             * 计算晚间离馆得分 (第22版标准 - 双锚点系统)
+             * 计算晚间离馆得分 (第23版标准 - 双锚点系统)
              */
             function calculateEveningScore() {
                 const eveningExitInput = document.getElementById('bcm-evening-exit');
@@ -15360,7 +15429,7 @@ function calculateAMI() {
                 const minutes = toNightMinutes(timeStr);
                 let score = 0;
 
-                // 第22版晚间离馆评分阶梯
+                // 第23版晚间离馆评分阶梯
                 // 👑 传奇 (< 23:15): +3分
                 if (minutes < 23 * 60 + 15) {
                     score = 3;
@@ -15384,7 +15453,7 @@ function calculateAMI() {
             }
 
             /**
-             * 计算睡眠得分 (第22版标准)
+             * 计算睡眠得分 (第23版标准)
              * 阶梯基础分 + 动态奖惩机制
              */
             function calculateSleepScore() {
@@ -15421,7 +15490,7 @@ function calculateAMI() {
                 const yesterdayDisplay = document.getElementById('bcm-sleep-yesterday-display');
                 if (yesterdayDisplay) yesterdayDisplay.textContent = yesterdayTime || '--:--';
 
-                // 阶梯基础分 (第22版)
+                // 阶梯基础分 (第23版)
                 // 👑 完美 (< 00:00): +5分
                 const minutes = timeToMinutes(timeStr);
 
@@ -15450,7 +15519,7 @@ function calculateAMI() {
                     const yesterdayMinutes = toNightMinutes(yesterdayTime);
                     const deltaT = todayMinutes - yesterdayMinutes; // 正数=今天更晚
 
-                    // 第22版动态奖惩阶梯
+                    // 第23版动态奖惩阶梯
                     if (deltaT <= -30) {
                         dynamicBonus = 1.0;
                     } else if (deltaT > -30 && deltaT <= 0) {
@@ -15471,46 +15540,46 @@ function calculateAMI() {
             }
 
           /**
-             * 计算BCM总分 (修复版)
+             * 计算BCM总分（优化方向三：移除BCM内部攀登奖励，改由Bonus模块统一处理）
              */
             function calculateBCM() {
                 let totalScore = 0;
 
                 try {
-                    // 1. 晨间入馆 (调用独立函数)
+                    // 1. 晨间入馆
                     const s1 = calculateMorningScore();
                     totalScore += s1;
 
-                    // 2. 午间防守 (直接调用，确保历史数据自动填充和动态奖惩生效)
+                    // 2. 午间防守
                     const s2 = calculateDefenseScore('lunch');
                     totalScore += s2;
 
-                    // 3. 晚间防守 (同上)
+                    // 3. 晚间防守
                     const s3 = calculateDefenseScore('dinner');
                     totalScore += s3;
 
-                    // 4. 晚间离馆 (调用独立函数)
+                    // 4. 晚间离馆
                     const s4 = calculateEveningScore();
                     totalScore += s4;
 
-                    // 5. 睡眠计分 (调用独立函数)
+                    // 5. 睡眠计分
                     const s5 = calculateSleepScore();
                     totalScore += s5;
 
-                    // 6. 数字气隙 (直接计算)
+                    // 6. 数字气隙
                     const digSelect = document.getElementById('bcm-digital-status');
                     const digScoreElem = document.getElementById('bcm-digital-score');
                     let s6 = 0;
                     if (digSelect) {
                         const val = digSelect.value;
-                        if (val === '1') s6 = 3;       // 完成+3
-                        else if (val === 'exempt') s6 = 3; // 豁免+3
+                        if (val === '1') s6 = 3;
+                        else if (val === 'exempt') s6 = 3;
                         else s6 = 0;
-                        digScoreElem.value = s6.toFixed(1);
+                        if (digScoreElem) digScoreElem.value = s6.toFixed(1);
                     }
                     totalScore += s6;
 
-                    // 7. 下午核心学习奖励 (直接计算)
+                    // 7. 下午核心学习奖励
                     const aftSelect = document.getElementById('bcm-afternoon-status');
                     const aftScoreElem = document.getElementById('bcm-afternoon-score');
                     let s7 = 0;
@@ -15519,54 +15588,49 @@ function calculateAMI() {
                         if (val === '1') s7 = 1.0;
                         else if (val === 'exempt') s7 = 1.0;
                         else s7 = 0;
-                        aftScoreElem.value = s7.toFixed(1);
+                        if (aftScoreElem) aftScoreElem.value = s7.toFixed(1);
                     }
                     totalScore += s7;
 
-                    // 封顶 24 分
-                    let finalScore = Math.min(totalScore, 24);
+                    // 【优化方向三】BCM只做基础分封顶（引用CONSTANTS.BCM_RAW_CAP = 24）
+                    // 攀登奖励已移至Bonus模块，由checkAutoBonuses()处理
+                    const finalScore = Math.min(totalScore, CONSTANTS.BCM_RAW_CAP);
 
-                    // 🔧 修复3: BCM攀登分自动比对
-                    // 从LocalStorage读取昨日BCM数据
-                    const today = new Date();
-                    const yesterday = new Date(today);
-                    yesterday.setDate(yesterday.getDate() - 1);
-                    const yesterdayKey = `tpi_data_${yesterday.toISOString().split('T')[0]}`;
+                    // 保存BCM原始分到state，供Bonus的攀登判定使用
+                    state.bcmRawScore = finalScore;
 
-                    let climbBonus = 0;
+                    // 读取昨日BCM数据用于显示参考（仅展示，不在BCM内加分）
                     try {
+                        const today = new Date();
+                        const yesterday = new Date(today);
+                        yesterday.setDate(yesterday.getDate() - 1);
+                        const yesterdayKey = `tpi_data_${yesterday.toISOString().split('T')[0]}`;
                         const yesterdayDataStr = __tpi_ls_get(yesterdayKey);
                         if (yesterdayDataStr) {
                             const yesterdayData = JSON.parse(yesterdayDataStr);
                             const yesterdayBCM = safeParseFloat(yesterdayData['bcm-score'] || yesterdayData['bcm'] || 0);
-
-                            // 显示昨日BCM参考
+                            state.bcmYesterdayScore = yesterdayBCM;
                             const bcmYesterdayElem = document.getElementById('bcm-yesterday-ref');
-                            if (bcmYesterdayElem) {
-                                bcmYesterdayElem.textContent = yesterdayBCM.toFixed(1);
-                            }
-
-                            // 计算攀登奖励
-                            const improvement = finalScore - yesterdayBCM;
-                            if (improvement >= 10) {
-                                climbBonus = 3.5;
-                            } else if (improvement >= 5) {
-                                climbBonus = 1.0;
-                            }
-
-                            // 显示攀登奖励
+                            if (bcmYesterdayElem) bcmYesterdayElem.textContent = yesterdayBCM.toFixed(1);
+                            // 显示攀登状态（仅展示，奖励在Bonus中计算）
                             const climbBonusElem = document.getElementById('bcm-climb-bonus');
                             if (climbBonusElem) {
-                                climbBonusElem.textContent = climbBonus > 0 ? `+${climbBonus.toFixed(1)}` : '0';
-                                climbBonusElem.style.color = climbBonus > 0 ? '#10b981' : '#6b7280';
+                                const improvement = finalScore - yesterdayBCM;
+                                if (improvement >= CONSTANTS.BCM_CLIMB_THRESHOLD_HIGH) {
+                                    climbBonusElem.textContent = `↑↑ +${CONSTANTS.BONUS_BCM_CLIMB_HIGH}(Bonus)`;
+                                    climbBonusElem.style.color = '#10b981';
+                                } else if (improvement >= CONSTANTS.BCM_CLIMB_THRESHOLD_LOW) {
+                                    climbBonusElem.textContent = `↑ +${CONSTANTS.BONUS_BCM_CLIMB_LOW}(Bonus)`;
+                                    climbBonusElem.style.color = '#3b82f6';
+                                } else {
+                                    climbBonusElem.textContent = '—';
+                                    climbBonusElem.style.color = '#6b7280';
+                                }
                             }
                         }
                     } catch (e) {
-                        console.error('读取昨日BCM数据失败:', e);
+                        console.warn('BCM参考数据读取失败:', e);
                     }
-
-                    // 加上攀登奖励
-                    finalScore += climbBonus;
 
                     // 更新总分显示
                     const bcmTotalElem = document.getElementById('bcm-total-score');
@@ -15616,7 +15680,8 @@ function calculateAMI() {
                         const coeff = safeParseFloat(levelSelect.value) || 0.5;
 
                         // 4. 实得分 = 基础分 + 耗时加分 × 等级系数（加分制）
-                        const finalRowScore = baseScore + timeBonus * coeff;
+                        // V3: 单项上限2.0分（原2.5），控制Logistics总占比
+                        const finalRowScore = Math.min(2.0, baseScore + timeBonus * coeff);
 
                         if (scoreInput) scoreInput.value = finalRowScore.toFixed(1);
                         totalScore += finalRowScore;
@@ -15650,14 +15715,14 @@ function calculateAMI() {
                     let coreScore = 0;
 
                     if (status === '1') {
-                        // 完成 = 4分
-                        coreScore = 4;
+                        // 完成 = 3分（V3: 4→3）
+                        coreScore = 3;
                     } else if (status === '0') {
                         // 未完成 = 0分
                         coreScore = 0;
                     } else if (status === 'exempt') {
-                        // 豁免 = 3分
-                        coreScore = 3;
+                        // 豁免 = 2分（V3: 3→2）
+                        coreScore = 2;
                     } else if (status === 'other') {
                         // 其他 = 0分
                         coreScore = 0;
@@ -15797,8 +15862,8 @@ function calculateAMI() {
                     totalScore += waterEveningScore;
                 }
 
-                // 上限5.3分
-                const finalScore = Math.min(totalScore, 5.3);
+                // 上限4.0分（V3: 5.3→4.0，控制HSM权重约8%）
+                const finalScore = Math.min(totalScore, 4.0);
                 const hsmTotalScoreElem = document.getElementById('hsm-total-score');
                 if (hsmTotalScoreElem) hsmTotalScoreElem.textContent = finalScore.toFixed(1);
 
@@ -15827,20 +15892,19 @@ function calculateAMI() {
                     if (val > 0) score += (val / 100) * price * focus;
                 });
 
-                // Type D (核心攻坚) - v14新算法: (字数/400) × 3.0 × F
+                // Type D (核心攻坚) - 单价引用CONSTANTS.WRITE_PRICE_TYPE_D (2.8)
                 let typeD_Words = safeParseFloat(inputs[3]?.value || 0);
                 if (typeD_Words > 0) {
-                    // v14人性化取整: 若差3字满百，自动向上取整
                     const remainder = typeD_Words % 100;
                     if (remainder > 0 && (100 - remainder) <= 3) {
                         typeD_Words = Math.ceil(typeD_Words / 100) * 100;
                     }
-                    score += (typeD_Words / 100) * 3.0 * focus;
+                    score += (typeD_Words / 100) * CONSTANTS.WRITE_PRICE_TYPE_D * focus;
                 }
 
                 return score;
             }
-         // 🔧 修复8: Bonus奖励自动化检查器
+         // 【优化方向三+五】Bonus奖励自动化检查器（全面重构）
         function checkAutoBonuses() {
 
             // 1. 攻坚勇士 (Type D >= 3个时段)
@@ -15862,47 +15926,86 @@ function calculateAMI() {
             const sleepScore = safeParseFloat(document.getElementById('bcm-sleep-score')?.value);
             const lunchStat = document.getElementById('bcm-lunch-status')?.textContent || '';
             const dinnerStat = document.getElementById('bcm-dinner-status')?.textContent || '';
-
             const isBalance = (morningScore >= 3.5) && (sleepScore >= 3) &&
                               (lunchStat.includes('坚守')) && (dinnerStat.includes('坚守'));
+            if (isBalance) { checkBonusBox('balance'); } else { uncheckBonusBox('balance'); }
 
-            if (isBalance) {
-                checkBonusBox('balance');
+            // 4. 【优化方向五·修复循环依赖】卓越表现
+            // 触发条件改为 AMI + FLI + Sys_Net（不含Bonus）≥ CONSTANTS.BONUS_EXCELLENT_THRESHOLD(148)
+            // 不再依赖包含Bonus自身的TPI总分
+            const amiForExcellent = safeParseFloat(document.getElementById('ami-score')?.value || 0);
+            const fliForExcellent = safeParseFloat(document.getElementById('fli-score')?.value || 0);
+            const sysForExcellent = safeParseFloat(document.getElementById('sys-score')?.value || 0);
+            const preBonus = amiForExcellent + fliForExcellent + sysForExcellent;
+            if (preBonus >= CONSTANTS.BONUS_EXCELLENT_THRESHOLD) {
+                checkBonusBox('excellent');
             } else {
-                uncheckBonusBox('balance');
+                uncheckBonusBox('excellent');
             }
 
-            // 4. 卓越表现 (TPI >= 160)
-            if (state.tpi >= 160) {
-                 checkBonusBox('excellent');
-            } else {
-                 uncheckBonusBox('excellent');
-            }
-
-            // 🔧 修复8: 新增自动判定 - 连续达标检查
+            // 5. 连续稳定奖 (引用CONSTANTS.STREAK_MIN_TPI = 100)
             const streak7 = checkStreakDays(7);
-            if (streak7) {
-                checkBonusBox('streak7');
-            } else {
-                uncheckBonusBox('streak7');
-            }
-
+            if (streak7) { checkBonusBox('streak7'); } else { uncheckBonusBox('streak7'); }
             const streak14 = checkStreakDays(14);
-            if (streak14) {
-                checkBonusBox('streak14');
+            if (streak14) { checkBonusBox('streak14'); } else { uncheckBonusBox('streak14'); }
+            const streak21 = checkStreakDays(21);
+            if (streak21) { checkBonusBox('streak21'); } else { uncheckBonusBox('streak21'); }
+
+            // 6. 【优化方向三】BCM跃升奖励（从BCM模块移来，加防操控条件）
+            // 防操控条件：今日BCM原始分须≥BCM_CLIMB_MIN_BASE(12)，昨日BCM须>0
+            const bcmToday = state.bcmRawScore || 0;
+            const bcmYesterday = state.bcmYesterdayScore || 0;
+            if (bcmToday >= CONSTANTS.BCM_CLIMB_MIN_BASE && bcmYesterday > 0) {
+                const improvement = bcmToday - bcmYesterday;
+                if (improvement >= CONSTANTS.BCM_CLIMB_THRESHOLD_HIGH) {
+                    checkBonusBox('bcm_climb_high');
+                    uncheckBonusBox('bcm_climb_low');
+                } else if (improvement >= CONSTANTS.BCM_CLIMB_THRESHOLD_LOW) {
+                    uncheckBonusBox('bcm_climb_high');
+                    checkBonusBox('bcm_climb_low');
+                } else {
+                    uncheckBonusBox('bcm_climb_high');
+                    uncheckBonusBox('bcm_climb_low');
+                }
             } else {
-                uncheckBonusBox('streak14');
+                uncheckBonusBox('bcm_climb_high');
+                uncheckBonusBox('bcm_climb_low');
             }
 
-            const streak21 = checkStreakDays(21);
-            if (streak21) {
-                checkBonusBox('streak21');
-            } else {
-                uncheckBonusBox('streak21');
+            // 7. 【优化方向三】BCM连续稳定：连续3日BCM≥18分
+            const bcmStreak = checkBCMStreakDays(3, 18);
+            if (bcmStreak) { checkBonusBox('bcm_streak'); } else { uncheckBonusBox('bcm_streak'); }
+
+            // 8. 微小胜利自动检测 (填满3项自动获得+1分)
+            const mv1 = document.getElementById('micro-victory-1')?.value?.trim();
+            const mv2 = document.getElementById('micro-victory-2')?.value?.trim();
+            const mv3 = document.getElementById('micro-victory-3')?.value?.trim();
+            if (mv1 && mv2 && mv3) { checkBonusBox('micro-victories'); } else { uncheckBonusBox('micro-victories'); }
+
+            // 9. 【优化方向五】状态回升防刷分：今日TPI比昨日提升须在[BONUS_RETURN_MIN_IMPROVE, BONUS_RETURN_MAX_IMPROVE]区间内
+            // 注意：状态回升仍为手动勾选，此处仅做合法性校验（若不满足条件则自动取消勾选）
+            const returnBox = document.querySelector('input[name="bonus-item"][value="return"]');
+            if (returnBox && returnBox.checked) {
+                const todayTPI = state.tpi || 0;
+                try {
+                    const today = new Date();
+                    const yesterday = new Date(today);
+                    yesterday.setDate(yesterday.getDate() - 1);
+                    const yKey = `tpi_data_${yesterday.toISOString().split('T')[0]}`;
+                    const yData = JSON.parse(__tpi_ls_get(yKey) || '{}');
+                    const yTPI = safeParseFloat(yData['tpi-total'] || yData.tpi || 0);
+                    if (yTPI > 0) {
+                        const improve = todayTPI - yTPI;
+                        if (improve < CONSTANTS.BONUS_RETURN_MIN_IMPROVE || improve > CONSTANTS.BONUS_RETURN_MAX_IMPROVE) {
+                            uncheckBonusBox('return');
+                            console.warn(`[状态回升] 提升幅度${improve.toFixed(1)}不在有效区间[${CONSTANTS.BONUS_RETURN_MIN_IMPROVE},${CONSTANTS.BONUS_RETURN_MAX_IMPROVE}]，自动取消`);
+                        }
+                    }
+                } catch(e) {}
             }
         }
 
-        // 辅助函数: 检查连续达标天数
+        // 辅助函数: 检查连续TPI达标天数（引用CONSTANTS.STREAK_MIN_TPI）
         function checkStreakDays(days) {
             const today = new Date();
             for (let i = 1; i <= days; i++) {
@@ -15913,16 +16016,35 @@ function calculateAMI() {
                 try {
                     const dataStr = __tpi_ls_get(dateKey);
                     if (!dataStr) return false;
-
                     const data = JSON.parse(dataStr);
-                    const tpi = safeParseFloat(data['tpi'] || data['tpi_total'] || 0);
-
-                    if (tpi < 100) return false; // 未达标
+                    const tpi = safeParseFloat(data['tpi'] || data['tpi_total'] || data['tpi-total'] || 0);
+                    // 引用CONSTANTS.STREAK_MIN_TPI（100分）
+                    if (tpi < CONSTANTS.STREAK_MIN_TPI) return false;
                 } catch (e) {
                     return false;
                 }
             }
-            return true; // 全部达标
+            return true;
+        }
+
+        // 【优化方向三】新增：检查连续BCM达标天数
+        function checkBCMStreakDays(days, minBCM) {
+            const today = new Date();
+            for (let i = 1; i <= days; i++) {
+                const checkDate = new Date(today);
+                checkDate.setDate(checkDate.getDate() - i);
+                const dateKey = `tpi_data_${checkDate.toISOString().split('T')[0]}`;
+                try {
+                    const dataStr = __tpi_ls_get(dateKey);
+                    if (!dataStr) return false;
+                    const data = JSON.parse(dataStr);
+                    const bcm = safeParseFloat(data['bcm-score'] || data['bcm'] || 0);
+                    if (bcm < minBCM) return false;
+                } catch (e) {
+                    return false;
+                }
+            }
+            return true;
         }
 
         function checkBonusBox(val) {
@@ -15947,26 +16069,31 @@ function calculateAMI() {
 
             bonusItems.forEach(item => {
                 switch(item.value) {
-                    case 'flow': totalBonus += 3; break;  // 超级心流: 改为+3
-                    case 'balance': totalBonus += 3; break;  // 完美作息: 改为+3
-                    case 'excellent': totalBonus += 4; break;  // 卓越表现: 改为+4
-                    case 'warrior': totalBonus += 4; break;  // 攻坚勇士: 改为+4
-                    case 'return': totalBonus += 4; break;  // 状态回升: 改为+4
-                    case 'streak21': totalBonus += 5; break;  // 连续稳定21日: 保持+5
-                    case 'streak14': totalBonus += 3; break;  // 连续稳定14日: 改为+3
-                    case 'streak7': totalBonus += 2; break;  // 连续稳定7日: 改为+2
-                    case 'recovery': totalBonus += 2; break;  // 快速恢复: 改为+2
-                    case 'micro-victories': totalBonus += 1; break;  // 微小胜利
-                    case 'bonus_deep_review': totalBonus += 3; break;  // 高强度稳定日: +3
-                    case 'bonus_steady': totalBonus += 2; break;  // 抗干扰稳态: +2
+                    // 【优化方向五】全部引用CONSTANTS，消除硬编码
+                    case 'flow':             totalBonus += CONSTANTS.BONUS_FLOW;            break; // 超级心流 +3
+                    case 'balance':          totalBonus += CONSTANTS.BONUS_BALANCE;         break; // 完美作息 +3
+                    case 'excellent':        totalBonus += CONSTANTS.BONUS_EXCELLENT;       break; // 卓越表现 +4
+                    case 'warrior':          totalBonus += CONSTANTS.BONUS_WARRIOR;         break; // 攻坚勇士 +4
+                    case 'return':           totalBonus += CONSTANTS.BONUS_RETURN;          break; // 状态回升 +4
+                    case 'streak21':         totalBonus += CONSTANTS.BONUS_STREAK21;        break; // 连续21日 +5
+                    case 'streak14':         totalBonus += CONSTANTS.BONUS_STREAK14;        break; // 连续14日 +3
+                    case 'streak7':          totalBonus += CONSTANTS.BONUS_STREAK7;         break; // 连续7日  +2
+                    case 'recovery':         totalBonus += CONSTANTS.BONUS_RECOVERY;        break; // 快速恢复 +2
+                    case 'micro-victories':  totalBonus += CONSTANTS.BONUS_MICRO_VICTORIES; break; // 微小胜利 +1
+                    case 'bonus_deep_review':totalBonus += CONSTANTS.BONUS_DEEP_REVIEW;     break; // 高强度稳定日 +3
+                    case 'bonus_steady':     totalBonus += CONSTANTS.BONUS_STEADY;          break; // 抗干扰稳态 +2
+                    // 【优化方向三】新增BCM跃升奖励（从BCM模块移来）
+                    case 'bcm_climb_high':   totalBonus += CONSTANTS.BONUS_BCM_CLIMB_HIGH;  break; // BCM大跃升 +2
+                    case 'bcm_climb_low':    totalBonus += CONSTANTS.BONUS_BCM_CLIMB_LOW;   break; // BCM小跃升 +1
+                    case 'bcm_streak':       totalBonus += CONSTANTS.BONUS_BCM_STREAK;      break; // BCM连续稳定 +2
                     default:
                         const val = safeParseFloat(item.value);
-                        if(val>0) totalBonus += val;
+                        if(val > 0) totalBonus += val;
                 }
             });
 
-            // 上限10分
-            const finalBonus = Math.min(totalBonus, 10);
+            // 引用CONSTANTS.BONUS_TOTAL_CAP（10分）
+            const finalBonus = Math.min(totalBonus, CONSTANTS.BONUS_TOTAL_CAP);
 
             const bonusTotal = document.getElementById('bonus-total-score');
             const bonusInp = document.getElementById('bonus-score');
@@ -15979,28 +16106,27 @@ function calculateAMI() {
             // ==================== TPI 计算 ====================
 
         /**
-             * 自动评级TPI (第22版标准)
-             * <95维护 | 95-120维持 | 121-155推进 | 156-200卓越 | 201+过载
+             * 自动评级TPI（优化方向八：引用CONSTANTS，熔断阈值210）
+             * <95维护 | 95-120维持 | 121-155推进 | 156-209卓越 | ≥210过载
              */
           function autoRateTPI(score) {
         const ratingSelect = document.getElementById('tpi-rating');
         if (!ratingSelect) return;
-        // 严格同步第22版界限: <95 / 95-120 / 121-155 / 156-200 / 201+
-        if (score >= 201) {
+        if (score >= CONSTANTS.TPI_OVERLOAD_THRESHOLD) {        // ≥210 过载
             ratingSelect.value = 'overload';
             ratingSelect.style.color = '#ef4444';
-        } else if (score >= 156) {
-            ratingSelect.value = 'excellent'; // 156-200 卓越
+        } else if (score >= CONSTANTS.TPI_HIGH_PERFORMANCE) {  // ≥156 卓越
+            ratingSelect.value = 'excellent';
             ratingSelect.style.color = '#8b5cf6';
-        } else if (score >= 121) {
-            ratingSelect.value = 'good'; // 121-155 推进
+        } else if (score >= CONSTANTS.TPI_STEADY) {            // ≥121 推进
+            ratingSelect.value = 'good';
             ratingSelect.style.color = '#10b981';
-        } else if (score >= 95) {
-                    ratingSelect.value = 'normal'; // 95-120 维持
+        } else if (score >= CONSTANTS.TPI_BASELINE) {          // ≥95 维持
+                    ratingSelect.value = 'normal';
                     ratingSelect.style.color = '#3b82f6';
                     ratingSelect.style.fontWeight = '600';
-                } else {
-                    ratingSelect.value = 'poor'; // <95 维护
+                } else {                                       // <95 维护
+                    ratingSelect.value = 'poor';
                     ratingSelect.style.color = '#6b7280';
                     ratingSelect.style.fontWeight = '600';
                 }
@@ -16053,35 +16179,31 @@ function calculateAMI() {
                 };
             }
 
-// Sys封顶18分（模板要求）
+// 【优化方向七】Sys封顶25分（原18分，提升生活系统权重，引用CONSTANTS.SYS_NET_MAX_SCORE）
 function calculateSysNet() {
     const bcm = calculateBCM();
     const logistics = calculateLogistics();
     const hsm = calculateHSM();
 
-    // 差异1修复：Sys_Net = BCM + Logistics + HSM
+    // Sys_Net = BCM + Logistics + HSM
     const rawSysNet = bcm + logistics + hsm;
 
-    // 差异29修复：负值归零法则 max(0, sum)
+    // 负值归零法则
     let finalSysNet = Math.max(0, rawSysNet);
 
-    // 第22版封顶规则：Sys_Net最高18分
+    // 引用CONSTANTS.SYS_NET_MAX_SCORE（现为25分）
     if (finalSysNet > CONSTANTS.SYS_NET_MAX_SCORE) {
         finalSysNet = CONSTANTS.SYS_NET_MAX_SCORE;
     }
 
-    if (rawSysNet < 0) {
-    }
-
-    // 第22版子系统最低达标分预警
+    // 子系统最低达标分预警（阈值也相应调整）
     const warnings = [];
     if (bcm < 12) warnings.push(`BCM(${bcm.toFixed(1)}) < 12分`);
     if (logistics < 4) warnings.push(`Logistics(${logistics.toFixed(1)}) < 4分`);
     if (hsm < 2.5) warnings.push(`HSM(${hsm.toFixed(1)}) < 2.5分`);
 
     if (warnings.length > 0) {
-        console.warn(`[第22版] ⚠️ 子系统预警: ${warnings.join(', ')} - 建议关注并调整`);
-        // 可以在UI上显示预警
+        console.warn(`[SysNet] ⚠️ 子系统预警: ${warnings.join(', ')}`);
         showNotification(`⚠️ 子系统预警: ${warnings.join('; ')}`, 'warning');
     }
 
@@ -16096,18 +16218,20 @@ function calculateSysNet() {
 }
 
 /**
- * 差异40,41,61,66修复：MA7滑动窗口计算
- * 计算最近7天的TPI平均分
+ * 【优化方向六】MA7滑动窗口计算
+ * 新增双模式：MA7严格版（分母固定7）和MA7有效版（分母=有记录天数）
+ * 有效版对新用户和数据不完整阶段更友好，不会因空日压低均值
  */
 function calculateMA7() {
     try {
         const today = new Date();
         let totalScore = 0;
-        let validDays = 0;
+        let validDays = 0;       // 有记录且TPI>0的天数（MA7有效版分母）
+        let totalDays = 0;       // 固定为7（MA7严格版分母）
         let daysList = [];
 
-        // 向前查找7天的数据
         for (let i = 0; i < 7; i++) {
+            totalDays++;
             const targetDate = new Date(today);
             targetDate.setDate(targetDate.getDate() - i);
             const dateKey = `tpi_data_${targetDate.toISOString().split('T')[0]}`;
@@ -16117,47 +16241,46 @@ function calculateMA7() {
                 try {
                     const data = JSON.parse(dataStr);
                     const tpiScore = safeParseFloat(data['tpi-total'] || data.tpi || 0);
-
                     if (tpiScore > 0) {
                         totalScore += tpiScore;
                         validDays++;
-                        daysList.push({
-                            date: targetDate.toISOString().split('T')[0],
-                            score: tpiScore
-                        });
+                        daysList.push({ date: targetDate.toISOString().split('T')[0], score: tpiScore });
                     } else {
-                        // 差异66修复：缺失天数计入分母（视为0分）
-                        validDays++;
-                        daysList.push({
-                            date: targetDate.toISOString().split('T')[0],
-                            score: 0
-                        });
+                        daysList.push({ date: targetDate.toISOString().split('T')[0], score: 0 });
                     }
                 } catch (e) {
                     console.error(`解析${dateKey}失败:`, e);
-                    // 差异66修复：解析失败也计入分母
-                    validDays++;
+                    daysList.push({ date: targetDate.toISOString().split('T')[0], score: 0 });
                 }
             } else {
-                // 差异66修复：无数据日也计入分母
-                validDays++;
+                daysList.push({ date: targetDate.toISOString().split('T')[0], score: 0 });
             }
         }
 
-        // 差异41修复：滑动窗口计算（不是本自然周）
-        const ma7 = validDays > 0 ? totalScore / validDays : 0;
+        // MA7严格版：分母=7（包含无数据天，视为0）
+        const ma7Strict = totalScore / totalDays;
 
-        // 更新显示
+        // MA7有效版：分母=实际有记录天数（≥1防除零）
+        const ma7Effective = validDays > 0 ? totalScore / validDays : 0;
+
+        // 更新主MA7显示（严格版，长期参考）
         const ma7Input = document.getElementById('ma7-score');
         if (ma7Input) {
-            ma7Input.value = ma7.toFixed(1);
+            ma7Input.value = ma7Strict.toFixed(1);
         }
 
-        // 差异4修复：MA7≥120判定稳健状态
-        if (ma7 >= 120) {
+        // 更新MA7有效版显示（新增元素，若存在则更新）
+        const ma7EffectiveEl = document.getElementById('ma7-effective-score');
+        if (ma7EffectiveEl) {
+            ma7EffectiveEl.textContent = `${ma7Effective.toFixed(1)}（${validDays}/7天有效）`;
         }
 
-        return ma7;
+        // MA7≥120判定稳健状态
+        if (ma7Strict >= 120) {
+            console.log(`[MA7] 稳健状态：MA7严格=${ma7Strict.toFixed(1)}`);
+        }
+
+        return ma7Strict;
     } catch (error) {
         console.error('MA7计算失败:', error);
         return 0;
@@ -16182,7 +16305,7 @@ function calculateTPI() {
                     const sysScoreElem = document.getElementById('sys-score');
                     if (sysScoreElem) sysScoreElem.value = sysNet.toFixed(1);
 
-                  // 第22版标准：废除基石系数α，采用 Sys_Net 直接加法权限制
+                  // 第23版标准：废除基石系数α，采用 Sys_Net 直接加法权限制
             // 逻辑：Sys_Net 本身占比 20%，低分会自动拉低总分，无需额外惩罚 AMI
             const amiAdjusted = ami;
 
@@ -16219,10 +16342,9 @@ function calculateTPI() {
                         }
                     }
 
-                    // 检测能量平衡协议 (TPI > 200)
-                    // 此处仅做标记，实际限制需在次日加载时读取
+                    // 检测能量平衡协议（引用CONSTANTS.TPI_OVERLOAD_THRESHOLD = 210）
                     if (state.tpi > CONSTANTS.TPI_OVERLOAD_THRESHOLD) {
-                         NotifySystem.showToast("🔥 能量平衡协议触发: 明日上限将锁死为95", "warning");
+                         NotifySystem.showToast(`🔥 能量平衡协议触发(TPI>${CONSTANTS.TPI_OVERLOAD_THRESHOLD}): 明日上限将锁死为95`, "warning");
                     }
 
                     // 4. 模式特异性计算
@@ -16236,14 +16358,14 @@ function calculateTPI() {
                         return 0;
                     }
 
-// 斯多葛模式 (柔性折算封顶 - 第22版)
+// 斯多葛模式 (柔性折算封顶 - 第23版)
                     if (selectedMode === 'stoic') {
                         // AMI×1.2补偿
                         const amiStoic = amiAdjusted * 1.2;
                         let rawStoic = amiStoic + fli + bonus;
                         // 注意：Sys_Net不参与TPI计算，只影响α系数
 
-                        // 第22版柔性封顶规则:
+                        // 第23版柔性封顶规则:
                         // 若总分 ≤ 95，直接取该值
                         // 若总分 > 95，则超出部分按50%折算，最终不超过120分
                         // 公式: TPI' = min(120, 95 + (TPI - 95) × 0.5)
@@ -16262,7 +16384,7 @@ function calculateTPI() {
                         reminderMessage = '©️ 斯多葛/止损模式：接受流失事实，力求止损。AMI×1.2补偿，柔性封顶规则已应用 (≤95原值, >95则50%折算且≤120)。';
                     } else {
                 // 常态 / 复苏模式
-                // 第22版公式: TPI = AMI + FLI + Sys_Net + Bonus
+                // 第23版公式: TPI = AMI + FLI + Sys_Net + Bonus
                 tpiTotal = amiAdjusted + fli + sysNet + bonus;
             }
 
@@ -18083,11 +18205,11 @@ try {
             const dinnerRef = document.getElementById('bcm-dinner-ref');
 
             /**
-             * 计算防守得分 (第22版 - 动态奖惩机制)
+             * 计算防守得分 (第23版 - 动态奖惩机制)
              * @param {string} type - 'lunch' 或 'dinner'
              */
             /**
-             * 计算午间/晚间防守得分 (第22版标准 - 基于在宿舍时间)
+             * 计算午间/晚间防守得分 (第23版标准 - 基于在宿舍时间)
              * @param {string} type - 'lunch' 或 'dinner'
              */
             function calculateDefenseScore(type) {
@@ -18145,7 +18267,7 @@ try {
                     const yesterdayDuration = parseFloat(yesterdayDurationStr);
                     const deltaT = todayDuration - yesterdayDuration; // 正数=今天在宿舍时间更长(变差)
 
-                    // 第22版动态奖惩阶梯 (在宿舍时间减少=进步=加分)
+                    // 第23版动态奖惩阶梯 (在宿舍时间减少=进步=加分)
                     if (deltaT <= -20) {
                         // 今天比昨天少待20+分钟 → 大幅进步
                         dynamicBonus = 1.5;
@@ -18289,12 +18411,12 @@ try {
                             message: `检测到昨日基石分(Sys=${ySys})低于12分，系统已根据安全协议强制锁定为复苏模式。`,
                             buttonText: '接受并执行'
                         });
-                    } else if (yTpi > 200) {
+                    } else if (yTpi > CONSTANTS.TPI_OVERLOAD_THRESHOLD) {
                         selectMode('recovery');
                         NotifySystem.showModal({
                             type: 'warning',
                             title: '💤 强制复苏模式 (能量过载)',
-                            message: `检测到昨日TPI高达 ${yTpi} 分 (系统过载)。为防止职业倦怠，今日强制执行能量平衡协议。`,
+                            message: `检测到昨日TPI高达 ${yTpi} 分 (超过过载阈值${CONSTANTS.TPI_OVERLOAD_THRESHOLD}分)。为防止职业倦怠，今日强制执行能量平衡协议。`,
                             buttonText: '接受强制休息'
                         });
                     }
@@ -18327,10 +18449,10 @@ try {
                             try {
                                 const parsed = JSON.parse(data);
                                 const tpi = parsed.tpi || 0;
-                           if (tpi >= 120) { // v13 连胜标准: 120
+                           if (tpi >= CONSTANTS.STREAK_MIN_TPI) { // 连胜标准引用CONSTANTS.STREAK_MIN_TPI(100)
                                     winStreak++;
                                     warnStreak = 0;
-                                } else if (tpi < 95) { // v13 预警标准: 95
+                                } else if (tpi < 95) { // 预警标准: 95
                                     warnStreak++;
                                     winStreak = 0;
                                 } else {
@@ -18390,9 +18512,9 @@ try {
                         }
                     }
 
-                    // 检查连续稳定奖里程碑（7/14/21日）
+                    // 检查连续稳定奖里程碑（7/14/21日）- 奖励分值引用CONSTANTS
                     if (winStreak === 7 || winStreak === 14 || winStreak === 21) {
-                        const bonusPoints = winStreak === 7 ? 3 : (winStreak === 14 ? 5 : 7);
+                        const bonusPoints = winStreak === 7 ? CONSTANTS.BONUS_STREAK7 : (winStreak === 14 ? CONSTANTS.BONUS_STREAK14 : CONSTANTS.BONUS_STREAK21);
                         const milestoneKey = `tpi_milestone_${winStreak}_${new Date().toISOString().split('T')[0]}`;
 
                         // 检查今天是否已经提醒过
@@ -18403,7 +18525,7 @@ try {
                             setTimeout(() => {
                                 if (confirm(
                                     `🎉 连续稳定奖里程碑达成！\n\n` +
-                                    `您已连续 ${winStreak} 日达到TPI≥120分\n` +
+                                    `您已连续 ${winStreak} 日达到TPI≥${CONSTANTS.STREAK_MIN_TPI}分\n` +
                                     `建议在【韧性与突破加分】区域勾选：\n` +
                                     `"📊 连续稳定奖 (${winStreak}日) +${bonusPoints}分"\n\n` +
                                     `点击确定跳转到奖励区域`
@@ -18597,7 +18719,7 @@ try {
                    // 收集触发奖励
         const bonusDetails = document.getElementById('bonus-reason')?.value || '无';
 
-        // 收集微小胜利 (同步第22版)
+        // 收集微小胜利 (同步第23版)
         const mv1 = document.getElementById('micro-victory-1')?.value || '';
         const mv2 = document.getElementById('micro-victory-2')?.value || '';
         const mv3 = document.getElementById('micro-victory-3')?.value || '';
@@ -19600,10 +19722,11 @@ const __exp = (function(){
                     const v = Number(totalEl.value || 0);
                     if (ratingEl) {
                         let r = '';
-                        if (v < 95) r = 'poor';
-                        else if (v <= 120) r = 'normal';
-                        else if (v <= 155) r = 'good';
-                        else r = 'excellent';
+                        if (v >= CONSTANTS.TPI_OVERLOAD_THRESHOLD) r = 'overload';
+                        else if (v >= CONSTANTS.TPI_HIGH_PERFORMANCE) r = 'excellent';
+                        else if (v >= CONSTANTS.TPI_STEADY) r = 'good';
+                        else if (v >= CONSTANTS.TPI_BASELINE) r = 'normal';
+                        else r = 'poor';
                         ratingEl.value = r;
                     }
                 } catch (_) {}
@@ -20267,7 +20390,7 @@ function applyMobileOptimizations() {
 const VERSION_INFO = {
   current: '20.0.0',
   date: window.TPI_BUILD_DATE || getCurrentDate(), // 使用动态日期
-  name: '第22版 v20.0.0 - 问题修复版'
+  name: '第23版 v20.0.0 - 问题修复版'
 };
 
 const CHANGELOG = [
@@ -20876,8 +20999,8 @@ window.addEventListener('resize', function() {
 
                 // 计算状态标签和颜色
                 const tpi = data.tpi || data['tpi-total'] || 0;
-                const color = tpi >= 120 ? '#16a34a' : tpi >= 95 ? '#2563eb' : tpi >= 80 ? '#ca8a04' : '#dc2626';
-                const label = tpi >= 120 ? '卓越' : tpi >= 95 ? '稳健' : tpi >= 80 ? '达标' : '需调整';
+                const color = tpi >= CONSTANTS.TPI_STEADY ? '#16a34a' : tpi >= CONSTANTS.TPI_BASELINE ? '#2563eb' : tpi >= 80 ? '#ca8a04' : '#dc2626';
+                const label = tpi >= CONSTANTS.TPI_STEADY ? '推进/卓越' : tpi >= CONSTANTS.TPI_BASELINE ? '稳健' : tpi >= 80 ? '达标' : '需调整';
 
                 preview.innerHTML = `
                     <h2 style="color: #2563eb; margin-bottom: 20px;">📅 TPI日报 — ${dateStr}</h2>
@@ -21025,8 +21148,8 @@ window.addEventListener('resize', function() {
                             <tbody>
                                 ${weekData.map(d => {
                                     const tpi = (d.tpi || d['tpi-total']) || 0;
-                                    const color = tpi >= 120 ? '#16a34a' : tpi >= 95 ? '#2563eb' : tpi >= 80 ? '#ca8a04' : '#dc2626';
-                                    const label = tpi >= 120 ? '卓越' : tpi >= 95 ? '稳健' : tpi >= 80 ? '达标' : '需调整';
+                                    const color = tpi >= CONSTANTS.TPI_STEADY ? '#16a34a' : tpi >= CONSTANTS.TPI_BASELINE ? '#2563eb' : tpi >= 80 ? '#ca8a04' : '#dc2626';
+                                    const label = tpi >= CONSTANTS.TPI_STEADY ? '推进/卓越' : tpi >= CONSTANTS.TPI_BASELINE ? '稳健' : tpi >= 80 ? '达标' : '需调整';
                                     return `<tr style="border-bottom: 1px solid #f3f4f6;">
                                         <td style="padding: 6px 8px;">${d.date}</td>
                                         <td style="padding: 6px 8px; text-align: right; font-weight: bold; color: ${color};">${tpi}</td>
@@ -21136,8 +21259,8 @@ window.addEventListener('resize', function() {
                                 <tbody>
                                     ${monthData.map(d => {
                                         const tpi = (d.tpi || d['tpi-total']) || 0;
-                                        const color = tpi >= 120 ? '#16a34a' : tpi >= 95 ? '#2563eb' : tpi >= 80 ? '#ca8a04' : '#dc2626';
-                                        const label = tpi >= 120 ? '卓越' : tpi >= 95 ? '稳健' : tpi >= 80 ? '达标' : '需调整';
+                                        const color = tpi >= CONSTANTS.TPI_STEADY ? '#16a34a' : tpi >= CONSTANTS.TPI_BASELINE ? '#2563eb' : tpi >= 80 ? '#ca8a04' : '#dc2626';
+                                        const label = tpi >= CONSTANTS.TPI_STEADY ? '推进/卓越' : tpi >= CONSTANTS.TPI_BASELINE ? '稳健' : tpi >= 80 ? '达标' : '需调整';
                                         return `<tr style="border-bottom: 1px solid #f3f4f6;">
                                             <td style="padding: 6px 8px;">${d.date}</td>
                                             <td style="padding: 6px 8px; text-align: right; font-weight: bold; color: ${color};">${tpi}</td>
@@ -21233,7 +21356,7 @@ window.addEventListener('resize', function() {
                         md += '| 日期 | TPI | AMI | BCM | HSM | BONUS | 状态 |\n|------|-----|-----|-----|-----|-------|------|\n';
                         data.forEach(function(d) {
                             const tpi = d.tpi||0;
-                            const label = tpi>=120?'卓越':tpi>=95?'稳健':tpi>=80?'达标':'需调整';
+                            const label = tpi>=CONSTANTS.TPI_STEADY?'推进/卓越':tpi>=CONSTANTS.TPI_BASELINE?'稳健':tpi>=80?'达标':'需调整';
                             md += '| ' + d.date + ' | ' + tpi + ' | ' + (d.ami||0) + ' | ' + (d.bcm||0) + ' | ' + (d.hsm||0) + ' | ' + (d.bonus||0) + ' | ' + label + ' |\n';
                         });
                         md += '\n';
@@ -24274,24 +24397,24 @@ const ScoreDashboard = {
         let bg = 'rgba(148, 163, 184, 0.30)';
         let border = 'rgba(148, 163, 184, 0.35)';
 
-        if (total >= 201) {
-            text = '≥ 201 过载 (Overload)';
+        if (total >= CONSTANTS.TPI_OVERLOAD_THRESHOLD) {
+            text = `≥ ${CONSTANTS.TPI_OVERLOAD_THRESHOLD} 过载 (Overload)`;
             bg = 'rgba(239, 68, 68, 0.22)';
             border = 'rgba(239, 68, 68, 0.30)';
-        } else if (total >= 156) {
-            text = '≥ 156 卓越 (Excellence)';
+        } else if (total >= CONSTANTS.TPI_HIGH_PERFORMANCE) {
+            text = `≥ ${CONSTANTS.TPI_HIGH_PERFORMANCE} 卓越 (Excellence)`;
             bg = 'rgba(16, 185, 129, 0.20)';
             border = 'rgba(16, 185, 129, 0.28)';
-        } else if (total >= 121) {
-            text = '≥ 121 推进 (Steady)';
+        } else if (total >= CONSTANTS.TPI_STEADY) {
+            text = `≥ ${CONSTANTS.TPI_STEADY} 推进 (Steady)`;
             bg = 'rgba(59, 130, 246, 0.18)';
             border = 'rgba(59, 130, 246, 0.26)';
-        } else if (total >= 95) {
-            text = '≥ 95 维持 (Baseline)';
+        } else if (total >= CONSTANTS.TPI_BASELINE) {
+            text = `≥ ${CONSTANTS.TPI_BASELINE} 维持 (Baseline)`;
             bg = 'rgba(245, 158, 11, 0.18)';
             border = 'rgba(245, 158, 11, 0.26)';
         } else {
-            text = '< 95 维护 (Maintenance)';
+            text = `< ${CONSTANTS.TPI_BASELINE} 维护 (Maintenance)`;
         }
 
         ratingEl.textContent = text;
@@ -25085,8 +25208,8 @@ function updateComparisonTrendChart(days) {
                         pointHoverRadius: 4
                     },
                     {
-                        label: '目标线',
-                        data: Array(data.labels.length).fill(90),
+                        label: '维持基线(95)',
+                        data: Array(data.labels.length).fill(CONSTANTS.TPI_BASELINE),
                         borderColor: 'rgb(239, 68, 68)',
                         borderWidth: 2,
                         borderDash: [10, 5],
@@ -25168,7 +25291,7 @@ function updateComparisonTrendChart(days) {
                     },
                     y: {
                         beginAtZero: true,
-                        max: 200,
+                        max: 230,
                         grid: {
                             display: true,
                             color: 'rgba(0, 0, 0, 0.05)'
@@ -25863,7 +25986,7 @@ console.log('');
 </script>
 <script>
 /* =========================================================
-   第22版 优化补丁（稳定性/导航/导出/弹窗）— 只增强，不破坏折叠与实时算分
+   第23版 优化补丁（稳定性/导航/导出/弹窗）— 只增强，不破坏折叠与实时算分
    目标：
    1) 任何时候可输入/可勾选（不被遮罩/阻塞弹窗卡死）
    2) 禁止“输入即自动云端同步”，只做本地快照 + 手动同步云端
@@ -26383,15 +26506,15 @@ console.log('');
   function ensureLoadingTexts(){
     try{
       const t = document.querySelector('.loading-text');
-      if(t) t.textContent = '第22版：加载中...';
+      if(t) t.textContent = '第23版：加载中...';
       const v = document.querySelector('.loading-version');
-      if(v) v.textContent = '第22版';
+      if(v) v.textContent = '第23版';
     }catch(e){}
   }
 
   // 备份：导出“全量可恢复包”（含所有 tpi_* 以及必要缓存；排除 token/password）
   function backupAllDataNow(){
-    const out = { _meta: { version: (window.TPI_VERSION||'第22版'), exportedAt: new Date().toISOString() }, localStorage: {} };
+    const out = { _meta: { version: (window.TPI_VERSION||'第23版'), exportedAt: new Date().toISOString() }, localStorage: {} };
     for(let i=0;i<__tpi_ls_length();i++){
       const k = __tpi_ls_key(i);
       if(!k) continue;
@@ -26530,7 +26653,7 @@ try{
       // 防止“重复注入”造成监听堆叠
       if(window.__TPI_V9_PATCH_ONCE__) return;
       window.__TPI_V9_PATCH_ONCE__ = true;
-      tpiToast('✅ 第22版 稳定性补丁已加载（自动导航/范围导出/禁用自动云端同步）');
+      tpiToast('✅ 第23版 稳定性补丁已加载（自动导航/范围导出/禁用自动云端同步）');
     }catch(e){}
   }, {once:true});
 
@@ -26575,7 +26698,7 @@ try{
       }
       window.__tpi_backup_lock = true;
 
-      const out = { _meta: { version: (window.TPI_VERSION||'第22版'), exportedAt: new Date().toISOString() }, localStorage: {} };
+      const out = { _meta: { version: (window.TPI_VERSION||'第23版'), exportedAt: new Date().toISOString() }, localStorage: {} };
 
       for(let i=0;i<__tpi_ls_length();i++){
         const k = __tpi_ls_key(i);
@@ -27215,7 +27338,7 @@ try{
       }
       window.__tpi_backup_lock = true;
 
-      const out = { _meta: { version: (window.TPI_VERSION||'第22版'), exportedAt: new Date().toISOString() }, localStorage: {} };
+      const out = { _meta: { version: (window.TPI_VERSION||'第23版'), exportedAt: new Date().toISOString() }, localStorage: {} };
 
       for(let i=0;i<__tpi_ls_length();i++){
         const k = __tpi_ls_key(i);
@@ -28058,11 +28181,11 @@ try{
   }
 })();
 </script>
-<!-- ===================== 第22版修复补丁 - 分数看板FLI和导航增强 ===================== -->
+<!-- ===================== 第23版修复补丁 - 分数看板FLI和导航增强 ===================== -->
 <script>
 (function() {
     'use strict';
-    console.log('🔧 [修复补丁] 开始加载第22版修复补丁...');
+    console.log('🔧 [修复补丁] 开始加载第23版修复补丁...');
 
     // ===== 修复1: 确保ScoreDashboard正确更新FLI分数 =====
     if (window.ScoreDashboard) {
@@ -28168,7 +28291,7 @@ try{
         }
     }, 15000);
 
-    console.log('✅ [修复补丁] 第22版修复补丁加载完成');
+    console.log('✅ [修复补丁] 第23版修复补丁加载完成');
 })();
 </script>
 
