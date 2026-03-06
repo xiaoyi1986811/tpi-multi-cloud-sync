@@ -1059,7 +1059,7 @@ if (typeof window.__tpi_debug_log === 'function') window.__tpi_debug_log('[Stora
     try {
       const isUpload = type === 'upload';
       const icon = isUpload ? '☁️' : '📥';
-      const title = isUpload ? '云端上传成功' : '云端下载成功';
+      const title = isUpload ? '✅ 上传成功！' : '✅ 下载成功！';
       const color = isUpload ? '#2563eb' : '#10b981';
       const bgGrad = isUpload
         ? 'linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%)'
@@ -1081,8 +1081,8 @@ if (typeof window.__tpi_debug_log === 'function') window.__tpi_debug_log('[Stora
       const box = document.createElement('div');
       box.style.cssText = `
         background:white;border-radius:20px;padding:0;
-        max-width:480px;width:calc(100% - 32px);
-        max-height:calc(100vh - 40px);
+        max-width:min(480px, calc(100vw - 32px));width:calc(100% - 32px);
+        max-height:min(580px, calc(100vh - 100px));
         display:flex;flex-direction:column;
         box-shadow:0 20px 60px rgba(0,0,0,0.25);
         overflow:hidden;animation:__tpiNotifScaleIn 0.3s cubic-bezier(0.16,1,0.3,1);
@@ -1091,7 +1091,7 @@ if (typeof window.__tpi_debug_log === 'function') window.__tpi_debug_log('[Stora
       `;
 
       const header = document.createElement('div');
-      header.style.cssText = `background:${bgGrad};padding:20px 24px 16px;border-bottom:1px solid rgba(0,0,0,0.07);`;
+      header.style.cssText = `background:${bgGrad};padding:16px 20px 12px;border-bottom:1px solid rgba(0,0,0,0.07);flex-shrink:0;`;
       header.innerHTML = `
         <div style="display:flex;align-items:center;gap:12px;">
           <div style="width:48px;height:48px;border-radius:14px;background:${color};display:flex;align-items:center;justify-content:center;font-size:24px;box-shadow:0 4px 12px ${color}40;">${icon}</div>
@@ -1118,21 +1118,22 @@ if (typeof window.__tpi_debug_log === 'function') window.__tpi_debug_log('[Stora
         header.style.position = 'relative';
         const xbtn = document.createElement('button');
         xbtn.type = 'button';
+        xbtn.className = '__tpi-rich-close-x';
         xbtn.setAttribute('aria-label','关闭');
         xbtn.textContent = '×';
         xbtn.style.cssText = `
-          position:absolute;top:12px;right:12px;
-          width:34px;height:34px;border:none;border-radius:10px;
-          background:rgba(255,255,255,0.75);color:#334155;
-          font-size:22px;line-height:34px;cursor:pointer;
-          box-shadow:0 6px 16px rgba(0,0,0,0.08);
+          position:absolute;top:10px;right:10px;
+          width:32px;height:32px;border:none;border-radius:8px;
+          background:rgba(255,255,255,0.8);color:#334155;
+          font-size:20px;line-height:32px;cursor:pointer;text-align:center;
+          box-shadow:0 4px 12px rgba(0,0,0,0.1);display:flex;align-items:center;justify-content:center;
         `;
         xbtn.onclick = doClose;
         header.appendChild(xbtn);
       }catch(e){}
 
       const body = document.createElement('div');
-      body.style.cssText = `padding:20px 24px;overflow-y:auto;flex:1;`;
+      body.style.cssText = `padding:14px 20px;overflow-y:auto;flex:1;min-height:0;`;
 
       const rows = [];
       rows.push(['📦', '数据大小', `${dataSizeKB} KB`]);
@@ -1161,11 +1162,11 @@ if (typeof window.__tpi_debug_log === 'function') window.__tpi_debug_log('[Stora
       }
 
       const table = document.createElement('div');
-      table.style.cssText = `display:flex;flex-direction:column;gap:6px;`;
+      table.style.cssText = `display:flex;flex-direction:column;gap:4px;`;
       rows.forEach(([em, label, val], idx) => {
         const row = document.createElement('div');
         const rowBg = idx % 2 === 0 ? '#f8fafc' : '#f1f5f9';
-        row.style.cssText = `display:flex;align-items:center;gap:10px;padding:8px 12px;background:${rowBg};border-radius:10px;`;
+        row.style.cssText = `display:flex;align-items:center;gap:8px;padding:6px 10px;background:${rowBg};border-radius:8px;`;
         row.innerHTML = `
           <span style="font-size:16px;width:22px;text-align:center;flex-shrink:0;">${em}</span>
           <span style="font-size:12.5px;color:#64748b;min-width:84px;">${label}</span>
@@ -1184,12 +1185,10 @@ if (typeof window.__tpi_debug_log === 'function') window.__tpi_debug_log('[Stora
       `;
       const successMessages = isUpload ? [
         '✅ 所有数据已成功上传到云端',
-        '🌐 可在任意设备登录后下载恢复',
-        '🔒 数据已加密存储于云端服务器'
+        '🌐 可在任意设备登录后下载恢复'
       ] : [
         '✅ 数据已完整下载到本页面',
-        '📊 分数与评级已实时重新计算',
-        '💾 本地缓存已同步更新'
+        '📊 分数与评级已实时重新计算'
       ];
       const msgIdx = Math.floor(Date.now() / 5000) % successMessages.length;
       successBadge.innerHTML = `
@@ -1202,7 +1201,7 @@ if (typeof window.__tpi_debug_log === 'function') window.__tpi_debug_log('[Stora
       body.appendChild(successBadge);
 
       const footer = document.createElement('div');
-      footer.style.cssText = `padding:12px 24px 20px;display:flex;justify-content:flex-end;`;
+      footer.style.cssText = `padding:10px 20px 16px;display:flex;justify-content:flex-end;flex-shrink:0;border-top:1px solid rgba(0,0,0,0.06);`;
       const btn = document.createElement('button');
       btn.type = 'button';
       btn.textContent = '知道了 ✓';
@@ -5038,8 +5037,10 @@ if (typeof window.showModal === 'undefined') {
             padding: 0;
             max-width: min(500px, 95vw);
             width: 90%;
-            max-height: 80vh;
-            overflow-y: auto;
+            max-height: min(520px, calc(100vh - 80px));
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
             box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
             animation: modalScaleIn 0.3s ease-out;
         `;
@@ -5059,17 +5060,17 @@ if (typeof window.showModal === 'undefined') {
         }
         
         content.innerHTML = `
-            <div class="modal-header" style="padding: 20px; border-bottom: 1px solid #e5e7eb; display: flex; align-items: center; justify-content: space-between;">
+            <div class="modal-header" style="padding: 20px; border-bottom: 1px solid #e5e7eb; display: flex; align-items: center; justify-content: space-between; flex-shrink: 0;">
                 <div style="display: flex; align-items: center; gap: 12px;">
                     <div style="font-size: 24px;">${icon}</div>
                     <h3 style="margin: 0; font-size: 18px; font-weight: 600; color: #111827;">${title}</h3>
                 </div>
                 <button class="modal-close-x-btn" type="button" title="关闭" style="background: none; border: none; cursor: pointer; font-size: 20px; color: #9ca3af; padding: 8px 12px; min-height: 44px; min-width: 44px; border-radius: 6px; line-height: 1; transition: all 0.15s; flex-shrink: 0;">✕</button>
             </div>
-            <div class="modal-body" style="padding: 20px;">
+            <div class="modal-body" style="padding: 20px; overflow-y: auto; flex: 1; min-height: 0; white-space: pre-wrap; word-break: break-word;">
                 ${message}
             </div>
-            <div class="modal-footer" style="padding: 15px 20px; border-top: 1px solid #e5e7eb; display: flex; gap: 10px; justify-content: flex-end;">
+            <div class="modal-footer" style="padding: 15px 20px; border-top: 1px solid #e5e7eb; display: flex; gap: 10px; justify-content: flex-end; flex-shrink: 0;">
                 ${showCancel ? `<button type="button" class="modal-cancel-btn" style="padding: 10px 20px; border: 1px solid #d1d5db; background: white; color: #6b7280; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 500; transition: all 0.2s;">${cancelText}</button>` : ''}
                 ${showConfirm ? `<button type="button" class="modal-confirm-btn" style="padding: 10px 20px; border: none; background: ${iconColor}; color: white; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 500; transition: all 0.2s;">${confirmText}</button>` : ''}
             </div>
@@ -31204,14 +31205,20 @@ window.__tpi_debug_log('☁️ [上传] 正在写入云端数据库...');
           _ul_fieldCount = Object.keys(_ul_day).filter(k=>!k.startsWith('_')&&k!=='futureRadarV3'&&k!=='miscRecordsV1').length;
         } catch(_) {}
         const _ul_uploadTime = new Date().toLocaleString('zh-CN',{year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false});
+        const _ul_duration = (typeof __upload_start_time !== 'undefined' ? ((Date.now() - __upload_start_time) / 1000).toFixed(2) : '—');
+        const _ul_localDays = (() => { try { return Object.keys(localStorage).filter(k => /^\d{4}-\d{2}-\d{2}$/.test(k)).length; } catch(_) { return 0; } })();
         const _ulLines = [
-          `✅ 上传成功 — ${dateStr}`,
-          `📦 数据大小：${dataSizeKB} KB`,
-          `🗂 表单字段：${_ul_fieldCount} 个  |  📓 杂记：${_ul_miscCount} 条`,
-          `⏰ 上传时间：${_ul_uploadTime}`,
-          `☁️ 同步方式：TPI+ 后端 (Appwrite)`,
-          `🔒 数据完整性：✓ JSON 结构验证通过`,
-          `📡 连接状态：✓ 云端写入已确认`
+          `✅ 上传成功！`,
+          `📅 日期: ${dateStr}`,
+          `📦 数据大小: ${dataSizeKB} KB`,
+          `📊 字段数: ${_ul_fieldCount} 个  |  杂记: ${_ul_miscCount} 条`,
+          `⏰ 上传时间: ${_ul_uploadTime}`,
+          `⏱️ 用时: ${_ul_duration} 秒`,
+          `☁️ 同步方式: TPI+ 后端 (Appwrite)`,
+          `🔒 数据完整性: ✓ JSON 结构验证通过`,
+          `📡 连接状态: ✓ 云端写入已确认`,
+          `📚 本地存档: 累计 ${_ul_localDays} 天数据`,
+          `💡 提示: 可在其他设备登录后下载恢复`
         ];
         const _ulMsg = _ulLines.join('\n');
         if (typeof window.tpiToast === 'function') {
@@ -31231,14 +31238,22 @@ window.__tpi_debug_log('☁️ [上传] 正在写入云端数据库...');
       try{ window.__tpi_logSync && window.__tpi_logSync({id:(crypto?.randomUUID?crypto.randomUUID():('log_'+Date.now())), ts:Date.now(), type:'upload', date: (typeof dateStr!=='undefined'?dateStr:''), ok:false, error:String(err?.message||err)}); }catch(e){}
       // 写入面板日志
       try {
-        const _failMsg = `❌ 上传失败\n🔍 错误原因: ${err?.message || err}\n💡 请检查: 网络连接、Appwrite 配置是否正确\n🕐 失败时间: ${new Date().toLocaleString('zh-CN')}`;
+        const _failMsg = [
+          `❌ 上传失败！`,
+          `📅 日期: ${typeof dateStr !== 'undefined' ? dateStr : '未知'}`,
+          `🔍 错误原因: ${err?.message || err}`,
+          `💡 建议检查: 网络连接、Appwrite 配置、登录状态是否正常`,
+          `🕐 失败时间: ${new Date().toLocaleString('zh-CN')}`,
+          `☁️ 同步方式: TPI+ 后端 (Appwrite)`
+        ].join('\n');
         tpiShowMsg('tpi-sync-msg', _failMsg, true);
       } catch(_) {}
       showModal?.({
         type:'error',
         title:'☁️ Appwrite 上传失败',
         message: `❌ 上传失败\n\n🔍 错误原因：${err?.message || err}\n\n💡 建议检查：\n• 网络连接是否正常\n• Appwrite 服务端是否可访问\n• 登录状态是否已过期（请尝试重新登录）`,
-        confirmText:'知道了 ✓'
+        confirmText:'知道了 ✓',
+        showCancel: false
       });
     }
   };
@@ -31324,7 +31339,7 @@ window.tpiLoadToday = async function () {
               window.restoreUIFromData(remoteDay2);
             }
             // ✅ [Fix V12-Bug1] 不调用 loadFromLocalStorage（避免 clearAllForm 清除刚恢复的数据）
-            showModal?.({type:'success', title:'✅ 下载成功（兼容模式）', message:'已使用兼容模式恢复数据。\n\n⚠️ 建议：请立即点击"☁️ 上传到Appwrite"重新上传，以升级云端数据格式，确保后续下载正常。', confirmText:'知道了'});
+            showModal?.({type:'success', title:'✅ 下载成功（兼容模式）', message:'已使用兼容模式恢复数据。\n\n⚠️ 建议：请立即点击"☁️ 上传到Appwrite"重新上传，以升级云端数据格式，确保后续下载正常。', confirmText:'知道了 ✓', showCancel: false});
             return;
           }
         } catch(_) {}
@@ -31622,15 +31637,20 @@ const __download_end_time = Date.now();
         }
         // 写入面板日志
         try {
+          const _dl_duration = (typeof __download_start_time !== 'undefined' ? ((Date.now() - __download_start_time) / 1000).toFixed(2) : '—');
+          const _dl_localDays = (() => { try { return Object.keys(localStorage).filter(k => /^\d{4}-\d{2}-\d{2}$/.test(k)).length; } catch(_) { return 0; } })();
           const _dlLogMsg = [
-            `✅ 下载成功 — ${dateStr}`,
-            `📦 数据大小：${dataSizeKB} KB`,
-            `🗂 表单字段：${_dl_fieldCount} 个  |  📓 杂记：${_dl_miscCount} 条`,
-            `🔄 本地键变化：${beforeKeys} → ${afterKeys} 个`,
-            `⏰ 下载时间：${_dl_downloadTime}`,
-            `☁️ 同步方式：TPI+ 后端 (Appwrite)`,
-            `📡 连接状态：✓ 云端读取成功`,
-            `💡 分数已实时重新计算`
+            `✅ 下载成功！`,
+            `📅 日期: ${dateStr}`,
+            `📦 数据大小: ${dataSizeKB} KB`,
+            `📊 字段数: ${_dl_fieldCount} 个  |  杂记: ${_dl_miscCount} 条`,
+            `🔄 本地键变化: ${beforeKeys} → ${afterKeys} 个`,
+            `⏰ 下载时间: ${_dl_downloadTime}`,
+            `⏱️ 用时: ${_dl_duration} 秒`,
+            `☁️ 同步方式: TPI+ 后端 (Appwrite)`,
+            `📡 连接状态: ✓ 云端读取成功`,
+            `📚 本地存档: 累计 ${_dl_localDays} 天数据`,
+            `💡 分数与评级已实时重新计算`
           ].join('\n');
           tpiShowMsg('tpi-sync-msg', _dlLogMsg, false);
         } catch(_) {}
@@ -31668,7 +31688,14 @@ const __download_end_time = Date.now();
         : (err?.message || err);
       // 写入面板日志
       try {
-        const _dlFailMsg = `❌ 下载失败\n🔍 错误原因: ${msg}\n💡 ${_isNotFound ? '请先上传当天数据到云端，再进行下载' : '请检查网络连接及登录状态'}\n🕐 失败时间: ${new Date().toLocaleString('zh-CN')}`;
+        const _dlFailMsg = [
+          `❌ 下载失败！`,
+          `📅 日期: ${typeof dateStr !== 'undefined' ? dateStr : '未知'}`,
+          `🔍 错误原因: ${msg}`,
+          `💡 ${_isNotFound ? '请先上传当天数据到云端，再进行下载恢复' : '请检查网络连接及登录状态是否正常'}`,
+          `🕐 失败时间: ${new Date().toLocaleString('zh-CN')}`,
+          `☁️ 同步方式: TPI+ 后端 (Appwrite)`
+        ].join('\n');
         tpiShowMsg('tpi-sync-msg', _dlFailMsg, true);
       } catch(_) {}
       showModal?.({
@@ -31677,7 +31704,8 @@ const __download_end_time = Date.now();
         message: _isNotFound
           ? `⚠️ ${msg}\n\n💡 建议：请先点击「同步上传数据到云端」将当天数据上传，再进行下载恢复。`
           : `❌ 下载失败\n\n🔍 错误原因：${msg}\n\n💡 建议检查：\n• 网络连接是否正常\n• 登录状态是否已过期（请尝试重新登录）\n• Appwrite 服务端是否可访问`,
-        confirmText:'知道了 ✓'
+        confirmText:'知道了 ✓',
+        showCancel: false
       });
     }
   };
@@ -34007,14 +34035,21 @@ window.__tpi_debug_log('✅ [TPI优化] 函数增强包装器已加载');
 
         const duration = ((Date.now() - startTime) / 1000).toFixed(2);
         
+        const _gist_ul_localDays = (() => { try { return Object.keys(localStorage).filter(k => /^\d{4}-\d{2}-\d{2}$/.test(k)).length; } catch(_) { return 0; } })();
         showGistMsg(
-          `✅ 上传成功！\n` +
-          `📅 日期: ${date}\n` +
-          `📊 字段数: ${fieldCount} | 大小: ${(dataSize/1024).toFixed(2)}KB\n` +
-          `📚 总天数: ${totalDays} 天\n` +
-          `⏱️ 用时: ${duration}秒\n` +
-          `☁️ 同步方式: GitHub Gist\n` +
-          `🔗 Gist ID: ${auth.gistId}`,
+          [
+            `✅ 上传成功！`,
+            `📅 日期: ${date}`,
+            `📦 数据大小: ${(dataSize/1024).toFixed(2)} KB`,
+            `📊 字段数: ${fieldCount} 个`,
+            `⏰ 上传时间: ${new Date().toLocaleString('zh-CN')}`,
+            `⏱️ 用时: ${duration} 秒`,
+            `☁️ 同步方式: GitHub Gist`,
+            `🔗 Gist ID: ${auth.gistId}`,
+            `📚 Gist 总数据: ${totalDays} 天`,
+            `📚 本地存档: 累计 ${_gist_ul_localDays} 天数据`,
+            `💡 提示: 可在其他设备恢复此备份`
+          ].join('\n'),
           false
         );
         // ✅ [Fix V13] 额外弹出丰富通知
@@ -34055,10 +34090,14 @@ window.__tpi_debug_log('✅ [TPI优化] 函数增强包装器已加载');
     } catch (error) {
       console.error('❌ [Gist上传] 上传失败:', error);
       showGistMsg(
-        `❌ 上传失败\n` +
-        `🔍 错误原因: ${error.message}\n` +
-        `💡 请检查: Token 权限（需勾选 gist）、网络连接是否正常\n` +
-        `🕐 失败时间: ${new Date().toLocaleString('zh-CN')}`,
+        [
+          `❌ 上传失败！`,
+          `📅 日期: ${date}`,
+          `🔍 错误原因: ${error.message}`,
+          `💡 建议检查: Token 权限（需勾选 gist）、网络连接是否正常`,
+          `🕐 失败时间: ${new Date().toLocaleString('zh-CN')}`,
+          `☁️ 同步方式: GitHub Gist`
+        ].join('\n'),
         true
       );
     }
@@ -34160,15 +34199,21 @@ window.__tpi_debug_log('✅ [TPI优化] 函数增强包装器已加载');
       const duration = ((Date.now() - startTime) / 1000).toFixed(2);
       const backupTime = new Date(backupInfo.backupTime).toLocaleString('zh-CN');
 
+      const _gist_dl_localDays = (() => { try { return Object.keys(localStorage).filter(k => /^\d{4}-\d{2}-\d{2}$/.test(k)).length; } catch(_) { return 0; } })();
       showGistMsg(
-        `✅ 下载成功！\n` +
-        `📅 日期: ${date}\n` +
-        `📊 字段数: ${fieldCount} | 大小: ${(dataSize/1024).toFixed(2)}KB\n` +
-        `🕐 下载时间: ${new Date().toLocaleString('zh-CN')}\n` +
-        `📤 原始上传时间: ${backupTime}\n` +
-        `⏱️ 用时: ${duration}秒\n` +
-        `☁️ 同步方式: GitHub Gist\n` +
-        `📚 Gist 总数据: ${totalDates} 天`,
+        [
+          `✅ 下载成功！`,
+          `📅 日期: ${date}`,
+          `📦 数据大小: ${(dataSize/1024).toFixed(2)} KB`,
+          `📊 字段数: ${fieldCount} 个`,
+          `⏰ 下载时间: ${new Date().toLocaleString('zh-CN')}`,
+          `📤 原始上传时间: ${backupTime}`,
+          `⏱️ 用时: ${duration} 秒`,
+          `☁️ 同步方式: GitHub Gist`,
+          `📚 Gist 总数据: ${totalDates} 天`,
+          `📚 本地存档: 累计 ${_gist_dl_localDays} 天数据`,
+          `💡 分数与评级已实时重新计算`
+        ].join('\n'),
         false
       );
 
@@ -34197,10 +34242,14 @@ window.__tpi_debug_log('✅ [TPI优化] 函数增强包装器已加载');
     } catch (error) {
       console.error('❌ [Gist下载] 下载失败:', error);
       showGistMsg(
-        `❌ 下载失败\n` +
-        `🔍 错误原因: ${error.message}\n` +
-        `💡 请检查: Token 权限是否有效、Gist ID 是否正确\n` +
-        `🕐 失败时间: ${new Date().toLocaleString('zh-CN')}`,
+        [
+          `❌ 下载失败！`,
+          `📅 日期: ${typeof date !== 'undefined' ? date : '未知'}`,
+          `🔍 错误原因: ${error.message}`,
+          `💡 建议检查: Token 权限是否有效、Gist ID 是否正确`,
+          `🕐 失败时间: ${new Date().toLocaleString('zh-CN')}`,
+          `☁️ 同步方式: GitHub Gist`
+        ].join('\n'),
         true
       );
     }
