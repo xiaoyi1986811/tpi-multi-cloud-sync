@@ -4088,17 +4088,6 @@ body.dark-mode .tpi-hover-label:hover {
 
 
 <style>
-   /* 补全模态框基础样式 */
-    .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 10001; align-items: center; justify-content: center; }
-    .modal { background: white; border-radius: 8px; overflow: hidden; display: flex; flex-direction: column; }
-    .modal-header { padding: 15px 20px; border-bottom: 1px solid #eee; font-weight: bold; }
-    .modal-body { padding: 20px; }
-
-    
-    
-
-    .modal-footer { padding: 15px 20px; border-top: 1px solid #eee; display: flex; justify-content: flex-end; gap: 10px; }
-    .modal-button { padding: 8px 16px; border-radius: 6px; cursor: pointer; border: none; font-weight: 600; }
     :root{--color-primary:#0d9488;--color-primary-light:#5eead4;--color-primary-dark:#0f766e;--color-secondary:#f59e0b;--color-accent:#ec4899;--color-success:#10b981;--color-warning:#f59e0b;--color-danger:#ef4444;--color-info:#0d9488;--color-tier1:#ef4444;--color-tier2:#f59e0b;--color-tier3:#6b7280;--color-legend:#a855f7;--color-excellent:#10b981;--color-good:#0d9488;--color-normal:#f59e0b;--color-poor:#6b7280;--color-bg-primary:#ffffff;--color-bg-secondary:#f9fafb;--color-bg-tertiary:#f3f4f6;--color-bg-hover:#f0f9ff;--color-text-primary:#111827;--color-text-secondary:#4b5563;--color-text-muted:#9ca3af;--color-border:#e5e7eb;--color-border-light:#f3f4f6;--color-shadow:rgba(0, 0, 0, 0.1);--font-display:-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;--font-body:-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans SC', 'Microsoft YaHei', sans-serif;--font-mono:'SF Mono', 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;--font-size-xs:0.75rem;--font-size-sm:0.875rem;--font-size-base:1rem;--font-size-lg:1.125rem;--font-size-xl:1.25rem;--font-size-2xl:1.5rem;--font-size-3xl:1.875rem;--font-size-4xl:2.25rem;--spacing-0:0;--spacing-1:0.25rem;--spacing-2:0.5rem;--spacing-3:0.75rem;--spacing-4:1rem;--spacing-5:1.25rem;--spacing-6:1.5rem;--spacing-8:2rem;--spacing-10:2.5rem;--spacing-12:3rem;--spacing-16:4rem;--radius-sm:0.375rem;--radius-md:0.5rem;--radius-lg:0.75rem;--radius-xl:1rem;--radius-full:9999px;--shadow-xs:0 1px 2px 0 rgba(0, 0, 0, 0.05);--shadow-sm:0 1px 3px 0 rgba(0, 0, 0, 0.1);--shadow-md:0 4px 6px -1px rgba(0, 0, 0, 0.1);--shadow-lg:0 10px 15px -3px rgba(0, 0, 0, 0.1);--shadow-xl:0 20px 25px -5px rgba(0, 0, 0, 0.1);--transition-fast:150ms cubic-bezier(0.4, 0, 0.2, 1);--transition-base:250ms cubic-bezier(0.4, 0, 0.2, 1);--transition-slow:350ms cubic-bezier(0.4, 0, 0.2, 1);--z-base:1;--z-dropdown:1000;--z-sticky:1020;--z-fixed:1030;--z-modal:1040;--z-tooltip:1050;}
 
 /* 第30版新增：云端同步模块暗黑模式支持 */
@@ -6526,22 +6515,6 @@ input[id="tpi-total"] {
   text-align: center !important;
   box-shadow: 0 0 0 2px rgba(13,148,136,0.12) !important;
   letter-spacing: 0.01em !important;
-}
-
-/* 各模块合计分 */
-#ami-total-score,
-#fli-total-score,
-#sys-net-score,
-#bonus-total-score,
-#bcm-total-score,
-#ma7-score,
-input[id$="-total-score"],
-input[id="ma7-score"] {
-  font-size: 1.18em !important;
-  font-weight: 800 !important;
-  color: #1a4d8a !important;
-  background: linear-gradient(135deg, #e0f0ff 0%, #f0f9ff 100%) !important;
-  border-color: #93c5fd !important;
 }
 
 /* ── 6. TPI 总分区域 h2 标题增强 ── */
@@ -10211,7 +10184,7 @@ body.dark-theme input[readonly] {
               <strong>
                完美作息平衡奖 (+2分)
               </strong>
-              ：晨间入馆 &lt;08:45 &amp; 睡眠 &lt;00:00 &amp; 午晚双坚守。三项核心作息指标同时达标，代表系统性改善。
+              ：晨间入馆得分 ≥3.5（传奇/攀登）&amp; 睡眠得分 ≥3（进取或更好）&amp; 午晚双坚守。三项核心作息指标同时达标，代表系统性改善。
              </li>
 </ul>
 </li>
@@ -10349,7 +10322,7 @@ body.dark-theme input[readonly] {
             ⚖️ 完美作息平衡奖 (+2)
            </span>
 <small class="text-muted" style="display: block; font-size: 0.75rem; line-height: 1.3;">
-            晨间入馆 &lt;08:45 &amp; 睡眠 &lt;00:00 &amp; 午晚双坚守
+            晨间入馆得分 ≥3.5（传奇/攀登）&amp; 睡眠得分 ≥3（进取或更好）&amp; 午晚双坚守
            </small>
 </div>
 </label>
@@ -13026,7 +12999,7 @@ body.dark-theme input[readonly] {
 <ul>
 <li>
 <strong>
-           核心生存运动（4分）
+           核心生存运动（3分）
           </strong>
           ：
           <ul>
@@ -13097,7 +13070,7 @@ body.dark-theme input[readonly] {
 <strong>
           计算公式
          </strong>
-         ：HSM = 核心生存运动(4) + 上午微运动(0.5) + 下午微运动(0.5) + 喝水(0.3)
+         ：HSM = 核心生存运动(3) + 上午微运动(0.5) + 下午微运动(0.5) + 喝水(0.3)
         </p>
 </div>
   </div>
@@ -13149,7 +13122,7 @@ body.dark-theme input[readonly] {
 </td>
 <td class="center">
 <strong>
-             4
+             3
             </strong>
 </td>
 <td class="center">
@@ -14684,114 +14657,6 @@ body.dark-theme input[readonly] {
             // 5. 性能: 实现事件委托和防抖
             // ==================== End ====================
 
-// ========================================
-// Bonus自动检测系统 (新增)
-// ========================================
-class BonusCalculator {
-    constructor() {
-        this.bonuses = [];
-        this.maxBonus = 5; // 封顶5分（与CONSTANTS.BONUS_TOTAL_CAP一致，V3: 10→5）
-    }
-
-    // 清空奖励
-    reset() {
-        this.bonuses = [];
-    }
-
-    // 添加奖励
-    addBonus(name, points, reason) {
-        this.bonuses.push({ name, points, reason });
-    }
-
-    // 计算所有Bonus（参考值，与CONSTANTS保持一致；实际计分由calculateBonus()负责）
-    calculateAll(state) {
-        this.reset();
-
-        // 1. 超级心流奖（≥3个F=1.3）+2分（V3: 3→2，引用CONSTANTS.BONUS_FLOW）
-        const flowCount = state.flowCount || 0;
-        if (flowCount >= 3) {
-            this.addBonus('超级心流奖', 2, `${flowCount}个心流时段`);
-        }
-
-        // 2. 攻坚勇士奖（≥3个Type D）+2分（V3: 4→2，引用CONSTANTS.BONUS_WARRIOR）
-        const typeDCount = state.typeDCount || 0;
-        if (typeDCount >= 3) {
-            this.addBonus('攻坚勇士奖', 2, `${typeDCount}个Type D任务`);
-        }
-
-        // 3. 完美作息平衡奖 +2分（V3: 3→2，引用CONSTANTS.BONUS_BALANCE）
-        if (this.checkPerfectBalance(state)) {
-            this.addBonus('完美作息平衡奖', 2, '晨间<08:45 & 睡眠<00:00 & 午晚双坚守');
-        }
-
-        // 4. 状态回升奖 +2分（V3: 4→2，引用CONSTANTS.BONUS_RETURN；触发条件：昨日<RECOVERY_MODE_CAP(95)，今日提升≥BONUS_RETURN_MIN_IMPROVE(20)）
-        const yesterday = historicalDataManager.getYesterday();
-        const _retThreshold = (typeof CONSTANTS !== 'undefined' && CONSTANTS.RECOVERY_MODE_CAP) ? CONSTANTS.RECOVERY_MODE_CAP : 95;
-        const _retMinImprove = (typeof CONSTANTS !== 'undefined' && CONSTANTS.BONUS_RETURN_MIN_IMPROVE) ? CONSTANTS.BONUS_RETURN_MIN_IMPROVE : 20;
-        if (yesterday && yesterday.tpi_total < _retThreshold && state.tpi_total >= (yesterday.tpi_total + _retMinImprove)) {
-            this.addBonus('状态回升奖', 2, `昨日${yesterday.tpi_total.toFixed(1)} → 今日${state.tpi_total.toFixed(1)}`);
-        }
-
-        // 5. 卓越表现奖 +2分（V3: 4→2，引用CONSTANTS.BONUS_EXCELLENT；触发：AMI+FLI+Sys_Net≥BONUS_EXCELLENT_THRESHOLD）
-        const preBonus = (state.ami || 0) + (state.fli || 0) + (state.sysNet || 0);
-        const _excellentThreshold = (typeof CONSTANTS !== 'undefined' && CONSTANTS.BONUS_EXCELLENT_THRESHOLD) ? CONSTANTS.BONUS_EXCELLENT_THRESHOLD : 148;
-        if (preBonus >= _excellentThreshold) {
-            this.addBonus('卓越表现奖', 2, `AMI+FLI+Sys_Net=${preBonus.toFixed(1)}≥${_excellentThreshold}`);
-        }
-
-        // 计算总分（封顶5分，与CONSTANTS.BONUS_TOTAL_CAP一致）
-        const rawTotal = this.bonuses.reduce((sum, b) => sum + b.points, 0);
-        const cappedTotal = Math.min(rawTotal, this.maxBonus);
-
-        if (rawTotal > this.maxBonus) {
-        }
-
-        // 更新UI
-        this.updateUI(cappedTotal);
-
-        return cappedTotal;
-    }
-
-    // 检查完美作息平衡
-    checkPerfectBalance(state) {
-        // 晨间<08:45（与JS计分逻辑一致）
-        const morningTime = document.getElementById('bcm-morning-time')?.value;
-        const morningOK = morningTime && morningTime < '08:45';
-
-        // 睡眠<00:00（入睡时间在午夜前）
-        const sleepTime = document.getElementById('bcm-sleep-time')?.value;
-        const sleepOK = sleepTime && (sleepTime <= '00:00' || sleepTime >= '23:00');
-
-        // 午间坚守（score >= 3.5 视为达标）
-        const lunchScoreElem = document.getElementById('bcm-lunch-score');
-        const lunchOK = lunchScoreElem && parseFloat(lunchScoreElem.value || '0') >= 3.5;
-
-        // 晚间坚守（score >= 3.5 视为达标）
-        const dinnerScoreElem = document.getElementById('bcm-dinner-score');
-        const dinnerOK = dinnerScoreElem && parseFloat(dinnerScoreElem.value || '0') >= 3.5;
-
-        return morningOK && sleepOK && lunchOK && dinnerOK;
-    }
-
-    // 更新UI
-    updateUI(total) {
-        const bonusScoreElem = document.getElementById('bonus-score');
-        if (bonusScoreElem) {
-            bonusScoreElem.textContent = total.toFixed(1);
-        }
-
-        const bonusListElem = document.getElementById('bonus-breakdown-list');
-        if (bonusListElem) {
-            /* [优化 §1.3] XSS防护：对 b.name/b.reason 使用 __tpi_sanitize_html */
-            const _san = typeof window.__tpi_sanitize_html === 'function' ? window.__tpi_sanitize_html : function(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); };
-            bonusListElem.innerHTML = this.bonuses.map(b =>
-                `<li><strong>${_san(b.name)}</strong>: +${_san(String(b.points))}分 (${_san(b.reason)})</li>`
-            ).join('');
-        }
-    }
-}
-
-const bonusCalculator = new BonusCalculator();
 
 // ========================================
 // 历史数据管理器 (新增)
@@ -15167,16 +15032,6 @@ const TPI = (function() {
                 if (value === null || value === undefined || value === '') return 0;
                 const parsed = parseInt(value, 10);
                 return isNaN(parsed) ? 0 : parsed;
-            }
-
-            /**
-             * 时间字符串转分钟数
-             */
-            function timeToMinutes(timeStr) {
-                if (!timeStr) return 0;
-                const parts = timeStr.split(':');
-                if (parts.length !== 2) return 0;
-                return safeParseInt(parts[0]) * 60 + safeParseInt(parts[1]);
             }
 
             /**
@@ -46029,7 +45884,6 @@ body.dark-theme .tpi-submodule-header:hover {
         disp.style.color = '';
         disp.style.borderColor = '';
         if (!disp.textContent || disp.textContent === '-- 评级 --') return;
-        return;
       }
       var s = RATING_STYLES[val];
       disp.style.background = s.bg;
