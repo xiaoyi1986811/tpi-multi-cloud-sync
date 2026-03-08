@@ -143,13 +143,13 @@
   };
 })();
 </script>
-<meta content="全维效能管理系统（TPI，V1.20）" property="og:title"/>
+<meta content="全维效能管理系统（TPI，V1.25）" property="og:title"/>
 <meta content="全维效能管理系统（TPI）| 全面追踪 · 科学管理 · 高效提升" property="og:description"/>
 <meta content="website" property="og:type"/>
 <meta content="https://mytpi.netlify.app/" property="og:url"/>
 <meta content="zh_CN" property="og:locale"/>
 <meta name="twitter:card" content="summary"/>
-<meta name="twitter:title" content="全维效能管理系统（TPI，V1.20）"/>
+<meta name="twitter:title" content="全维效能管理系统（TPI，V1.25）"/>
 <meta name="twitter:description" content="全维效能管理系统（TPI）"/>
 <meta content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=5.0, user-scalable=yes, viewport-fit=cover" name="viewport"/>
 <meta content="全维效能管理系统（TPI）- 跨设备同步 | 支持电脑/手机/平板访问" name="description"/>
@@ -157,7 +157,7 @@
 <meta content="TPI System" name="author"/><!-- 移动端优化 -->
 <meta content="yes" name="apple-mobile-web-app-capable"/>
 <meta content="black-translucent" name="apple-mobile-web-app-status-bar-style"/>
-<meta content="全维效能管理系统（TPI，V1.20）" name="apple-mobile-web-app-title"/>
+<meta content="全维效能管理系统（TPI，V1.25）" name="apple-mobile-web-app-title"/>
 <meta content="yes" name="mobile-web-app-capable"/>
 <meta content="telephone=no, email=no, address=no" name="format-detection"/>
 <meta content="#0d9488" name="theme-color"/>
@@ -1100,10 +1100,10 @@ if (typeof window.__tpi_debug_log === 'function') window.__tpi_debug_log('[Stora
       }
       rows.push(['⏰', isUpload ? '上传时间' : '下载时间', info.time || new Date().toLocaleString('zh-CN')]);
       rows.push(['☁️', '同步方式', (info && (info.syncLabel||info.syncMethod||info.syncWay||info.methodLabel)) ? (info.syncLabel||info.syncMethod||info.syncWay||info.methodLabel) : 'TPI+ 后端 (Appwrite)']);
-      // [V3] 扩展通知字段
+      // [V1.24修复] 使用存储抽象层统计本地存档天数
       try {
-        const _ls = window.__tpi_ls_get || localStorage.getItem.bind(localStorage);
-        const _totalDays = Object.keys(localStorage).filter(k => /^\d{4}-\d{2}-\d{2}$/.test(k)).length;
+        const _memCache = window.__tpi_mem_cache || {};
+        const _totalDays = Object.keys(_memCache).filter(k => k.startsWith('tpi_data_')).length;
         if (_totalDays > 0) rows.push(['📚', '本地存档', `累计 ${_totalDays} 天数据`]);
       } catch(_) {}
       if (isUpload) {
@@ -2671,7 +2671,7 @@ window.getTpiDayDataAsync = async function(dateStr) {
         const manifestBlob = new Blob([JSON.stringify(manifest)], { type: 'application/json' });
         const manifestURL = URL.createObjectURL(manifestBlob);
         var _pwaEl = document.getElementById('pwa-manifest'); if (_pwaEl) _pwaEl.setAttribute('href', manifestURL); // [Fix §6] 空安全：manifest 元素可能不存在
-  </script><title>全维效能管理系统（TPI，V1.20）</title>
+  </script><title>全维效能管理系统（TPI，V1.25）</title>
 <script>
    'use strict';
 // 获取当前日期
@@ -2684,8 +2684,8 @@ window.getTpiDayDataAsync = async function(dateStr) {
         };
         
         // 系统版本号
-        window.TPI_VERSION = '全维效能管理系统（TPI，V1.20）';
-        window.TPI_APP_VERSION = '1.12'; // 数字可比较的应用版本号
+        window.TPI_VERSION = '全维效能管理系统（TPI，V1.25）';
+        window.TPI_APP_VERSION = '1.25'; // 数字可比较的应用版本号（V1.25） // 数字可比较的应用版本号
 
 window.TPI = window.TPI || {};
 window.TPI.Utils = window.TPI.Utils || {
@@ -2790,7 +2790,7 @@ window.TPI.DOM = window.TPI.DOM || {
                             : '三十';
             const lunarStr = `农历${lunarMonth}${lunarDay}${lunar.isLeap ? '(闰)' : ''}`;
             
-            document.title = `全维效能管理系统（TPI，V1.20）（${window.TPI_BUILD_DATE} ${weekday} ${lunarStr}）`;
+            document.title = `全维效能管理系统（TPI，V1.25）（${window.TPI_BUILD_DATE} ${weekday} ${lunarStr}）`;
             
             // 同时更新页面中的日期显示元素（如果存在）
             const dateDisplay = document.getElementById('current-date-display');
@@ -4318,7 +4318,7 @@ window.exportReportComplete = function(format) {
                 <html>
                 <head>
                     <meta charset="UTF-8">
-                    <title>全维效能管理系统（TPI，V1.20）</title>
+                    <title>全维效能管理系统（TPI，V1.25）</title>
                     <style>
     /* 补全模态框基础样式 */
     .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 10001; align-items: center; justify-content: center; }
@@ -4517,7 +4517,6 @@ window.loadFromCloudComplete = function() {
 };
 
 // 3. 备份管理函数
-// openBackupManagerComplete removed (deprecated)
 // 4. 创建新备份函数
 window.createNewBackup = function() {
     window.__tpi_debug_log('💾 [createNewBackup] 被调用');
@@ -4601,7 +4600,6 @@ window.restoreBackup = async function(backupKey) {
 };
 
 // 6. 删除备份函数
-// deleteBackup removed (deprecated)
 // 7. 安全的Toast显示函数（用于InputValidator未初始化时）
 window.safeShowToast = function(message, type) {
     window.__tpi_debug_log('📢 [safeShowToast] 被调用');
@@ -4660,127 +4658,242 @@ window.__tpi_debug_log('✅ window.undoActionComplete:', typeof window.undoActio
 window.__tpi_debug_log('✅ window.redoActionComplete:', typeof window.redoActionComplete);
 
 // 8. 导入数据函数
+/* ══════════════════════════════════════════════════════
+   [V1.21] importDataComplete — 智能全格式导入引擎
+   自动识别并处理四种JSON格式：
+   ① 全量备份包（backupAllData）: { _meta, localStorage:{tpi_data_*, ...} }
+   ② TPI 全量导出（__tpi_exportFullJSON）: { schema:'tpi_full_export_*', days:{}, globals:{} }
+   ③ 旧版全量导出: { tpi_dir:{}, exportedAt, ... }（key=日期的对象）
+   ④ 单日数据: { date, academic, ... }（仅恢复当前选中日期）
+   兼容：无论从哪个版本导出，均可 100% 恢复到新版本。
+══════════════════════════════════════════════════════ */
 window.importDataComplete = async function() {
-    window.__tpi_debug_log('📥 [importDataComplete] 被调用');
-    window.__tpi_debug_log('📥 [importDataComplete] 执行时间:', new Date().toLocaleString());
-    
+    window.__tpi_debug_log('📥 [importDataComplete v1.21] 被调用');
+
+    function _lsSet(k, v){
+        try{
+            if(typeof window.__tpi_ls_set==='function') window.__tpi_ls_set(k,v);
+            else localStorage.setItem(k,v);
+        }catch(e){}
+    }
+
     try {
-        // 尝试两个可能的文件输入ID
         let fileInput = document.getElementById('import-file');
-        if (!fileInput || !fileInput.files || fileInput.files.length === 0) {
+        if (!fileInput || !fileInput.files || fileInput.files.length === 0)
             fileInput = document.getElementById('import-file-input');
-        }
-        
         if (!fileInput || !fileInput.files || fileInput.files.length === 0) {
-            console.warn('⚠️ [importDataComplete] 未选择文件');
             if(window.tpiToast) window.tpiToast('⚠️ 请先选择要导入的文件', 'warning');
             return;
         }
-        
+
         const file = fileInput.files[0];
-        window.__tpi_debug_log('📁 [importDataComplete] 文件名:', file.name);
-        window.__tpi_debug_log('📁 [importDataComplete] 文件大小:', (file.size / 1024).toFixed(2), 'KB');
-        
+        if (!file.name.endsWith('.json')) {
+            if(window.tpiToast) window.tpiToast('⚠️ 仅支持 JSON 格式导入', 'warning');
+            return;
+        }
+
         const reader = new FileReader();
-        
         reader.onload = async function(e) {
             try {
-                window.__tpi_debug_log('🔍 [importDataComplete] 文件读取完成');
                 const content = e.target.result;
                 let data;
-                
-                // 支持多种格式
-                if (file.name.endsWith('.json')) {
-                    window.__tpi_debug_log('📄 [importDataComplete] 解析JSON格式');
-                    data = JSON.parse(content);
-                } else if (file.name.endsWith('.xlsx') || file.name.endsWith('.xls')) {
-                    window.__tpi_debug_log('📊 [importDataComplete] 解析Excel格式');
-                    // 检查XLSX库
-                    if (typeof XLSX !== 'undefined') {
-                        const workbook = XLSX.read(content, { type: 'binary' });
-                        const worksheet = workbook.Sheets[workbook.SheetNames[0]];
-                        data = XLSX.utils.sheet_to_json(worksheet)[0];
-                    } else {
-                        console.error('❌ [importDataComplete] XLSX库未加载');
-                        if(window.tpiToast) window.tpiToast('⚠️ Excel导入需要SheetJS库，请使用JSON格式导入', 'warning');
-                        return;
-                    }
-                } else if (file.name.endsWith('.csv')) {
-                    window.__tpi_debug_log('📄 [importDataComplete] 解析CSV格式');
-                    const lines = content.split('\n');
-                    const headers = lines[0].split(',').map(h => h.trim());
-                    const values = lines[1].split(',').map(v => v.trim());
-                    data = {};
-                    headers.forEach((header, index) => {
-                        data[header] = values[index] || '';
+                try { data = JSON.parse(content); } catch(pe) {
+                    throw new Error('JSON 解析失败：' + pe.message + '\n\n请确保文件格式正确（有效的 JSON 文件）');
+                }
+                if (!data || typeof data !== 'object') throw new Error('无效的数据格式');
+
+                const today = document.getElementById('date-input')?.value || new Date().toISOString().split('T')[0];
+
+                /* ── 格式检测 ── */
+                let importMode = 'unknown';
+                let dayCount   = 0;
+
+                // ① 全量备份包：{ _meta, localStorage: { tpi_data_YYYY-MM-DD: ... } }
+                const isFull_backup = data._meta && data.localStorage && typeof data.localStorage === 'object';
+                // ② TPI全量导出（新格式）：{ _meta, dailyRecords:{YYYY-MM-DD:{...}}, rawKV:{...} }
+                const isFull_newexport = data._meta && data.dailyRecords && typeof data.dailyRecords === 'object';
+                // ② TPI全量导出（旧schema格式）：{ schema:'tpi_full_export_*', days:{YYYY-MM-DD:{...}} }
+                const isFull_export = !isFull_newexport && data.schema && /tpi_full_export|tpi_export_v/i.test(String(data.schema));
+                // ③ 旧版全量导出：顶层含 tpi_dir 字段，或含大量日期键
+                const dateKeyCount = Object.keys(data).filter(k=>/^\d{4}-\d{2}-\d{2}$/.test(k)).length;
+                const isFull_old   = dateKeyCount >= 2 || (data.tpi_dir && typeof data.tpi_dir === 'object');
+                // ④ 单日数据：包含常见 TPI 字段
+                const isSingleDay  = !isFull_backup && !isFull_export && !isFull_old;
+
+                if (isFull_backup) {
+                    importMode = 'full_backup';
+                    dayCount = Object.keys(data.localStorage).filter(k=>/^tpi_data_\d{4}-\d{2}-\d{2}$/.test(k)).length;
+                } else if (isFull_newexport) {
+                    importMode = 'full_newexport';
+                    dayCount = Object.keys(data.dailyRecords).filter(k=>/^\d{4}-\d{2}-\d{2}$/.test(k)).length;
+                } else if (isFull_export) {
+                    importMode = 'full_export';
+                    const daysObj = data.days || data.data || {};
+                    dayCount = Object.keys(daysObj).filter(k=>/^\d{4}-\d{2}-\d{2}$/.test(k)).length;
+                } else if (isFull_old) {
+                    importMode = 'full_old';
+                    dayCount = dateKeyCount || Object.keys(data.tpi_dir||{}).length;
+                } else {
+                    importMode = 'single_day';
+                    dayCount = 1;
+                }
+
+                /* ── 确认弹窗（根据模式显示不同提示）── */
+                let confirmMsg;
+                if (importMode === 'full_backup') {
+                    confirmMsg = `📦 检测到【全量备份包】\n\n` +
+                        `文件: ${file.name}\n包含日期数: ${dayCount} 天\n导出版本: ${(data._meta&&data._meta.version)||'未知'}\n\n` +
+                        `✅ 将恢复所有历史数据（${dayCount} 天）到本版本。\n⚠️ 本地同名日期数据将被覆盖。`;
+                } else if (importMode === 'full_newexport') {
+                    confirmMsg = `📊 检测到【全量数据导出（V1.21+）】\n\n` +
+                        `文件: ${file.name}\n包含日期数: ${dayCount} 天\n导出版本: ${(data._meta&&data._meta.version)||'未知'}\n\n` +
+                        `✅ 将恢复所有历史数据（${dayCount} 天）到本版本。\n⚠️ 本地同名日期数据将被覆盖。`;
+                } else if (importMode === 'full_export') {
+                    confirmMsg = `📊 检测到【全量JSON导出】\n\n` +
+                        `文件: ${file.name}\n包含日期数: ${dayCount} 天\n数据格式: ${data.schema||'TPI导出'}\n\n` +
+                        `✅ 将恢复所有历史数据（${dayCount} 天）到本版本。\n⚠️ 本地同名日期数据将被覆盖。`;
+                } else if (importMode === 'full_old') {
+                    confirmMsg = `🗂️ 检测到【旧版全量导出】\n\n` +
+                        `文件: ${file.name}\n包含日期数: ${dayCount} 天\n\n` +
+                        `✅ 将恢复所有历史数据（${dayCount} 天）到本版本。\n⚠️ 本地同名日期数据将被覆盖。`;
+                } else {
+                    confirmMsg = `📅 检测到【单日数据】\n\n` +
+                        `文件: ${file.name}\n目标日期: ${today}\n\n` +
+                        `⚠️ 仅恢复当前选中日期（${today}）的数据。\n如需恢复所有历史数据，请使用"备份所有数据"导出的文件。`;
+                }
+
+                const confirmed = confirm(confirmMsg + '\n\n【确定】开始导入  【取消】放弃');
+                if (!confirmed) return;
+
+                let success = 0, skipped = 0, errors = [];
+
+                /* ── 执行导入 ── */
+                if (importMode === 'full_newexport') {
+                    // 恢复 dailyRecords
+                    const dr = data.dailyRecords || {};
+                    Object.keys(dr).forEach(d => {
+                        if (!/^\d{4}-\d{2}-\d{2}$/.test(d)) return;
+                        try {
+                            const dayData = dr[d];
+                            if (dayData && typeof dayData === 'object') {
+                                _lsSet('tpi_data_' + d, JSON.stringify(dayData));
+                                success++;
+                            } else { skipped++; }
+                        } catch(e) { skipped++; errors.push(d); }
                     });
+                    // 恢复 miscRecords
+                    try {
+                        const mr = data.miscRecords || {};
+                        Object.keys(mr).forEach(d => {
+                            if (!/^\d{4}-\d{2}-\d{2}$/.test(d)) return;
+                            try { _lsSet('tpi_misc_records_' + d, JSON.stringify(mr[d])); } catch(e) {}
+                        });
+                    } catch(e) {}
+                    // 恢复 checkin
+                    try { if (data.checkin) _lsSet('tpi_checkin_data', JSON.stringify(data.checkin)); } catch(e) {}
+                    // 恢复 settings
+                    try {
+                        const st = data.settings || {};
+                        Object.keys(st).forEach(k => {
+                            if (/token|secret|password|pat/i.test(k)) return;
+                            try { _lsSet(k, typeof st[k]==='string' ? st[k] : JSON.stringify(st[k])); } catch(e) {}
+                        });
+                    } catch(e) {}
+                    // 恢复 rawKV (排除敏感)
+                    try {
+                        const rv = data.rawKV || {};
+                        Object.keys(rv).forEach(k => {
+                            if (/token|secret|password|pat/i.test(k)) return;
+                            if (k.startsWith('tpi_data_') || k.startsWith('tpi_misc_records_') || k === 'tpi_checkin_data') return; // already handled
+                            try { _lsSet(k, rv[k]); } catch(e) {}
+                        });
+                    } catch(e) {}
+
+                } else if (importMode === 'full_backup') {
+                    // 恢复所有 localStorage 键（排除 token/secret）
+                    const bag = data.localStorage;
+                    Object.keys(bag).forEach(k => {
+                        if (/token|secret|password|pat/i.test(k)) return;
+                        try { _lsSet(k, bag[k]); success++; } catch(e){ skipped++; }
+                    });
+                    // 若带 todaySnapshot，覆写当日数据
+                    try {
+                        const snap = data._todaySnapshot;
+                        if (snap && typeof snap === 'object') {
+                            const dk = Object.keys(snap)[0];
+                            if (dk && snap[dk]) _lsSet('tpi_data_' + dk, JSON.stringify(snap[dk]));
+                        }
+                    } catch(e) {}
+
+                } else if (importMode === 'full_export') {
+                    const daysObj = data.days || data.data || {};
+                    Object.keys(daysObj).forEach(d => {
+                        if (!/^\d{4}-\d{2}-\d{2}$/.test(d)) return;
+                        try {
+                            const dayData = daysObj[d];
+                            if (dayData && typeof dayData === 'object') {
+                                _lsSet('tpi_data_' + d, JSON.stringify(dayData));
+                                success++;
+                            } else { skipped++; }
+                        } catch(e) { skipped++; errors.push(d); }
+                    });
+                    // 恢复全局键
+                    const globals = data.globals || data.settings || {};
+                    Object.keys(globals).forEach(k => {
+                        if (/token|secret|password|pat/i.test(k)) return;
+                        try { _lsSet(k, typeof globals[k]==='string' ? globals[k] : JSON.stringify(globals[k])); } catch(e){}
+                    });
+
+                } else if (importMode === 'full_old') {
+                    // 尝试从 tpi_dir 或直接的日期键恢复
+                    const src = (data.tpi_dir && typeof data.tpi_dir==='object') ? data.tpi_dir : data;
+                    Object.keys(src).forEach(d => {
+                        if (!/^\d{4}-\d{2}-\d{2}$/.test(d)) return;
+                        try {
+                            const dayData = src[d];
+                            if (dayData && typeof dayData === 'object') {
+                                _lsSet('tpi_data_' + d, JSON.stringify(dayData));
+                                success++;
+                            } else { skipped++; }
+                        } catch(e) { skipped++; errors.push(d); }
+                    });
+
                 } else {
-                    console.error('❌ [importDataComplete] 不支持的文件格式:', file.name);
-                    if(window.tpiToast) window.tpiToast('⚠️ 支持的格式: JSON, Excel, CSV，当前文件: ' + file.name, 'warning');
-                    return;
+                    // 单日数据
+                    if (!data.date) data.date = today;
+                    _lsSet('tpi_data_' + today, JSON.stringify(data));
+                    success = 1;
                 }
-                
-                // 验证数据格式
-                if (!data || typeof data !== 'object') {
-                    throw new Error('无效的数据格式');
-                }
-                
-                window.__tpi_debug_log('✅ [importDataComplete] 数据解析成功');
-                
-                // 确认导入
-                const dateStr = document.getElementById('date-input')?.value || new Date().toISOString().split('T')[0];
-                const confirmMsg = `📥 确认导入数据？\n\n` +
-                    `文件名: ${file.name}\n` +
-                    `目标日期: ${dateStr}\n\n` +
-                    `⚠️ 这将覆盖当前日期的数据！`;
-                
-                const _importConfirmed = await new Promise(r => { if(window.tpiConfirm) window.tpiConfirm('确认导入数据？', confirmMsg).then(r); else r(window.confirm(confirmMsg)); });
-                if (_importConfirmed) {
-                    window.__tpi_debug_log('💾 [importDataComplete] 用户确认，开始导入');
-                    
-                    // 确保数据有日期字段
-                    if (!data.date) {
-                        data.date = dateStr;
-                    }
-                    
-                    __tpi_ls_set('tpi_data_' + dateStr, JSON.stringify(data));
-                    
-                    window.__tpi_debug_log('✅ [importDataComplete] 数据已保存到localStorage');
-                    
-                    if(window.tpiToast) window.tpiToast('✅ 数据导入成功！即将刷新页面以显示新数据', 'success');
-                    
-                    // 清空文件输入
-                    if (fileInput) {
-                        fileInput.value = '';
-                    }
-                    
-                    location.reload();
+
+                /* ── 结果提示 ── */
+                let resultMsg;
+                if (importMode === 'single_day') {
+                    resultMsg = '✅ 单日数据导入成功！即将刷新页面。';
+                    if(window.tpiToast) window.tpiToast(resultMsg, 'success');
                 } else {
-                    window.__tpi_debug_log('❌ [importDataComplete] 用户取消导入');
+                    resultMsg = `✅ 全量导入完成！\n\n成功恢复：${success} 条\n跳过：${skipped} 条` +
+                        (errors.length ? `\n失败：${errors.slice(0,5).join(', ')}` : '') +
+                        '\n\n页面即将刷新以加载恢复的数据。';
+                    alert(resultMsg);
+                    if(window.tpiToast) window.tpiToast(`✅ 全量导入完成：${success} 条记录`, 'success');
                 }
-                
+
+                if (fileInput) fileInput.value = '';
+                setTimeout(() => { try { location.reload(); } catch(e){} }, 800);
+
             } catch (error) {
                 console.error('❌ [importDataComplete] 导入失败:', error);
-                console.error('❌ [importDataComplete] 错误堆栈:', error.stack);
-                if(window.tpiToast) window.tpiToast('❌ 导入失败：' + error.message + '，请确保文件格式正确', 'error');
+                if(window.tpiToast) window.tpiToast('❌ 导入失败：' + error.message, 'error');
+                alert('❌ 导入失败\n\n' + error.message + '\n\n请确保文件格式正确（使用本系统导出的 JSON 文件）。');
             }
         };
-        
         reader.onerror = function() {
-            console.error('❌ [importDataComplete] 文件读取失败');
             if(window.tpiToast) window.tpiToast('❌ 文件读取失败，请重试', 'error');
         };
-        
-        // 根据文件类型选择读取方式
-        if (file.name.endsWith('.xlsx') || file.name.endsWith('.xls')) {
-            reader.readAsBinaryString(file);
-        } else {
-            reader.readAsText(file);
-        }
-        
+        reader.readAsText(file);
+
     } catch (error) {
         console.error('❌ [importDataComplete] 执行失败:', error);
-        console.error('❌ [importDataComplete] 错误堆栈:', error.stack);
         if(window.tpiToast) window.tpiToast('❌ 导入数据失败：' + error.message, 'error');
     }
 };
@@ -7422,7 +7535,7 @@ hr { border-color: #bbf7d0 !important; }
 <div class="header-content">
 <div class="header-title">
 <h1 style="font-size:clamp(1.5rem, 3vw, 2.5rem);font-weight:800;background:linear-gradient(135deg,#0f766e 0%,#0d9488 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;letter-spacing:-0.02em;">
-        全维效能管理系统（TPI，V1.20）
+        全维效能管理系统（TPI，V1.25）
        </h1>
 
 <div style="display:inline-flex;align-items:center;gap:6px;flex-shrink:0;">
@@ -7657,24 +7770,34 @@ hr { border-color: #bbf7d0 !important; }
 
         <div style="font-weight:700; color:#111827;">👤 已登录: <span id="tpi-current-user"></span></div>
         <button type="button" onclick="tpiSaveToday()" style="padding:12px 22px; background: linear-gradient(135deg,#0d9488,#0f766e); color:white; border:none; border-radius:8px; font-weight:700; cursor:pointer; box-shadow:0 2px 8px rgba(13,148,136,0.3); transition:all 0.2s;" title="将当前页面所选日期数据上传到 Appwrite 云端">
-          ⬆️ 同步上传数据到云端
+          ⬆️ 同步上传（当日）
         </button>
         <button type="button" onclick="tpiLoadToday()" style="padding:12px 22px; background: linear-gradient(135deg,#06b6d4,#0891b2); color:white; border:none; border-radius:8px; font-weight:700; cursor:pointer; box-shadow:0 2px 8px rgba(8,145,178,0.3); transition:all 0.2s;" title="从 Appwrite 云端下载所选日期数据并恢复到页面">
-          ⬇️ 同步下载数据到网页
+          ⬇️ 同步下载（当日）
         </button>
+        <!-- [V1.21] 日常同步说明 -->
+        <div style="width:100%;margin-top:4px;padding:7px 12px;background:#f0fdfa;border-left:3px solid #0d9488;border-radius:6px;font-size:12px;color:#0f766e;line-height:1.6;">
+          <b>📌 日常同步（非全量）说明：</b>仅上传/下载当前选中日期的单日数据。适合每日常规备份与快速恢复。<b>不包含</b>其他历史日期数据。
+        </div>
         <!-- ====== 全量同步按钮（版本迁移专用）====== -->
         <div id="tpi-bulk-sync-wrap" style="margin-top:10px;padding:12px 14px;background:linear-gradient(135deg,#fffbeb,#fef3c7);border:1.5px dashed #f59e0b;border-radius:10px;display:flex;flex-direction:column;gap:8px;">
-          <div style="font-size:12px;font-weight:700;color:#92400e;margin-bottom:2px;">🔄 全量同步（版本升级 / 跨设备完整恢复）</div>
+          <div style="font-size:13px;font-weight:700;color:#92400e;margin-bottom:2px;">🔄 全量同步（版本升级 / 跨设备完整恢复）</div>
+          <!-- [V1.21] 全量同步说明 -->
+          <div style="font-size:12px;color:#78350f;background:#fffbeb;border-left:3px solid #f59e0b;padding:6px 10px;border-radius:5px;line-height:1.6;margin-bottom:4px;">
+            <b>📦 全量同步说明：</b>将<b>所有历史日期</b>的数据一次性上传或下载，适用于版本升级迁移、跨设备完整恢复、旧版→新版数据迁移。<br>
+            <b>与日常同步的区别：</b>日常同步仅操作当日数据；全量同步一次处理所有历史天数，是完整的数据迁移工具。<br>
+            <b>旧版本迁移步骤：</b>① 在旧版页面点击"全量上传" → ② 切换到新版页面并登录 → ③ 点击"全量下载"→ ④ 点击"立即刷新页面"。
+          </div>
           <div style="display:flex;gap:8px;flex-wrap:wrap;">
             <button type="button" onclick="tpiSaveAllToCloud()" id="btn-bulk-upload"
               style="padding:10px 18px;background:linear-gradient(135deg,#f59e0b,#d97706);color:white;border:none;border-radius:8px;font-weight:700;cursor:pointer;font-size:13px;box-shadow:0 2px 6px rgba(217,119,6,0.3);"
               title="将本地所有历史日期数据全部上传到云端（版本迁移时使用）">
-              ⬆️ 全量上传所有历史数据
+              ⬆️ 全量上传（所有历史数据）
             </button>
             <button type="button" onclick="tpiLoadAllFromCloud()" id="btn-bulk-download"
               style="padding:10px 18px;background:linear-gradient(135deg,#8b5cf6,#7c3aed);color:white;border:none;border-radius:8px;font-weight:700;cursor:pointer;font-size:13px;box-shadow:0 2px 6px rgba(139,92,246,0.3);"
               title="从云端下载该账号所有历史日期数据并恢复到本地（新版本初次使用时点击）">
-              ⬇️ 全量下载恢复所有数据
+              ⬇️ 全量下载（恢复所有数据）
             </button>
           </div>
           <div id="tpi-bulk-sync-progress" style="font-size:12px;color:#92400e;display:none;"></div>
@@ -7751,30 +7874,40 @@ hr { border-color: #bbf7d0 !important; }
       <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
         <button type="button" onclick="gistBackupNow()"
                 style="padding:12px 22px; background: linear-gradient(135deg,#f59e0b,#d97706); color:white; border:none; border-radius:8px; font-weight:700; cursor:pointer; box-shadow:0 2px 8px rgba(217,119,6,0.3); transition:all 0.2s;" title="将当前页面所有数据同步上传到 GitHub Gist 云端">
-          ⬆️ 同步上传数据到云端
+          ⬆️ 同步上传（当日）
         </button>
         <button type="button" onclick="gistRestoreData()"
                 style="padding:12px 22px; background: linear-gradient(135deg,#8b5cf6,#7c3aed); color:white; border:none; border-radius:8px; font-weight:700; cursor:pointer; box-shadow:0 2px 8px rgba(13,148,136,0.3); transition:all 0.2s;" title="从 GitHub Gist 云端下载数据并恢复到当前页面">
-          ⬇️ 同步下载数据到网页
+          ⬇️ 同步下载（当日）
         </button>
         <label style="display:flex; gap:8px; align-items:center; cursor:pointer; user-select:none; padding:8px 12px; background:#f3f4f6; border-radius:8px;">
           <input id="gist-auto-backup" type="checkbox" onchange="toggleGistAutoBackup(this.checked)">
           <span style="font-weight:600; color:#374151;">每日自动备份 (23:00)</span>
         </label>
       </div>
+      <!-- [V1.21] Gist 日常同步说明 -->
+      <div style="margin-top:6px;padding:7px 12px;background:#fefce8;border-left:3px solid #eab308;border-radius:6px;font-size:12px;color:#713f12;line-height:1.6;">
+        <b>📌 日常同步（非全量）说明：</b>仅上传/下载当前选中日期的单日数据，适合每日常规备份。<b>不包含</b>其他历史日期数据。
+      </div>
       <!-- ====== Gist 全量同步按钮（版本迁移专用）====== -->
       <div id="tpi-gist-bulk-sync-wrap" style="margin-top:10px;padding:12px 14px;background:linear-gradient(135deg,#eff6ff,#eef2ff);border:1.5px dashed #818cf8;border-radius:10px;display:flex;flex-direction:column;gap:8px;">
-        <div style="font-size:12px;font-weight:700;color:#3730a3;margin-bottom:2px;">🔄 全量同步（版本升级 / 跨设备完整恢复）</div>
+        <div style="font-size:13px;font-weight:700;color:#3730a3;margin-bottom:2px;">🔄 全量同步（版本升级 / 跨设备完整恢复）</div>
+        <!-- [V1.21] Gist 全量同步说明 -->
+        <div style="font-size:12px;color:#312e81;background:#eef2ff;border-left:3px solid #818cf8;padding:6px 10px;border-radius:5px;line-height:1.6;margin-bottom:4px;">
+          <b>📦 全量同步说明：</b>将<b>所有历史日期</b>的数据一次性上传或从 Gist 完整下载，适用于版本升级、跨设备迁移、旧版→新版数据迁移。<br>
+          <b>与日常同步的区别：</b>日常同步仅操作当日数据；全量同步一次处理所有历史天数，是完整的数据迁移工具。<br>
+          <b>旧版本迁移步骤：</b>① 填写 Token → ② 在旧版点击"全量上传" → ③ 切换到新版填写同一 Token → ④ 点击"全量下载" → ⑤ 点击"立即刷新页面"。
+        </div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;">
           <button type="button" onclick="gistSaveAllToCloud()" id="btn-gist-bulk-upload"
             style="padding:10px 18px;background:linear-gradient(135deg,#f59e0b,#d97706);color:white;border:none;border-radius:8px;font-weight:700;cursor:pointer;font-size:13px;box-shadow:0 2px 6px rgba(217,119,6,0.3);"
             title="将本地所有历史日期数据全部上传到 Gist（版本迁移时使用）">
-            ⬆️ 全量上传所有历史数据
+            ⬆️ 全量上传（所有历史数据）
           </button>
           <button type="button" onclick="gistLoadAllFromCloud()" id="btn-gist-bulk-download"
             style="padding:10px 18px;background:linear-gradient(135deg,#8b5cf6,#7c3aed);color:white;border:none;border-radius:8px;font-weight:700;cursor:pointer;font-size:13px;box-shadow:0 2px 6px rgba(139,92,246,0.3);"
             title="从 Gist 下载所有历史日期数据并恢复到本地（新版本初次使用时点击）">
-            ⬇️ 全量下载恢复所有数据
+            ⬇️ 全量下载（恢复所有数据）
           </button>
         </div>
         <div id="tpi-gist-bulk-sync-progress" style="font-size:12px;color:#3730a3;display:none;"></div>
@@ -9148,9 +9281,7 @@ hr { border-color: #bbf7d0 !important; }
          </em>
 </p>
 <div class="mt-4">
-<h5>
-          今日主要状态（可多选）
-         </h5>
+<h5>📝 今日主要状态（可多选）</h5>
 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: var(--spacing-3); margin-top: var(--spacing-3);">
 <label class="tpi-inline-03">
 <input aria-label="心流充沛" name="cognitive-state" type="checkbox" value="flow"/>
@@ -9215,9 +9346,7 @@ hr { border-color: #bbf7d0 !important; }
 </div>
 </div>
 <div class="mt-4">
-<h5>
-          资源状态
-         </h5>
+<h5>🔋 资源状态</h5>
 <div style="display: flex; gap: var(--spacing-4); flex-wrap: wrap; margin-top: var(--spacing-3);">
 <label class="tpi-inline-03">
 <input aria-label="资料充足" name="resource-state" type="checkbox" value="sufficient"/>
@@ -9763,7 +9892,7 @@ hr { border-color: #bbf7d0 !important; }
          </div>
 <div class="rules-content">
 <h4>
-           1. 常态研究 (Normal Science) —— [混合/标准]
+           📚 1. 常态研究 (Normal Science) —— [混合/标准]
           </h4>
 <ul>
 <li>
@@ -9794,7 +9923,7 @@ hr { border-color: #bbf7d0 !important; }
            </li>
 </ul>
 <h4>
-           2. 复苏/冷启动 (Recovery / Low Power) —— [主动休整/特殊板块]
+           🔄 2. 复苏/冷启动 (Recovery / Low Power) —— [主动休整/特殊板块]
           </h4>
 <ul>
 <li>
@@ -9995,7 +10124,7 @@ hr { border-color: #bbf7d0 !important; }
            </li>
 </ul>
 <h4>
-           3. 斯多葛/止损 (Stoic / Damage Control) —— [底线防御]
+           🛡️ 3. 斯多葛/止损 (Stoic / Damage Control) —— [底线防御]
           </h4>
 <ul>
 <li>
@@ -10080,7 +10209,7 @@ hr { border-color: #bbf7d0 !important; }
 </li>
 </ul>
 <h4>
-           4. 假期/停机 (Vacation) —— [系统重置]
+           🏖️ 4. 假期/停机 (Vacation) —— [系统重置]
           </h4>
 <ul>
 <li>
@@ -10137,7 +10266,7 @@ hr { border-color: #bbf7d0 !important; }
            </li>
 </ul>
 <h4>
-           5. [M] 混合模式 (Mixed Mode) —— [灵活组合]
+           🔀 5. [M] 混合模式 (Mixed Mode) —— [灵活组合]
           </h4>
 <ul>
 <li>
@@ -10214,9 +10343,7 @@ hr { border-color: #bbf7d0 !important; }
             定位：心理调节与关键转折。本板块奖励总分 <strong>≤ 5 分</strong>。
            </strong>
 </p>
-<h4>
-           一、各维度进步奖励方案（大幅精简）
-          </h4>
+<h4>🏆 一、各维度进步奖励方案（大幅精简）</h4>
 <ul>
 <li>
 <strong>
@@ -10268,9 +10395,7 @@ hr { border-color: #bbf7d0 !important; }
 </ul>
 </li>
 </ul>
-<h4>
-           二、全局进步奖励（替代原自由填写）
-          </h4>
+<h4>🌟 二、全局进步奖励（替代原自由填写）</h4>
 <ul>
 <li>
             🏆
@@ -10301,9 +10426,7 @@ hr { border-color: #bbf7d0 !important; }
             ：连续 TPI ≥ 100 达到 7日(+1分)/14日(+2分)/21日(+3分)。奖励持续性，仅在里程碑日自动判定。
            </li>
 </ul>
-<h4>
-           三、连败预警与响应
-          </h4>
+<h4>⚡ 三、连败预警与响应</h4>
 <p>
 <strong>
             触发条件
@@ -14442,9 +14565,16 @@ hr { border-color: #bbf7d0 !important; }
     <span class="tpi-submodule-arrow" aria-hidden="true">▼</span>
   </div>
   <div class="tpi-submodule-body" id="submod-dp-import-body">
+<!-- [V1.21] 导入说明总览 -->
+<div style="margin-bottom:14px;padding:10px 14px;background:linear-gradient(135deg,#f0fdf4,#eff6ff);border:1px solid #6ee7b7;border-radius:8px;font-size:13px;line-height:1.7;color:#374151;">
+  <b>📖 导入方式说明（V1.25）</b><br>
+  <b>① 全量导入</b>（推荐用于版本迁移）：选择从"备份所有数据"或"JSON格式（全量）"导出的文件，点击下方"导入JSON数据"。系统自动识别格式，恢复<b>所有历史日期数据</b>。<br>
+  <b>② 单日导入</b>（仅恢复某天数据）：选择单日快照文件，系统将仅恢复当前选中日期的数据。<br>
+  <b>③ 恢复备份</b>（最完整方式）：使用"备份所有数据"导出的文件，通过"恢复备份"按钮还原所有设置和历史记录（推荐首选）。
+</div>
 <p class="text-muted" style="margin-bottom:12px;font-size:13px;">导入外部JSON数据文件，或重置当前表单。</p>
 <div class="import-section" id="tpi-import-dropzone" style="border: 2px dashed var(--color-border); border-radius: var(--radius-lg); padding: var(--spacing-4); transition: all 0.2s ease;">
-<h5>数据导入</h5>
+<h5>📥 数据导入</h5>
 <p style="font-size: var(--font-size-xs); color: var(--color-text-muted); margin-bottom: var(--spacing-2);">
   💡 可直接将 JSON 文件拖拽到此区域导入
 </p>
@@ -14452,8 +14582,8 @@ hr { border-color: #bbf7d0 !important; }
 <input accept=".json" id="import-file" style="width: 100%; padding: var(--spacing-2);" type="file"/>
 </div>
 <div class="export-buttons" style="display: flex; gap: 10px; flex-wrap: wrap;">
-<button type="button" class="btn btn-primary" onclick="window.importDataComplete()" style="flex: 1; min-width: 120px;">
-            📥 导入JSON数据
+<button type="button" class="btn btn-primary" onclick="window.importDataComplete()" style="flex: 1; min-width: 120px;" title="自动识别全量备份包/全量导出/单日数据，均可100%导入">
+            📥 导入JSON数据（自动识别全量/单日）
            </button>
 <button type="button" class="btn btn-warning" onclick="window.TPI.resetForm()" style="flex: 1; min-width: 120px;">
             🔄 重置当前表单
@@ -14461,22 +14591,25 @@ hr { border-color: #bbf7d0 !important; }
 </div>
 </div>
 <div class="mt-4">
-<h5>批量操作</h5>
+<h5>📦 全量备份与恢复（推荐：最完整）</h5>
+<div style="margin-bottom:8px;padding:8px 12px;background:#fef3c7;border-left:3px solid #f59e0b;border-radius:6px;font-size:12px;color:#78350f;line-height:1.6;">
+  <b>全量备份</b>：导出含所有历史数据的完整包（打卡、杂事、设置等），可跨版本 100% 恢复。<br>
+  <b>恢复备份</b>：选择"备份所有数据"导出的文件，一键还原所有历史数据到新版本。<br>
+  <b>清空今日</b>：仅清除今日表单缓存，不影响历史记录。
+</div>
 <div class="export-buttons" style="display: flex; gap: 10px; flex-wrap: wrap;">
 <button type="button" class="btn btn-secondary" onclick="window.TPI.backupAllData()" style="flex: 1; min-width: 120px;">
-            💽 备份所有数据
+            💽 备份所有数据（全量）
            </button>
 <button type="button" class="btn btn-secondary" onclick="window.TPI.restoreBackup()" style="flex: 1; min-width: 120px;">
-            🔄 恢复备份
+            🔄 恢复备份（全量还原）
            </button>
 
 <button type="button" class="btn btn-danger" onclick="window.TPI.clearTodayCache()" style="flex: 1; min-width: 120px;">
             🧹 清空今日
            </button>
 </div>
-<p class="text-muted" style="margin-top: 10px; font-size: 0.9em; line-height: 1.4;">
-          ⚠️ 说明：<strong>“备份所有数据”</strong>将全量导出所有历史天数数据（含打卡、杂事、评级、设置等），适合完整迁移或灾难恢复；<strong>“清空今日”</strong>仅清除今日表单缓存，不影响历史记录与杂事记录。
-         </p>
+
 </div><div class="data-processing-card">
 <h4>
           📋 复制前一天
@@ -14500,10 +14633,17 @@ hr { border-color: #bbf7d0 !important; }
     <span class="tpi-submodule-arrow" aria-hidden="true">▼</span>
   </div>
   <div class="tpi-submodule-body" id="submod-dp-export-body">
-<p class="text-muted" style="margin-bottom:14px;font-size:13px;">统一的数据管理中心，支持JSON和Markdown两种格式导出，确保所有输入、勾选和计算数据都能被完整保存。</p>
-<!-- 快速导出当前数据 -->
+<p class="text-muted" style="margin-bottom:8px;font-size:13px;">统一的数据管理中心，支持JSON和Markdown两种格式导出，确保所有输入、勾选和计算数据都能被完整保存。</p>
+<!-- [V1.21] 导出说明总览 -->
+<div style="margin-bottom:14px;padding:10px 14px;background:linear-gradient(135deg,#f0fdf4,#ccfbf1);border:1px solid #6ee7b7;border-radius:8px;font-size:13px;line-height:1.7;color:#374151;">
+  <b>📖 导出方式说明（V1.25）</b><br>
+  <b>① 全量导出（JSON/Markdown）</b>：导出所有历史天数的完整数据文件。JSON格式可用"导入JSON数据"完整恢复，是版本迁移推荐选项；Markdown格式供人类阅读。<br>
+  <b>② 按时间范围导出（非全量）</b>：仅导出本周/本月/本年或自定义范围内的数据，<b>不包含</b>范围外历史数据，适合阶段性查阅归档而非完整迁移。<br>
+  <b>总结：版本迁移请用"全量导出 JSON"；日常查阅用"按时间范围导出"。</b>
+</div>
+<!-- 全量导出 -->
 <div style="margin-bottom: 20px; padding: 12px; background: #ccfbf1; border-radius: 8px; border-left: 3px solid #0d9488;">
-<h5 style="margin-bottom: 10px; font-size: 14px; color: #0f766e;">⚡ 快速导出当前数据</h5>
+<h5 style="margin-bottom: 10px; font-size: 14px; color: #0f766e;">📦 全量导出（推荐用于版本迁移）</h5>
 <div style="display: flex; gap: 10px; flex-wrap: wrap;">
 <button type="button" class="btn btn-primary" onclick="window.__tpi_exportFullJSON()" title="导出所有历史数据（JSON格式，全量）" style="flex: 1; min-width: 140px;">
             📄 JSON格式（全量）
@@ -14513,13 +14653,14 @@ hr { border-color: #bbf7d0 !important; }
            </button>
 </div>
 <p style="font-size: 12px; color: #64748b; margin-top: 8px; margin-bottom: 0;">
-           JSON格式：全量导出<b>所有历史天数</b>的输入、勾选、计算数据及评级，含打卡、设置等<br/>
-           Markdown格式：全量导出<b>所有历史天数</b>的可读报告，含汇总表格、逐日详情、杂记等
+           <b>JSON格式（全量）</b>：含所有历史天数的输入、勾选、计算数据及评级，可用"导入JSON数据"完整导回任意版本<br/>
+           <b>Markdown格式（全量）</b>：人类可读的完整报告，含汇总表格、逐日详情、杂记等，不可程序导入
           </p>
 </div>
 <!-- 时间范围导出 -->
 <div style="margin-bottom: 20px; padding: 12px; background: #f0fdf4; border-radius: 8px; border-left: 3px solid #10b981;">
-<h5 style="margin-bottom: 10px; font-size: 14px; color: #065f46;">📅 按时间范围导出</h5>
+<h5 style="margin-bottom: 6px; font-size: 14px; color: #065f46;">📅 按时间范围导出（非全量）</h5>
+<p style="font-size:12px;color:#64748b;margin-bottom:8px;">仅导出指定时间段内的数据。<b>不适合</b>用于跨版本完整迁移，适合阶段性查阅归档。</p>
 <div class="export-period-buttons">
 <button type="button" class="btn btn-outline-primary" onclick="window.TPI.exportByPeriod('week')">
             本周
@@ -14548,9 +14689,9 @@ hr { border-color: #bbf7d0 !important; }
 <strong>✅ 导出说明:</strong>
 <ul style="margin: 8px 0 0 0; padding-left: 20px; font-size: 12px;">
 <li>所有输入框、勾选框、下拉菜单的内容都会被完整导出</li>
-<li>JSON格式还包含所有计算结果和系统生成的数据</li>
-<li>时间范围导出可选择特定周期的历史数据</li>
-<li>建议定期导出备份，防止数据丢失</li>
+<li><b>JSON全量格式</b>还包含所有计算结果和系统生成的数据，可 100% 导入任意版本</li>
+<li><b>时间范围导出</b>仅含指定时段数据（非全量），不适合用于版本迁移</li>
+<li>建议定期导出全量JSON备份，防止数据丢失</li>
 </ul>
 </div>
   </div>
@@ -14638,59 +14779,7 @@ hr { border-color: #bbf7d0 !important; }
 <!-- ==================== JavaScript 功能 ==================== -->
 <script>
    'use strict';
-/**
-         * ========================================================================
-         * TPI System v14 - JavaScript Architecture
-         * ========================================================================
-         *
-         * 设计模式 (Design Pattern):
-         * - IIFE模块化封装 (Immediately Invoked Function Expression)
-         * - 状态管理集中化 (Centralized State Management)
-         * - 事件驱动架构 (Event-Driven Architecture)
-         *
-         * 代码组织 (Code Organization):
-         * 1. 常量配置 (Constants Configuration)
-         * 2. 状态管理 (State Management)
-         * 3. 工具函数 (Utility Functions)
-         * 4. UI通知系统 (UI Notification System)
-         * 5. 核心计算模块 (Core Calculation Modules)
-         *    - AMI计算 (Attention Management Index)
-         *    - FLI计算 (Flow Experience Index)
-         *    - BCM计算 (Body Condition Management)
-         *    - Logistics计算 (Logistics Management)
-         *    - HSM计算 (High-level System Management)
-         *    - Bonus计算 (Bonus Score Calculation)
-         *    - TPI总分计算 (Total Performance Index)
-         * 6. 数据持久化 (Data Persistence)
-         * 7. 数据可视化 (Data Visualization)
-         * 8. 事件绑定 (Event Binding)
-         *
-         * 关键原则 (Key Principles):
-         * - 防御性编程 (Defensive Programming)
-         * - 优雅降级 (Graceful Degradation)
-         * - 渐进增强 (Progressive Enhancement)
-         * ========================================================================
-         */
 // ==================== TPI 增强版命名空间 ====================
-
-        /*
-         * ==================== 安全性与代码质量优化 ====================
-         * 1. 所有用户输入都经过 safeParseFloat/safeParseInt 验证
-         * 2. 使用 debounce 防抖优化性能
-         * 3. 所有DOM操作都有空值检查
-         * 4. localStorage 操作都有异常处理
-         * 5. 事件监听器使用被动模式提升滚动性能
-         * 6. 避免使用 eval 和 innerHTML 注入
-         */
-
-            // ==================== 代码重构改进 ====================
-            // 本系统已进行以下优化:
-            // 1. 模块化: 所有功能封装在 TPI 命名空间中
-            // 2. DRY: 重复逻辑已提取为可复用函数
-            // 3. 安全: 使用 textContent 防止 XSS
-            // 4. 健壮: 添加完整的错误处理
-            // 5. 性能: 实现事件委托和防抖
-            // ==================== End ====================
 
 // 历史数据管理器 (新增)
 class HistoricalDataManager {
@@ -14831,7 +14920,6 @@ const TPI = (function() {
                 MAX_DAILY_HOURS: 16,          // 单日有效时长上限
 
                 // ==================== 碎片信息流 ====================
-                // FRAGMENT_INFO_PRICE: 0.2,    // 碎片信息流单价 // [已注释：未使用常量]
 
                 // ==================== BCM 封顶 ====================
                 BCM_RAW_CAP: 20,             // BCM基础分封顶（V3调整：24→20，约占非AMI权重12%）
@@ -18148,6 +18236,17 @@ let calculateTPI_debounceTimer = null;
                         return 0;
                     }
 
+                    // 复苏模式 (4个休息时段) -> 暂停计算（与UI提示"4个(TPI暂停)"保持逻辑一致）
+                    if (selectedMode === 'recovery') {
+                        const _recRestPeriods = parseInt(__tpi_ls_get('recovery_rest_periods') || '0', 10);
+                        if (_recRestPeriods >= 4) {
+                            tpiTotal = 0;
+                            updateDisplay("PAUSED");
+                            updateRecoveryTarget('recovery');
+                            return 0;
+                        }
+                    }
+
                     // ★★★ 混合模式：调用 MixedModeCalculator 分段计算 ★★★
                     if (selectedMode === 'mixed' && typeof window.MixedModeCalculator !== 'undefined') {
                         const autoCalcEnabled = state.mixedMode ? state.mixedMode.autoCalc : true;
@@ -18933,11 +19032,11 @@ calculateTPI_original = calculateTPI;
                                     }
                                 } else {
                                     const sanitizedValue = String(data[key] || '').substring(0, 10000);
-                                  el.value = sanitizedValue;
-            }
-        });
-    }
-});
+                                    el.value = sanitizedValue;
+                                }
+                            });
+                        }
+                    });
 
 // [草稿52+] 恢复杂事记录数据（按日期存储）
 try {
@@ -19631,10 +19730,10 @@ try {
                 try {
                     // 收集所有数据
                     const allData = [];
-                    const keys = Object.keys(localStorage);
+                    const keys = Object.keys(window.__tpi_mem_cache || {});
 
                     keys.forEach(key => {
-                        if (key.startsWith('tpi_data_v14_final__v14_final_')) {
+                        if (key.startsWith('tpi_data_')) {
                             try {
                                 const data = JSON.parse(__tpi_ls_get(key));
                                 if (data && data.date) {
@@ -19696,9 +19795,9 @@ try {
                                 console.warn('[DataProcessing] 用户确认恢复备份');
                                 
                                 // 清除现有TPI数据
-                                const keys = Object.keys(localStorage);
+                                const keys = Object.keys(window.__tpi_mem_cache || {});
                                 keys.forEach(key => {
-                                    if (key.startsWith('tpi_data_v14_final__v14_final_')) {
+                                    if (key.startsWith('tpi_data_')) {
                                         __tpi_ls_remove(key);
                                     }
                                 });
@@ -20590,7 +20689,6 @@ try {
                     // 绑定帮助按钮
                     const helpBtn = document.getElementById('help-btn');
                     if (helpBtn) {
-                        // Help button removed in 第 20 版
                     }
 
                     // 绑定密码强度检测
@@ -20732,7 +20830,7 @@ ${reflection}
              * 规则：当前版本 >= 存储版本时可以读取
              */
             function tpiIsVersionCompatible(storedVer) {
-                var current = tpiParseAppVersion(window.TPI_APP_VERSION || '1.09');
+                var current = tpiParseAppVersion(window.TPI_APP_VERSION || '1.24');
                 var stored = tpiParseAppVersion(storedVer || '1.00');
                 return current >= stored;
             }
@@ -20754,7 +20852,7 @@ ${reflection}
 
                     const storedAppVer = tpiGetDataAppVersion(data);
                     if (!tpiIsVersionCompatible(storedAppVer)) {
-                        console.warn('[TPI版本兼容] 存储数据版本(' + storedAppVer + ')比当前版本(' + (window.TPI_APP_VERSION||'1.07') + ')更新，请升级应用版本。');
+                        console.warn('[TPI版本兼容] 存储数据版本(' + storedAppVer + ')比当前版本(' + (window.TPI_APP_VERSION||'1.24') + ')更新，请升级应用版本。');
                         // 宽松策略：即使数据版本更新也尝试加载
                     }
 
@@ -21329,90 +21427,114 @@ const __exp = (function(){
             // 将exportAllData暴露到全局
             window.exportAllDataGlobal = exportAllData;
 
-            // 【优化7】导入所有数据
+            // 【优化7 / V1.24跨版本兼容升级】导入所有数据
+            // 支持四种格式：① 全量备份包 ② TPI全量导出 ③ 旧版全量导出 ④ 带data字段的导出
             function importAllData(event) {
-                window.__tpi_debug_log('📥 [importAllData] 导入数据功能被调用');
-                window.__tpi_debug_log('📥 [importAllData] 执行时间:', new Date().toLocaleString());
-                
+                window.__tpi_debug_log('📥 [importAllData v1.24] 导入数据功能被调用');
                 try {
                     const file = event.target.files[0];
-                    if (!file) {
-                        console.warn('⚠️ [importAllData] 未选择文件');
-                        return;
-                    }
-                    
-                    window.__tpi_debug_log('📥 [importAllData] 选择的文件:', file.name, '大小:', Math.round(file.size / 1024), 'KB');
+                    if (!file) { console.warn('⚠️ [importAllData] 未选择文件'); return; }
+                    window.__tpi_debug_log('📥 [importAllData] 文件:', file.name, Math.round(file.size/1024), 'KB');
 
                     const reader = new FileReader();
                     reader.onload = function(e) {
-                        window.__tpi_debug_log('📥 [importAllData] 文件读取完成');
                         try {
-                            const importData = JSON.parse(e.target.result);
-                            window.__tpi_debug_log('📥 [importAllData] JSON解析成功');
+                            const raw = JSON.parse(e.target.result);
+                            if (!raw || typeof raw !== 'object') throw new Error('无效的JSON数据格式');
 
-                            // 验证数据格式
-                            if (!importData.data || typeof importData.data !== 'object') {
-                                console.error('❌ [importAllData] 数据格式不正确');
-                                throw new Error('数据格式不正确');
+                            // ── 多格式自动检测 ──
+                            const isFull_backup = raw._meta && raw.localStorage && typeof raw.localStorage === 'object';
+                            const isFull_export = raw.schema && /tpi_full_export|tpi_export_v/i.test(String(raw.schema));
+                            const dateKeyCount  = Object.keys(raw).filter(k => /^\d{4}-\d{2}-\d{2}$/.test(k)).length;
+                            const isFull_old    = dateKeyCount >= 2 || (raw.tpi_dir && typeof raw.tpi_dir === 'object');
+                            const hasDataField  = raw.data && typeof raw.data === 'object';
+
+                            let dataMap = {}; // key → dayObj
+                            let mode = 'unknown';
+                            let dayCount = 0;
+
+                            if (isFull_backup) {
+                                mode = 'full_backup';
+                                const bag = raw.localStorage;
+                                Object.keys(bag).forEach(k => {
+                                    if (/token|secret|password|pat/i.test(k)) return;
+                                    if (/^tpi_data_\d{4}-\d{2}-\d{2}$/.test(k)) {
+                                        try {
+                                            const v = bag[k];
+                                            dataMap[k] = (typeof v === 'string') ? v : JSON.stringify(v);
+                                            dayCount++;
+                                        } catch(_) {}
+                                    } else {
+                                        try {
+                                            const v = bag[k];
+                                            dataMap[k] = (typeof v === 'string') ? v : JSON.stringify(v);
+                                        } catch(_) {}
+                                    }
+                                });
+                            } else if (isFull_export) {
+                                mode = 'full_export';
+                                const daysObj = raw.days || raw.data || {};
+                                Object.keys(daysObj).forEach(d => {
+                                    if (!/^\d{4}-\d{2}-\d{2}$/.test(d)) return;
+                                    const v = daysObj[d];
+                                    if (v && typeof v === 'object') { dataMap['tpi_data_'+d] = JSON.stringify(v); dayCount++; }
+                                });
+                                const globals = raw.globals || raw.settings || {};
+                                Object.keys(globals).forEach(k => {
+                                    if (/token|secret|password|pat/i.test(k)) return;
+                                    const v = globals[k];
+                                    dataMap[k] = (typeof v === 'string') ? v : JSON.stringify(v);
+                                });
+                            } else if (isFull_old) {
+                                mode = 'full_old';
+                                const src = (raw.tpi_dir && typeof raw.tpi_dir === 'object') ? raw.tpi_dir : raw;
+                                Object.keys(src).forEach(d => {
+                                    if (!/^\d{4}-\d{2}-\d{2}$/.test(d)) return;
+                                    const v = src[d];
+                                    if (v && typeof v === 'object') { dataMap['tpi_data_'+d] = JSON.stringify(v); dayCount++; }
+                                });
+                            } else if (hasDataField) {
+                                mode = 'data_field';
+                                const migratedData = migrateDataIfNeeded(raw);
+                                Object.keys(migratedData.data).forEach(k => {
+                                    const v = migratedData.data[k];
+                                    if (k.startsWith('tpi_data_')) {
+                                        dataMap[k] = (typeof v === 'string') ? v : JSON.stringify(v);
+                                        dayCount++;
+                                    }
+                                });
+                            } else {
+                                throw new Error('无法识别的数据格式。请使用本系统导出的备份文件（JSON格式）。');
                             }
-                            
-                            window.__tpi_debug_log('📥 [importAllData] 待导入记录数:', Object.keys(importData.data).length);
 
-                            // 数据迁移处理
-                            const migratedData = migrateDataIfNeeded(importData);
-                            window.__tpi_debug_log('📥 [importAllData] 数据迁移处理完成');
+                            if (Object.keys(dataMap).length === 0) throw new Error('文件中没有可恢复的数据');
 
-                            // 询问用户是否覆盖
-                            const existingKeys = Object.keys(localStorage).filter(k => k.startsWith('tpi_data_'));
-                            let message = `即将导入 ${Object.keys(migratedData.data).length} 条记录`;
-                            if (existingKeys.length > 0) {
-                                message += `\n当前有 ${existingKeys.length} 条本地记录\n\n是否覆盖现有数据?`;
-                            }
-                            
-                            window.__tpi_debug_log('📥 [importAllData] 等待用户确认...');
+                            const existingKeys = Object.keys(window.__tpi_mem_cache || {}).filter(k => k.startsWith('tpi_data_'));
+                            let confirmMsg = `📦 检测到【${mode === 'full_backup' ? '全量备份包' : mode === 'full_export' ? '全量JSON导出' : mode === 'full_old' ? '旧版全量导出' : '数据导出文件'}】\n\n文件：${file.name}\n包含日期数：${dayCount} 天\n当前本地记录：${existingKeys.length} 天\n\n即将导入所有历史数据，本地同日期数据将被覆盖。\n\n【确定】开始导入  【取消】放弃`;
+                            if (!confirm(confirmMsg)) { event.target.value = ''; return; }
 
-                            if (!confirm(message)) {
-                                window.__tpi_debug_log('❌ [importAllData] 用户取消导入');
-                                event.target.value = '';
-                                return;
-                            }
-                            
-                            window.__tpi_debug_log('✅ [importAllData] 用户确认导入，开始写入数据...');
+                            let successCount = 0, skipCount = 0;
+                            Object.keys(dataMap).forEach(k => {
+                                try { window.__tpi_ls_set ? window.__tpi_ls_set(k, dataMap[k]) : __tpi_ls_set(k, dataMap[k]); if (k.startsWith('tpi_data_')) successCount++; } catch(_) { skipCount++; }
+                            });
 
-                            // 导入数据
-                            let successCount = 0;
-                            for (let key in migratedData.data) {
-                                if (key.startsWith('tpi_data_')) {
-                                    __tpi_ls_set(key, JSON.stringify(migratedData.data[key]));
-                                    successCount++;
-                                }
-                            }
-                            
-                            window.__tpi_debug_log('✅ [importAllData] 数据导入完成，成功导入:', successCount, '条记录');
-
-                            showNotification(`✅ 成功导入 ${successCount} 条记录`, 'success');
-                            // 使用新的成功提示系统
-                            if (window.SuccessNotifier) {
-                                window.SuccessNotifier.showImportSuccess(`${successCount} 条记录`);
-                            }
-                            loadFromLocalStorage();
-                            updateStorageIndicator();
-                            logUserAction('导入数据', { count: successCount });
-                            
-                            window.__tpi_debug_log('✅ [importAllData] 界面更新完成');
+                            window.__tpi_debug_log('✅ [importAllData v1.24] 导入完成，日期:', successCount, '条');
+                            if(window.tpiToast) window.tpiToast('✅ 导入完成：' + dayCount + ' 天数据', 'success');
+                            showNotification('✅ 成功导入 ' + dayCount + ' 天数据', 'success');
+                            if (window.SuccessNotifier) window.SuccessNotifier.showImportSuccess(dayCount + ' 天数据');
+                            try { loadFromLocalStorage(); } catch(_) {}
+                            try { updateStorageIndicator(); } catch(_) {}
+                            try { logUserAction('导入数据', { count: successCount }); } catch(_) {}
                         } catch (error) {
                             console.error('❌ [importAllData] 导入失败:', error);
-                            console.error('❌ [importAllData] 错误堆栈:', error.stack);
                             showNotification('❌ 导入失败: ' + error.message, 'error');
+                            if(window.tpiToast) window.tpiToast('❌ 导入失败：' + error.message, 'error');
                         }
                         event.target.value = '';
                     };
-                    
-                    window.__tpi_debug_log('📥 [importAllData] 开始读取文件...');
                     reader.readAsText(file);
                 } catch (error) {
                     console.error('❌ [importAllData] 读取文件失败:', error);
-                    console.error('❌ [importAllData] 错误堆栈:', error.stack);
                     showNotification('❌ 读取文件失败', 'error');
                     event.target.value = '';
                 }
@@ -21596,7 +21718,6 @@ const __exp = (function(){
                 // v15 新增功能
                 exportAllData,
                 importAllData,
-                // showHelpDialog removed in 第 20 版
                 updateStorageIndicator,
                 initializeDateNavigation,
                 initializeNetworkMonitor,
@@ -23794,7 +23915,7 @@ window.addEventListener('resize', function() {
                         <div style="display:flex;justify-content:space-between;align-items:center;padding:16px 24px;background:#f8fafc;border-bottom: 1px solid #d1fae5;flex-shrink:0;">
                             <h3 style="margin:0;font-size:18px;color:#1e293b;">👁️ 报告预览</h3>
                             <div style="display:flex;gap:10px;">
-                                <button type="button" onclick="(function(){var p=document.getElementById('tpi-preview-body');if(p){var w=window.open('','_blank');if(w){w.document.write('<html><head><meta charset=UTF-8><title>全维效能管理系统（TPI，V1.20）</title><style>body{font-family:Arial,sans-serif;max-width:900px;margin:40px auto;padding:20px;}h2{color:#0d9488;}table{width:100%;border-collapse:collapse;margin:20px 0;}th,td{padding:10px;border: 1px solid #bbf7d0;}th{background:#f3f4f6;}.btn{padding:10px 20px;margin:10px 5px;cursor:pointer;border: 1px solid #86efac;border-radius:6px;background:#fff;}</style><\/head><body>'+p.innerHTML+'<div style=text-align:center;margin-top:30px><button type="button" class=btn onclick=window.print()>🖨️ 打印</button><button type="button" class=btn onclick=window.close()>关闭</button></div><\/body></html>');w.document.close();}}})()" style="padding:6px 14px;border: 1px solid #6ee7b7;border-radius:6px;background:#fff;cursor:pointer;font-size:13px;color:#334155;transition:all 0.15s;" onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background='#fff'">🌐 新窗口打开</button>
+                                <button type="button" onclick="(function(){var p=document.getElementById('tpi-preview-body');if(p){var w=window.open('','_blank');if(w){w.document.write('<html><head><meta charset=UTF-8><title>全维效能管理系统（TPI，V1.25）</title><style>body{font-family:Arial,sans-serif;max-width:900px;margin:40px auto;padding:20px;}h2{color:#0d9488;}table{width:100%;border-collapse:collapse;margin:20px 0;}th,td{padding:10px;border: 1px solid #bbf7d0;}th{background:#f3f4f6;}.btn{padding:10px 20px;margin:10px 5px;cursor:pointer;border: 1px solid #86efac;border-radius:6px;background:#fff;}</style><\/head><body>'+p.innerHTML+'<div style=text-align:center;margin-top:30px><button type="button" class=btn onclick=window.print()>🖨️ 打印</button><button type="button" class=btn onclick=window.close()>关闭</button></div><\/body></html>');w.document.close();}}})()" style="padding:6px 14px;border: 1px solid #6ee7b7;border-radius:6px;background:#fff;cursor:pointer;font-size:13px;color:#334155;transition:all 0.15s;" onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background='#fff'">🌐 新窗口打开</button>
                                 <button class="tpi-preview-close-btn" type="button" onclick="document.getElementById('tpi-preview-modal').remove()" style="padding:6px 14px;border: 1px solid #86efac;border-radius:6px;background:#f9fafb;color:#374151;cursor:pointer;font-size:13px;font-weight:600;transition:background 0.15s;">✕ 关闭</button>
                             </div>
                         </div>
@@ -23827,10 +23948,18 @@ window.addEventListener('resize', function() {
                     let issues = [];
                     let report = '💊 数据健康检查报告\n\n';
 
-                    const dataKeys = Object.keys(localStorage).filter(k => k.startsWith('tpi_data_'));
-                    report += '📦 总记录数: ' + dataKeys.length + '\n\n';
+                    // [V1.24修复] 使用存储抽象层（IndexedDB内存缓存）替代直接读 localStorage
+                    // 因为 tpi_data_* 键存储在 IndexedDB，而非 localStorage
+                    const memCache = window.__tpi_mem_cache || {};
+                    const dataKeys = Object.keys(memCache).filter(k => k.startsWith('tpi_data_'));
+                    // 如果内存缓存为空（预载尚未完成），回退到 localStorage 兼容
+                    const lsKeys = dataKeys.length === 0
+                        ? Object.keys(localStorage || {}).filter(k => k.startsWith('tpi_data_'))
+                        : [];
+                    const allKeys = dataKeys.length > 0 ? dataKeys : lsKeys;
+                    report += '📦 总记录数: ' + allKeys.length + '\n\n';
 
-                    dataKeys.forEach(key => {
+                    allKeys.forEach(key => {
                         try {
                             const data = JSON.parse(__tpi_ls_get(key));
                             if (!data) issues.push(key + ': 数据为空');
@@ -24492,7 +24621,7 @@ window.addEventListener('resize', function() {
                     <html>
                     <head>
                         <meta charset="UTF-8">
-                        <title>全维效能管理系统（TPI，V1.20）</title>
+                        <title>全维效能管理系统（TPI，V1.25）</title>
                         <style>
     /* 补全模态框基础样式 */
     .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 10001; align-items: center; justify-content: center; }
@@ -24835,7 +24964,7 @@ window.addEventListener('resize', function() {
                 filename = 'TPI_数据导出_' + new Date().toISOString().split('T')[0] + '.csv';
                 mimeType = 'text/csv';
             } else if (format === 'html') {
-                let html = `<html><head><meta charset="UTF-8"><title>全维效能管理系统（TPI，V1.20）</title><\/head><body>
+                let html = `<html><head><meta charset="UTF-8"><title>全维效能管理系统（TPI，V1.25）</title><\/head><body>
 
         <div id="score-dashboard" style="background: linear-gradient(135deg, #e0e7ff 0%, #ddd6fe 100%); padding: 8px 16px; border-radius: 0; margin: 0; color: #1e293b; box-shadow: 0 2px 6px rgba(0,0,0,0.1);">
             <div style="max-width: 1400px; margin: 0 auto; display: flex; align-items: center; justify-content: center; gap: 10px; flex-wrap: nowrap;">
@@ -25747,7 +25876,6 @@ window.addEventListener('resize', function() {
         }
     };
 
-    // openBackupManagerComplete removed (deprecated)
 // 归档旧数据
 window.archiveOldDataComplete = function() {
     window.__tpi_debug_log('🗃️ [archiveOldDataComplete] 函数被调用');
@@ -26051,7 +26179,7 @@ window.__tpi_debug_log('✅ 全局函数已定义: copyPreviousDayDataComplete, 
                         alert('✅ Excel导出成功！');
                     }
                     else if (format === 'html') {
-                        let html = '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>全维效能管理系统（TPI，V1.20）</title>';
+                        let html = '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>全维效能管理系统（TPI，V1.25）</title>';
                         html += `<style>
     /* 补全模态框基础样式 */
     .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 10001; align-items: center; justify-content: center; }
@@ -26370,7 +26498,6 @@ html += `<\/head><body>
 
         // 问题 12: 打开备份管理
         if (!window.openBackupManagerComplete) {
-            // openBackupManagerComplete removed (deprecated)
         }
 // 页面加载完成后初始化
 
@@ -26971,8 +27098,8 @@ if (!window.TPIAdvanced) { window.TPIAdvanced = {
             try {
                 window.__tpi_debug_log('📊 [runComparison] 开始计算真实统计数据...');
                 
-                // 扫描所有tpi_data_*键
-                const allKeys = Object.keys(localStorage).filter(key => key.startsWith('tpi_data_'));
+                // [V1.24修复] 使用存储抽象层（IndexedDB内存缓存）
+                const allKeys = Object.keys(window.__tpi_mem_cache || {}).filter(key => key.startsWith('tpi_data_'));
                 window.__tpi_debug_log('📊 [runComparison] 找到', allKeys.length, '天的数据');
                 
                 if (allKeys.length === 0) {
@@ -28147,8 +28274,9 @@ if (typeof window.TPI !== 'undefined') {
             return;
         }
         
-        // 扫描所有TPI数据键
-        const allKeys = Object.keys(localStorage);
+        // [V1.24修复] 使用存储抽象层（IndexedDB内存缓存）；localStorage 仅含白名单配置键
+        const memCache = window.__tpi_mem_cache || {};
+        const allKeys = Object.keys(memCache);
         const tpiDataKeys = allKeys.filter(key => key.startsWith('tpi_data_'));
         const tpiBackupKeys = allKeys.filter(key => key.startsWith('tpi_backup_'));
         
@@ -28871,7 +28999,7 @@ window.__tpi_debug_log('✅ 全局错误监控已启动');
 
   // 备份：导出“全量可恢复包”（含所有 tpi_* 以及必要缓存；排除 token/password）
   function backupAllDataNow(){
-    const out = { _meta: { version: (window.TPI_VERSION||'全维效能管理系统（TPI，V1.20）'), appVersion: (window.TPI_APP_VERSION||'1.09'), exportedAt: new Date().toISOString() }, localStorage: {} };
+    const out = { _meta: { version: (window.TPI_VERSION||'全维效能管理系统（TPI，V1.25）'), appVersion: (window.TPI_APP_VERSION||'1.25'), exportedAt: new Date().toISOString() }, localStorage: {} };
     for(let i=0;i<__tpi_ls_length();i++){
       const k = __tpi_ls_key(i);
       if(!k) continue;
@@ -29068,7 +29196,7 @@ try{
       }
       window.__tpi_backup_lock = true;
 
-      const out = { _meta: { version: (window.TPI_VERSION||'全维效能管理系统（TPI，V1.20）'), appVersion: (window.TPI_APP_VERSION||'1.09'), exportedAt: new Date().toISOString() }, localStorage: {} };
+      const out = { _meta: { version: (window.TPI_VERSION||'全维效能管理系统（TPI，V1.25）'), appVersion: (window.TPI_APP_VERSION||'1.25'), exportedAt: new Date().toISOString() }, localStorage: {} };
 
       for(let i=0;i<__tpi_ls_length();i++){
         const k = __tpi_ls_key(i);
@@ -29743,7 +29871,7 @@ try{
       }
       window.__tpi_backup_lock = true;
 
-      const out = { _meta: { version: (window.TPI_VERSION||'全维效能管理系统（TPI，V1.20）'), appVersion: (window.TPI_APP_VERSION||'1.09'), exportedAt: new Date().toISOString() }, localStorage: {} };
+      const out = { _meta: { version: (window.TPI_VERSION||'全维效能管理系统（TPI，V1.25）'), appVersion: (window.TPI_APP_VERSION||'1.25'), exportedAt: new Date().toISOString() }, localStorage: {} };
 
       for(let i=0;i<__tpi_ls_length();i++){
         const k = __tpi_ls_key(i);
@@ -32167,7 +32295,7 @@ window.__tpi_debug_log('☁️ [上传] 正在写入云端数据库...');
         } catch(_) {}
         const _ul_uploadTime = new Date().toLocaleString('zh-CN',{year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false});
         const _ul_duration = (typeof __upload_start_time !== 'undefined' ? ((Date.now() - __upload_start_time) / 1000).toFixed(2) : '—');
-        const _ul_localDays = (() => { try { return Object.keys(localStorage).filter(k => /^\d{4}-\d{2}-\d{2}$/.test(k)).length; } catch(_) { return 0; } })();
+        const _ul_localDays = (() => { try { return Object.keys(window.__tpi_mem_cache || {}).filter(k => k.startsWith('tpi_data_')).length; } catch(_) { return 0; } })();
         const _ulLines = [
           `✅ 上传成功！`,
           `📅 日期: ${dateStr}`,
@@ -32590,7 +32718,7 @@ const __download_end_time = Date.now();
         // 写入面板日志
         try {
           const _dl_duration = (typeof __download_start_time !== 'undefined' ? ((Date.now() - __download_start_time) / 1000).toFixed(2) : '—');
-          const _dl_localDays = (() => { try { return Object.keys(localStorage).filter(k => /^\d{4}-\d{2}-\d{2}$/.test(k)).length; } catch(_) { return 0; } })();
+          const _dl_localDays = (() => { try { return Object.keys(window.__tpi_mem_cache || {}).filter(k => k.startsWith('tpi_data_')).length; } catch(_) { return 0; } })();
           const _dlLogMsg = [
             `✅ 下载成功！`,
             `📅 日期: ${dateStr}`,
@@ -33722,7 +33850,6 @@ document.getElementById('logout-btn').addEventListener('click', async () => {
     }
 })();
 
-// [Removed] Placeholder Appwrite integration block removed (was causing overrides/syntax errors)
 
 /* ===========================
    TPI 深度优化脚本 v1.0 (增强版 - 不覆盖现有功能)
@@ -35106,7 +35233,7 @@ window.__tpi_debug_log('✅ [TPI优化] 函数增强包装器已加载');
 
         const duration = ((Date.now() - startTime) / 1000).toFixed(2);
         
-        const _gist_ul_localDays = (() => { try { return Object.keys(localStorage).filter(k => /^\d{4}-\d{2}-\d{2}$/.test(k)).length; } catch(_) { return 0; } })();
+        const _gist_ul_localDays = (() => { try { return Object.keys(window.__tpi_mem_cache || {}).filter(k => k.startsWith('tpi_data_')).length; } catch(_) { return 0; } })();
         showGistMsg(
           [
             `✅ 上传成功！`,
@@ -35276,7 +35403,7 @@ window.__tpi_debug_log('✅ [TPI优化] 函数增强包装器已加载');
       const duration = ((Date.now() - startTime) / 1000).toFixed(2);
       const backupTime = new Date(backupInfo.backupTime).toLocaleString('zh-CN');
 
-      const _gist_dl_localDays = (() => { try { return Object.keys(localStorage).filter(k => /^\d{4}-\d{2}-\d{2}$/.test(k)).length; } catch(_) { return 0; } })();
+      const _gist_dl_localDays = (() => { try { return Object.keys(window.__tpi_mem_cache || {}).filter(k => k.startsWith('tpi_data_')).length; } catch(_) { return 0; } })();
       showGistMsg(
         [
           `✅ 下载成功！`,
@@ -45897,7 +46024,7 @@ body.dark-theme .tpi-submodule-header:hover {
 }
 
 /* =====================================================================
-   V1.20 全局覆盖：所有输入框、下拉框、文本框强制中性边框
+   V1.24 全局覆盖：所有输入框、下拉框、文本框强制中性边框
    (最高优先级，放在所有样式最后)
    ===================================================================== */
 input[type="text"],
@@ -45933,6 +46060,127 @@ textarea:focus {
 /* 所有文本框确保有右下角拖拽调整把手 */
 textarea {
   resize: vertical !important;
+}
+
+/* ============================================================
+   V1.25 综合修复：标题图标 & 居中对齐 & 移动端优化
+   ============================================================ */
+
+/* 1. 所有模块/子模块/段落标题强制居中对齐 */
+.card-title,
+.tpi-submodule-header > div,
+.tpi-submodule-header > span:not(.tpi-submodule-arrow),
+.tpi-card-title,
+.section-title,
+.module-title,
+h3.card-title, h4.card-title,
+.data-processing-card h4,
+.tpi-submodule-header span[style*="font-size"] {
+  text-align: center !important;
+  justify-content: center !important;
+}
+
+/* 2. submodule-header内部flex容器强制居中 */
+.tpi-submodule-header {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+}
+.tpi-submodule-header > div:first-child {
+  flex: 1 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 8px !important;
+  text-align: center !important;
+}
+
+/* 3. 段落标题（h3-h5）居中 */
+.card-content h3,
+.card-content h4,
+.card-content h5,
+.tpi-submodule-body h3,
+.tpi-submodule-body h4,
+.tpi-submodule-body h5 {
+  text-align: center !important;
+}
+
+/* 4. axiom-title 居中 */
+.axiom-title {
+  text-align: center !important;
+}
+
+/* 5. 移动端优化 */
+@media (max-width: 768px) {
+  /* 防止横向溢出 */
+  body {
+    overflow-x: hidden !important;
+  }
+  
+  /* 卡片内边距优化 */
+  .card-content {
+    padding: 12px 10px !important;
+  }
+  
+  /* 表格移动端滚动 */
+  .table-container,
+  table {
+    display: block !important;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    max-width: 100% !important;
+  }
+  
+  /* grid适配 */
+  .grid-2, .grid-3, .grid-4 {
+    grid-template-columns: 1fr !important;
+  }
+  
+  /* export buttons */
+  .export-period-buttons {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+  
+  /* 按钮宽度 */
+  .export-format-buttons {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+  
+  /* 子模块标题在移动端换行处理 */
+  .tpi-submodule-header > div:first-child {
+    flex-wrap: wrap !important;
+    font-size: 13px !important;
+  }
+  
+  /* 输入框字体防止缩放 */
+  input[type="text"],
+  input[type="number"],
+  input[type="time"],
+  input[type="date"],
+  textarea,
+  select {
+    font-size: 16px !important;
+  }
+  
+  /* 标题字号 */
+  .card-title {
+    font-size: 14px !important;
+    flex-wrap: wrap !important;
+  }
+  
+  /* 数据面板布局 */
+  .data-processing-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .tpi-submodule-header > div:first-child span[style*="font-size:11px"] {
+    display: none !important;
+  }
+  .card-title span[style*="font-weight:400"] {
+    display: none !important;
+  }
 }
 </style>
 
@@ -45995,7 +46243,7 @@ textarea {
 
 
 <!-- ======================================================
-     TPI 全量同步模块 v4 (Bulk Sync Patch - V1.20)
+     TPI 全量同步模块 v5 (Bulk Sync Patch - V1.21)
      核心修复：
        · Appwrite认证：直接用 window.__appwriteAccount.get()
        · 旧版数据兼容：_smartUnpack() 支持所有历史格式
@@ -46473,8 +46721,19 @@ textarea {
       '\n页面即将刷新以加载最新数据。';
     if(errors.length) summary += '\n\n失败详情（前5条）：\n'+errors.slice(0,5).join('\n');
     alert(summary);
-    _toast('✅ Appwrite全量下载：'+success+' 天，即将刷新','success');
-    setTimeout(function(){ try{ location.reload(); }catch(e){} }, 1800);
+    _toast('✅ Appwrite全量下载：'+success+' 天，请点击刷新按钮加载数据','success');
+    /* [V1.21修复] 不自动 reload（防止浏览器弹出"放弃更改？"确认框后要求重新登录）
+       改为在进度区显示一个"立即刷新"按钮，由用户主动点击。 */
+    var progressEl = document.getElementById('tpi-bulk-sync-progress');
+    if(progressEl){
+      progressEl.style.display = 'block';
+      progressEl.innerHTML = '✅ 数据已恢复到本地！' +
+        '<button type="button" onclick="location.reload()" style="' +
+          'margin-left:12px;padding:5px 16px;background:#7c3aed;color:white;border:none;' +
+          'border-radius:6px;cursor:pointer;font-weight:700;font-size:13px;' +
+        '">🔄 立即刷新页面</button>' +
+        '<span style="margin-left:10px;font-size:11px;color:#6b7280;">（刷新后数据生效）</span>';
+    }
   };
 
   /* ══════════════════════════════════════════════════════
@@ -46537,7 +46796,7 @@ textarea {
     _progress('tpi-gist-bulk-sync-progress','正在写入 Gist（共 '+Object.keys(allBackupData).length+' 天）…');
     try{
       await _callGist('https://api.github.com/gists/'+gistId,'PATCH',token,{
-        description: 'TPI 全维效能管理系统 - 全量数据备份 (BulkSync v4)',
+        description: 'TPI 全维效能管理系统 - 全量数据备份 (BulkSync v5)',
         public: false,
         files: { 'tpi-backup-data.json': { content: JSON.stringify(allBackupData,null,2) } }
       });
@@ -46652,8 +46911,18 @@ textarea {
       '页面即将刷新以加载最新数据。';
     if(errors.length) summary += '\n\n失败详情（前5条）：\n'+errors.slice(0,5).join('\n');
     alert(summary);
-    _toast('✅ Gist全量下载：'+success+' 天，即将刷新','success');
-    setTimeout(function(){ try{ location.reload(); }catch(e){} }, 1800);
+    _toast('✅ Gist全量下载：'+success+' 天，请点击刷新按钮加载数据','success');
+    /* [V1.21修复] 不自动 reload，防止浏览器弹出"放弃更改？"后要求重新登录 */
+    var progressEl2 = document.getElementById('tpi-gist-bulk-sync-progress');
+    if(progressEl2){
+      progressEl2.style.display = 'block';
+      progressEl2.innerHTML = '✅ 数据已恢复到本地！' +
+        '<button type="button" onclick="location.reload()" style="' +
+          'margin-left:12px;padding:5px 16px;background:#7c3aed;color:white;border:none;' +
+          'border-radius:6px;cursor:pointer;font-weight:700;font-size:13px;' +
+        '">🔄 立即刷新页面</button>' +
+        '<span style="margin-left:10px;font-size:11px;color:#6b7280;">（刷新后数据生效）</span>';
+    }
   };
 
 })();
