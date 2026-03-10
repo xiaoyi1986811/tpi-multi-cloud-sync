@@ -119,13 +119,13 @@
   };
 })();
 </script>
-<meta content="全维效能管理系统（TPI，V1.51）" property="og:title"/>
+<meta content="全维效能管理系统（TPI，V1.50）" property="og:title"/>
 <meta content="全维效能管理系统（TPI）| 全面追踪 · 科学管理 · 高效提升" property="og:description"/>
 <meta content="website" property="og:type"/>
 <meta content="https://mytpi.netlify.app/" property="og:url"/>
 <meta content="zh_CN" property="og:locale"/>
 <meta name="twitter:card" content="summary"/>
-<meta name="twitter:title" content="全维效能管理系统（TPI，V1.51）"/>
+<meta name="twitter:title" content="全维效能管理系统（TPI，V1.50）"/>
 <meta name="twitter:description" content="全维效能管理系统（TPI）"/>
 <meta content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=5.0, user-scalable=yes, viewport-fit=cover" name="viewport"/>
 <meta content="全维效能管理系统（TPI）- 跨设备同步 | 支持电脑/手机/平板访问" name="description"/>
@@ -2279,7 +2279,7 @@ window.getTpiDayDataAsync = async function(dateStr) {
   } catch (e) {}
 })();
 </script>
-<title>全维效能管理系统（TPI，V1.51）</title>
+<title>全维效能管理系统（TPI，V1.50）</title>
 <script>
    'use strict';
         const getCurrentDate = () => {
@@ -2290,8 +2290,8 @@ window.getTpiDayDataAsync = async function(dateStr) {
             return `${year}-${month}-${day}`;
         };
 
-        window.TPI_VERSION = '全维效能管理系统（TPI，V1.51）';
-        window.TPI_APP_VERSION = '1.51';
+        window.TPI_VERSION = '全维效能管理系统（TPI，V1.50）';
+        window.TPI_APP_VERSION = '1.50';
 
         // V1.50: 检查是否有待恢复的数据（import后不刷新，直接恢复）
         // 此标志由各导入函数设置，用于在初始化完成后自动加载
@@ -2385,7 +2385,7 @@ window.TPI.DOM = window.TPI.DOM || {
                             : '三十';
             const lunarStr = `农历${lunarMonth}${lunarDay}${lunar.isLeap ? '(闰)' : ''}`;
 
-            document.title = `全维效能管理系统（TPI，V1.51）（${window.TPI_BUILD_DATE} ${weekday} ${lunarStr}）`;
+            document.title = `全维效能管理系统（TPI，V1.50）（${window.TPI_BUILD_DATE} ${weekday} ${lunarStr}）`;
 
             const dateDisplay = document.getElementById('current-date-display');
             if (dateDisplay) {
@@ -6494,7 +6494,7 @@ hr { border-color: #bbf7d0 !important; }
 <div class="header-content">
 <div class="header-title">
 <h1 style="font-size:clamp(1.5rem, 3vw, 2.5rem);font-weight:800;background:linear-gradient(135deg,#0f766e 0%,#0d9488 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;letter-spacing:-0.02em;">
-        全维效能管理系统（TPI，V1.51）
+        全维效能管理系统（TPI，V1.50）
        </h1>
 
 <div style="display:inline-flex;align-items:center;gap:6px;flex-shrink:0;">
@@ -17643,14 +17643,7 @@ try {
                 }
             }
 
-            // V1.51修复：restoreBackup 支持多种格式（旧版Array / tpi_direct_v7_full / 全量备份包）
             function restoreBackup() {
-                // 优先使用外部增强版（window.TPI.restoreBackup 在初始化后会被替换为增强版）
-                // 但此处保留独立实现，确保即使外部版本未加载也能正常工作
-                if (window.__tpi_restoreBackupEnhanced && typeof window.__tpi_restoreBackupEnhanced === 'function') {
-                    window.__tpi_restoreBackupEnhanced();
-                    return;
-                }
 
                 const fileInput = document.createElement('input');
                 fileInput.type = 'file';
@@ -17658,113 +17651,51 @@ try {
 
                 fileInput.onchange = function(e) {
                     const file = e.target.files[0];
-                    if (!file) return;
+                    if (!file) {
+                        return;
+                    }
 
                     const reader = new FileReader();
-                    reader.onload = function(evt) {
+
+                    reader.onload = function(e) {
                         try {
-                            const obj = JSON.parse(evt.target.result);
-                            if (!obj || typeof obj !== 'object') {
-                                showNotification('❌ 无效的 JSON 格式', 'error'); return;
-                            }
+                            const data = JSON.parse(e.target.result);
 
-                            // 格式A：旧版 Array 格式（原始DataProcessing格式）
-                            if (Array.isArray(obj)) {
-                                if (!confirm('准备恢复 ' + obj.length + ' 条记录，这将覆盖现有数据。确定要继续吗？')) return;
-                                const keys2 = Object.keys(window.__tpi_mem_cache || {});
-                                keys2.forEach(k => { if (k.startsWith('tpi_data_')) __tpi_ls_remove(k); });
-                                obj.forEach(item => { if (item.date) __tpi_ls_set('tpi_data_' + item.date, JSON.stringify(item)); });
-                                showNotification('✅ 成功恢复 ' + obj.length + ' 条记录', 'success');
-                                updateStatistics();
+                            if (!Array.isArray(data)) {
+                                console.error('[DataProcessing] 备份文件格式不正确');
+                                showNotification('❌ 备份文件格式不正确', 'error');
                                 return;
                             }
 
-                            // 格式B：{ localStorage: {...} } 全量备份包
-                            if (obj.localStorage && typeof obj.localStorage === 'object') {
-                                const bag = obj.localStorage;
-                                const dayCount = Object.keys(bag).filter(k => /^tpi_data_\d{4}-\d{2}-\d{2}$/.test(k)).length;
-                                if (!confirm('检测到全量备份包，包含 ' + dayCount + ' 天数据。恢复后将刷新页面，确定继续？')) return;
-                                Object.keys(bag).forEach(k => {
-                                    if (/token|secret|password|pat/i.test(k)) return;
-                                    try { __tpi_ls_set(k, bag[k]); } catch(_) {}
-                                });
-                                showNotification('✅ 备份恢复成功，即将刷新页面', 'success');
-                                setTimeout(() => { try { location.reload(); } catch(_) {} }, 800);
-                                return;
-                            }
+                            if (confirm(`准备恢复 ${data.length} 条记录，这将覆盖现有数据。确定要继续吗？`)) {
+                                console.warn('[DataProcessing] 用户确认恢复备份');
 
-                            // 格式C：tpi_direct_v7_full（V1.46单日导出）
-                            if (obj.schema && /tpi_direct_v\d+_full/i.test(String(obj.schema))) {
-                                const targetDate = obj.date || (typeof __tpi_getSelectedDate === 'function' ? __tpi_getSelectedDate() : new Date().toISOString().split('T')[0]);
-                                if (!confirm('检测到 V1.46 单日数据（' + targetDate + '），恢复后将立即显示在页面中，确定继续？')) return;
-                                // 使用增强转换函数
-                                let dayData = null;
-                                try {
-                                    if (typeof window.migrateDataIfNeeded === 'function') {
-                                        dayData = window.migrateDataIfNeeded(obj);
+                                const keys = Object.keys(window.__tpi_mem_cache || {});
+                                keys.forEach(key => {
+                                    if (key.startsWith('tpi_data_')) {
+                                        __tpi_ls_remove(key);
                                     }
-                                } catch(_) {}
-                                if (!dayData) {
-                                    dayData = { 'date-input': targetDate, date: targetDate, timestamp: new Date().toISOString(), _importedFrom: 'tpi_direct_v7_full' };
-                                    const af = [].concat(obj.textareas||[], obj.selects||[], obj.numbers||[], obj.times||[], obj.texts||[], obj.richTexts||[]);
-                                    af.forEach(f => { if (f.id) dayData[f.id] = f.value !== undefined ? f.value : ''; else if (f.label) dayData['__al__' + f.label] = f.value !== undefined ? f.value : ''; });
-                                    (obj.checkboxes||[]).forEach(f => { if (f.id) dayData[f.id] = !!f.checked; else if (f.label && f.label !== 'input') dayData['__al_cb__' + f.label] = !!f.checked; });
-                                    (obj.radios||[]).forEach(f => { if (f.checked && f.name) dayData[f.name] = f.value; });
-                                    if (obj.miscRecords && Array.isArray(obj.miscRecords) && obj.miscRecords.length > 0) dayData.miscRecordsV1 = obj.miscRecords;
-                                }
-                                if (!dayData['date-input']) dayData['date-input'] = targetDate;
-                                __tpi_ls_set('tpi_data_' + targetDate, JSON.stringify(dayData));
-                                if (dayData.miscRecordsV1) __tpi_ls_set('tpi_misc_records_' + targetDate, JSON.stringify(dayData.miscRecordsV1));
-                                showNotification('✅ V1.46 数据已恢复（' + targetDate + '）', 'success');
-                                // 恢复UI
-                                try {
-                                    const dateEl = document.getElementById('date-input');
-                                    if (dateEl) dateEl.value = targetDate;
-                                    if (window.TPI && typeof window.TPI.loadFromLocalStorage === 'function') window.TPI.loadFromLocalStorage();
-                                    else if (typeof loadFromLocalStorage === 'function') loadFromLocalStorage();
-                                } catch(_) {}
-                                return;
-                            }
-
-                            // 格式D：新版全量备份 { _meta, dailyRecords, ... }
-                            if (obj._meta && obj.dailyRecords && typeof obj.dailyRecords === 'object') {
-                                const dr = obj.dailyRecords;
-                                const dayCount2 = Object.keys(dr).filter(k => /^\d{4}-\d{2}-\d{2}$/.test(k)).length;
-                                if (!confirm('检测到全量数据导出（' + dayCount2 + ' 天），恢复后将刷新页面，确定继续？')) return;
-                                Object.keys(dr).forEach(d => {
-                                    if (!/^\d{4}-\d{2}-\d{2}$/.test(d)) return;
-                                    const v = dr[d];
-                                    if (v && typeof v === 'object') { try { __tpi_ls_set('tpi_data_' + d, JSON.stringify(v)); } catch(_) {} }
                                 });
-                                try { if (obj.checkin) __tpi_ls_set('tpi_checkin_data', JSON.stringify(obj.checkin)); } catch(_) {}
-                                showNotification('✅ 全量数据已恢复（' + dayCount2 + ' 天），即将刷新', 'success');
-                                setTimeout(() => { try { location.reload(); } catch(_) {} }, 800);
-                                return;
-                            }
 
-                            // 格式E：日期键值对 { "2026-01-01": {...} }
-                            const dateKeys = Object.keys(obj).filter(k => /^\d{4}-\d{2}-\d{2}$/.test(k));
-                            if (dateKeys.length >= 1) {
-                                if (!confirm('检测到 ' + dateKeys.length + ' 天数据，恢复后将刷新页面，确定继续？')) return;
-                                dateKeys.forEach(d => {
-                                    const v = obj[d];
-                                    if (v && typeof v === 'object') { try { __tpi_ls_set('tpi_data_' + d, JSON.stringify(v)); } catch(_) {} }
+                                data.forEach(item => {
+                                    if (item.date) {
+                                        const key = `tpi_data_${item.date}`;
+                                        __tpi_ls_set(key, JSON.stringify(item));
+                                    }
                                 });
-                                showNotification('✅ 数据已恢复（' + dateKeys.length + ' 天），即将刷新', 'success');
-                                setTimeout(() => { try { location.reload(); } catch(_) {} }, 800);
-                                return;
-                            }
 
-                            // 无法识别
-                            console.error('[DataProcessing] 无法识别的备份格式');
-                            showNotification('❌ 无法识别的备份格式，请使用本系统导出的文件', 'error');
-                            alert('❌ 无法识别备份文件格式\n\n支持的格式：\n• 全量备份包（localStorage 格式）\n• 全量备份包（dailyRecords 格式）\n• V1.46单日导出（tpi_direct_v7_full）\n• 旧版数组格式');
+                                showNotification(`✅ 成功恢复 ${data.length} 条记录`, 'success');
+
+                                updateStatistics();
+                            } else {
+                            }
 
                         } catch (error) {
                             console.error('[DataProcessing] 恢复备份错误:', error);
-                            showNotification('❌ 恢复备份失败：' + (error.message || '未知错误'), 'error');
+                            showNotification('❌ 恢复备份失败', 'error');
                         }
                     };
+
                     reader.readAsText(file);
                 };
 
@@ -19527,7 +19458,7 @@ const __exp = (function(){
 
         document.addEventListener('DOMContentLoaded', TPI.initialize);
 
-        // V1.51: 在页面初始化后自动加载当前日期数据，并确保 TPI.restoreBackup 指向增强版
+        // V1.50: 在页面初始化后自动加载当前日期数据（支持import后不刷新）
         document.addEventListener('DOMContentLoaded', function() {
           setTimeout(function() {
             try {
@@ -19547,22 +19478,8 @@ const __exp = (function(){
                   if(raw){ window.TPI.loadFromLocalStorage(); }
                 }
               }
-            } catch(e) { console.warn('[V1.51 auto-load]', e); }
+            } catch(e) { console.warn('[V1.50 auto-load]', e); }
           }, 800); // 等待其他初始化完成
-
-          // V1.51: 在所有脚本初始化完成后，确保 TPI.restoreBackup 指向增强版
-          setTimeout(function() {
-            try {
-              if(typeof window.__tpi_restoreBackupEnhanced === 'function') {
-                window.TPI = window.TPI || {};
-                window.TPI.restoreBackup = window.__tpi_restoreBackupEnhanced;
-              }
-              // 同时修复 importDataComplete
-              if(typeof window.__tpi_importDataComplete_v150 === 'function') {
-                window.importDataComplete = window.__tpi_importDataComplete_v150;
-              }
-            } catch(_) {}
-          }, 500);
         }, { once: true });
 
         window.TPI = TPI;
@@ -21481,7 +21398,7 @@ window.addEventListener('resize', function() {
                         <div style="display:flex;justify-content:space-between;align-items:center;padding:16px 24px;background:#f8fafc;border-bottom: 1px solid #d1fae5;flex-shrink:0;">
                             <h3 style="margin:0;font-size:18px;color:#1e293b;">👁️ 报告预览</h3>
                             <div style="display:flex;gap:10px;">
-                                <button type="button" onclick="(function(){var p=document.getElementById('tpi-preview-body');if(p){var w=window.open('','_blank');if(w){w.document.write('<html><head><meta charset=UTF-8><title>全维效能管理系统（TPI，V1.51）</title><style>body{font-family:Arial,sans-serif;max-width:900px;margin:40px auto;padding:20px;}h2{color:#0d9488;}table{width:100%;border-collapse:collapse;margin:20px 0;}th,td{padding:10px;border: 1px solid #bbf7d0;}th{background:#f3f4f6;}.btn{padding:10px 20px;margin:10px 5px;cursor:pointer;border: 1px solid #86efac;border-radius:6px;background:#fff;}</style><\/head><body>'+p.innerHTML+'<div style=text-align:center;margin-top:30px><button type="button" class=btn onclick=window.print()>🖨️ 打印</button><button type="button" class=btn onclick=window.close()>关闭</button></div><\/body></html>');w.document.close();}}})()" style="padding:6px 14px;border: 1px solid #6ee7b7;border-radius:6px;background:#fff;cursor:pointer;font-size:13px;color:#334155;transition:all 0.15s;" onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background='#fff'">🌐 新窗口打开</button>
+                                <button type="button" onclick="(function(){var p=document.getElementById('tpi-preview-body');if(p){var w=window.open('','_blank');if(w){w.document.write('<html><head><meta charset=UTF-8><title>全维效能管理系统（TPI，V1.50）</title><style>body{font-family:Arial,sans-serif;max-width:900px;margin:40px auto;padding:20px;}h2{color:#0d9488;}table{width:100%;border-collapse:collapse;margin:20px 0;}th,td{padding:10px;border: 1px solid #bbf7d0;}th{background:#f3f4f6;}.btn{padding:10px 20px;margin:10px 5px;cursor:pointer;border: 1px solid #86efac;border-radius:6px;background:#fff;}</style><\/head><body>'+p.innerHTML+'<div style=text-align:center;margin-top:30px><button type="button" class=btn onclick=window.print()>🖨️ 打印</button><button type="button" class=btn onclick=window.close()>关闭</button></div><\/body></html>');w.document.close();}}})()" style="padding:6px 14px;border: 1px solid #6ee7b7;border-radius:6px;background:#fff;cursor:pointer;font-size:13px;color:#334155;transition:all 0.15s;" onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background='#fff'">🌐 新窗口打开</button>
                                 <button class="tpi-preview-close-btn" type="button" onclick="document.getElementById('tpi-preview-modal').remove()" style="padding:6px 14px;border: 1px solid #86efac;border-radius:6px;background:#f9fafb;color:#374151;cursor:pointer;font-size:13px;font-weight:600;transition:background 0.15s;">✕ 关闭</button>
                             </div>
                         </div>
@@ -22289,7 +22206,7 @@ window.addEventListener('resize', function() {
                 filename = 'TPI_数据导出_' + new Date().toISOString().split('T')[0] + '.txt';
                 mimeType = 'text/plain';
             } else if (format === 'html') {
-                let html = `<html><head><meta charset="UTF-8"><title>全维效能管理系统（TPI，V1.51）</title><\/head><body>
+                let html = `<html><head><meta charset="UTF-8"><title>全维效能管理系统（TPI，V1.50）</title><\/head><body>
 
         <div id="score-dashboard" style="background: linear-gradient(135deg, #e0e7ff 0%, #ddd6fe 100%); padding: 8px 16px; border-radius: 0; margin: 0; color: #1e293b; box-shadow: 0 2px 6px rgba(0,0,0,0.1);">
             <div style="max-width: 1400px; margin: 0 auto; display: flex; align-items: center; justify-content: center; gap: 10px; flex-wrap: nowrap;">
@@ -23304,7 +23221,7 @@ window.archiveOldDataComplete = function() {
                         alert('✅ JSON导出成功！');
                     }
                     else if (format === 'html') {
-                        let html = '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>全维效能管理系统（TPI，V1.51）</title>';
+                        let html = '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>全维效能管理系统（TPI，V1.50）</title>';
                         html += `<style>
 
     .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 10001; align-items: center; justify-content: center; }
@@ -25614,7 +25531,7 @@ window.addEventListener('unhandledrejection', function(event) {
   }
 
   function backupAllDataNow(){
-    const out = { _meta: { version: (window.TPI_VERSION||'全维效能管理系统（TPI，V1.51）'), appVersion: (window.TPI_APP_VERSION||'1.51'), exportedAt: new Date().toISOString() }, localStorage: {} };
+    const out = { _meta: { version: (window.TPI_VERSION||'全维效能管理系统（TPI，V1.50）'), appVersion: (window.TPI_APP_VERSION||'1.50'), exportedAt: new Date().toISOString() }, localStorage: {} };
     for(let i=0;i<__tpi_ls_length();i++){
       const k = __tpi_ls_key(i);
       if(!k) continue;
@@ -25631,7 +25548,7 @@ window.addEventListener('unhandledrejection', function(event) {
     const blob = new Blob([JSON.stringify(out, null, 2)], {type:'application/json'});
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
-    a.download = `TPI_V1.51_full_backup_${(new Date()).toISOString().slice(0,10)}.json`;
+    a.download = `TPI_V1.50_full_backup_${(new Date()).toISOString().slice(0,10)}.json`;
     a.click();
     tpiToast('✅ 已导出“备份所有数据”JSON（可用于全量恢复）');
   }
@@ -25788,10 +25705,7 @@ window.addEventListener('unhandledrejection', function(event) {
 
   window.TPI = window.TPI || {};
   if(typeof window.TPI.backupAllData !== 'function') window.TPI.backupAllData = backupAllDataNow;
-  // V1.51修复：无条件覆盖 TPI.restoreBackup 为增强版（旧版只接受Array格式，新版支持所有格式）
-  window.TPI.restoreBackup = restoreBackupFromFile;
-  // 同时暴露到全局，供 DataProcessing 内部的 restoreBackup 函数调用
-  window.__tpi_restoreBackupEnhanced = restoreBackupFromFile;
+  if(typeof window.TPI.restoreBackup !== 'function') window.TPI.restoreBackup = restoreBackupFromFile;
 
   // V1.50: 确保使用功能完整的 importDataComplete（防止被基础版覆盖）
   try{
@@ -25908,7 +25822,7 @@ try{
       }
       window.__tpi_backup_lock = true;
 
-      const out = { _meta: { version: (window.TPI_VERSION||'全维效能管理系统（TPI，V1.51）'), appVersion: (window.TPI_APP_VERSION||'1.51'), exportedAt: new Date().toISOString() }, localStorage: {} };
+      const out = { _meta: { version: (window.TPI_VERSION||'全维效能管理系统（TPI，V1.50）'), appVersion: (window.TPI_APP_VERSION||'1.50'), exportedAt: new Date().toISOString() }, localStorage: {} };
 
       for(let i=0;i<__tpi_ls_length();i++){
         const k = __tpi_ls_key(i);
@@ -26461,7 +26375,7 @@ try{
       }
       window.__tpi_backup_lock = true;
 
-      const out = { _meta: { version: (window.TPI_VERSION||'全维效能管理系统（TPI，V1.51）'), appVersion: (window.TPI_APP_VERSION||'1.51'), exportedAt: new Date().toISOString() }, localStorage: {} };
+      const out = { _meta: { version: (window.TPI_VERSION||'全维效能管理系统（TPI，V1.50）'), appVersion: (window.TPI_APP_VERSION||'1.50'), exportedAt: new Date().toISOString() }, localStorage: {} };
 
       for(let i=0;i<__tpi_ls_length();i++){
         const k = __tpi_ls_key(i);
@@ -27831,32 +27745,19 @@ window.__tpi_syncDateToMain = function(){
   };
 
   window.tpiLogout = async function(){
-    // V1.51修复：deleteSession 在未登录/访客状态下会抛出401，需静默处理
     try{
-      const acctObj = window.__appwriteAccount || account;
-      if (acctObj && typeof acctObj.get === 'function') {
-        try {
-          const currentUser = await acctObj.get();
-          // 只有真实登录用户才调用 deleteSession
-          if (currentUser && currentUser.$id) {
-            await acctObj.deleteSession('current');
-          }
-        } catch(checkErr) {
-          // 未登录状态（401/guest），跳过 deleteSession
-          console.warn('[Logout] 用户未登录，跳过 deleteSession:', checkErr.message || checkErr);
-        }
-      }
+      await (window.__appwriteAccount||account).deleteSession('current');
     }catch(e){
-      console.warn('[Logout] 退出登录时出错（已忽略）:', e.message || e);
+      console.warn('退出登录时出错:', e);
     }
 
     TPI_CURRENT_USER = null;
     TPI_CURRENT_PASSWORD = null;
 
-    try { lsRemove(KEY_TOKEN); } catch(_) {}
+    lsRemove(KEY_TOKEN);
 
-    try { setLoggedOutUI(); } catch(_) {}
-    try { tpiShowMsg('tpi-login-msg', '已退出登录', false); } catch(_) {}
+    setLoggedOutUI();
+    tpiShowMsg('tpi-login-msg', '已退出登录', false);
   };
 
   window.tpiResetPassword = async function(){
@@ -29886,28 +29787,16 @@ async function saveTodaysData() {
 
 document.getElementById('save-to-cloud-btn').addEventListener('click', saveTodaysData);
 
-// V1.51修复：logout-btn 退出，静默处理401错误
-(function(){
-  var _logoutBtn = document.getElementById('logout-btn');
-  if (_logoutBtn && !_logoutBtn._v151_bound) {
-    _logoutBtn._v151_bound = true;
-    _logoutBtn.addEventListener('click', async function() {
-      try {
-        const acct = __awAccount();
-        if (acct && typeof acct.get === 'function') {
-          try {
-            const u = await acct.get();
-            if (u && u.$id) { await acct.deleteSession('current'); }
-          } catch(_) { /* 未登录，忽略 */ }
-        }
-      } catch (error) {
-        console.warn('[logout-btn] deleteSession 失败（已忽略）:', error.message || error);
-      }
-      // 无论删除 session 是否成功，都执行本地退出
-      try { location.reload(); } catch(_) {}
-    });
-  }
-})();
+document.getElementById('logout-btn').addEventListener('click', async () => {
+    try {
+        await __awAccount().deleteSession('current');
+        alert('已退出登录');
+        location.reload(); // 刷新页面回到登录状态
+    } catch (error) {
+        console.error('退出失败:', error);
+        alert('退出失败');
+    }
+});
 
 (async () => {
     try {
@@ -31212,16 +31101,7 @@ document.addEventListener('DOMContentLoaded', function() {
         return;
       }
 
-      // V1.51: 处理 Gist 内容截断问题
-      const _gistFile = gist.files[GIST_FILENAME];
-      let _gistRawContent = _gistFile.content || '';
-      if (_gistFile.truncated === true && _gistFile.raw_url) {
-        try {
-          const _rawR = await fetch(_gistFile.raw_url, { headers: { 'Authorization': 'Bearer ' + (await _getToken()) } });
-          if (_rawR.ok) _gistRawContent = await _rawR.text();
-        } catch(_) {}
-      }
-      const backupData = JSON.parse(_gistRawContent);
+      const backupData = JSON.parse(gist.files[GIST_FILENAME].content);
       const totalDates = Object.keys(backupData).length;
       const date = $('date-input') ? $('date-input').value : new Date().toISOString().split('T')[0];
 
@@ -41350,38 +41230,7 @@ h3.card-title, h4.card-title,
       var fname = 'tpi-backup-data.json';
       if(!gistJson.files || !gistJson.files[fname])
         throw new Error('Gist 中没有找到备份文件 tpi-backup-data.json\n\n请先执行"全量上传"，将本地数据上传到 Gist。');
-
-      var fileObj = gistJson.files[fname];
-      var rawContent = fileObj.content || '';
-
-      // V1.51修复：GitHub API 会在文件超过 ~1MB 时截断 content，导致 JSON 解析失败（Unterminated string）
-      // 当 truncated===true 或 content 解析失败时，使用 raw_url 获取完整内容
-      var needRawFetch = fileObj.truncated === true;
-      if (!needRawFetch && rawContent) {
-        // 尝试解析，如果失败则说明内容被截断
-        try { JSON.parse(rawContent); }
-        catch(testErr) { needRawFetch = true; console.warn('[Gist] content 解析失败，切换到 raw_url 获取'); }
-      }
-
-      if (needRawFetch && fileObj.raw_url) {
-        _progress('tpi-gist-bulk-sync-progress','内容较大，正在通过 raw_url 获取完整数据…');
-        try {
-          var rawResp = await fetch(fileObj.raw_url, {
-            headers: {
-              'Authorization': 'Bearer ' + token,
-              'Accept': 'application/vnd.github.v3.raw'
-            }
-          });
-          if (!rawResp.ok) throw new Error('raw_url 请求失败：HTTP ' + rawResp.status);
-          rawContent = await rawResp.text();
-        } catch(rawErr) {
-          console.warn('[Gist] raw_url 获取失败:', rawErr);
-          // 继续使用截断的 content，解析时可能报错
-        }
-      }
-
-      if (!rawContent) throw new Error('Gist 文件内容为空');
-      allBackupData = JSON.parse(rawContent);
+      allBackupData = JSON.parse(gistJson.files[fname].content);
     }catch(e){
       _toast('❌ 拉取 Gist 失败：'+((e&&e.message)||String(e)),'error');
       alert('❌ Gist 全量下载失败！\n\n错误：'+((e&&e.message)||String(e))+'\n\n请检查 Token 是否有效、Gist ID 是否正确。');
