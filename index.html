@@ -119,13 +119,13 @@
   };
 })();
 </script>
-<meta content="全维效能管理系统（TPI，V1.53）" property="og:title"/>
+<meta content="全维效能管理系统（TPI，V1.55）" property="og:title"/>
 <meta content="全维效能管理系统（TPI）| 全面追踪 · 科学管理 · 高效提升" property="og:description"/>
 <meta content="website" property="og:type"/>
 <meta content="https://mytpi.netlify.app/" property="og:url"/>
 <meta content="zh_CN" property="og:locale"/>
 <meta name="twitter:card" content="summary"/>
-<meta name="twitter:title" content="全维效能管理系统（TPI，V1.53）"/>
+<meta name="twitter:title" content="全维效能管理系统（TPI，V1.55）"/>
 <meta name="twitter:description" content="全维效能管理系统（TPI）"/>
 <meta content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=5.0, user-scalable=yes, viewport-fit=cover" name="viewport"/>
 <meta content="全维效能管理系统（TPI）- 跨设备同步 | 支持电脑/手机/平板访问" name="description"/>
@@ -2279,7 +2279,7 @@ window.getTpiDayDataAsync = async function(dateStr) {
   } catch (e) {}
 })();
 </script>
-<title>全维效能管理系统（TPI，V1.53）</title>
+<title>全维效能管理系统（TPI，V1.55）</title>
 <script>
    'use strict';
         const getCurrentDate = () => {
@@ -2290,8 +2290,8 @@ window.getTpiDayDataAsync = async function(dateStr) {
             return `${year}-${month}-${day}`;
         };
 
-        window.TPI_VERSION = '全维效能管理系统（TPI，V1.53）';
-        window.TPI_APP_VERSION = '1.51';
+        window.TPI_VERSION = '全维效能管理系统（TPI，V1.55）';
+        window.TPI_APP_VERSION = '1.55';
 
         // V1.50: 检查是否有待恢复的数据（import后不刷新，直接恢复）
         // 此标志由各导入函数设置，用于在初始化完成后自动加载
@@ -2385,7 +2385,7 @@ window.TPI.DOM = window.TPI.DOM || {
                             : '三十';
             const lunarStr = `农历${lunarMonth}${lunarDay}${lunar.isLeap ? '(闰)' : ''}`;
 
-            document.title = `全维效能管理系统（TPI，V1.53）（${window.TPI_BUILD_DATE} ${weekday} ${lunarStr}）`;
+            document.title = `全维效能管理系统（TPI，V1.55）（${window.TPI_BUILD_DATE} ${weekday} ${lunarStr}）`;
 
             const dateDisplay = document.getElementById('current-date-display');
             if (dateDisplay) {
@@ -6494,7 +6494,7 @@ hr { border-color: #bbf7d0 !important; }
 <div class="header-content">
 <div class="header-title">
 <h1 style="font-size:clamp(1.5rem, 3vw, 2.5rem);font-weight:800;background:linear-gradient(135deg,#0f766e 0%,#0d9488 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;letter-spacing:-0.02em;">
-        全维效能管理系统（TPI，V1.53）
+        全维效能管理系统（TPI，V1.55）
        </h1>
 
 <div style="display:inline-flex;align-items:center;gap:6px;flex-shrink:0;">
@@ -6819,7 +6819,7 @@ hr { border-color: #bbf7d0 !important; }
         <span id="tpi-sync-last-time" style="font-size:12px;color:#6b7280;">上次同步：—</span>
       </div>
       <div style="text-align:center;">
-      <button type="button" onclick="tpiLogout()" style="padding:10px 18px; background: linear-gradient(135deg,#ef4444,#dc2626); color:white; border:none; border-radius:8px; font-weight:600; cursor:pointer;">
+      <button type="button" id="tpi-logout-btn" onclick="tpiLogout()" style="display:none; padding:10px 18px; background: linear-gradient(135deg,#ef4444,#dc2626); color:white; border:none; border-radius:8px; font-weight:600; cursor:pointer;">
         🚪 退出登录
       </button>
       </div>
@@ -6827,7 +6827,7 @@ hr { border-color: #bbf7d0 !important; }
       <div id="tpi-sync-msg" style="margin-top:12px; font-size:14px; max-height:260px; overflow-y:auto;"></div>
       <p id="sync-status" style="margin-top:6px; font-size:13px; opacity:.9;"></p>
       <div id="tpi-dual-sync-summary" style="margin-top:12px;padding:10px 14px;background:linear-gradient(135deg,#f0fdf4,#eff6ff);border: 1px solid #d1fae5;border-radius:8px;font-size:12px;display:flex;flex-wrap:wrap;gap:16px;align-items:center;justify-content:center;text-align:center;">
-        <span style="font-weight:700;color:#374151;text-align:center;display:block;">🔄 双云端状态摘要</span>
+        <span style="font-weight:700;color:#374151;text-align:center;display:block;width:100%;">🔄 双云端状态摘要</span>
         <span>Appwrite 上次同步：<strong id="dual-appwrite-last">获取中...</strong></span>
         <span style="color:#d1d5db;">|</span>
         <span>GIT 上次同步：<strong id="dual-gist-last">获取中...</strong></span>
@@ -21481,7 +21481,7 @@ window.addEventListener('resize', function() {
                         <div style="display:flex;justify-content:space-between;align-items:center;padding:16px 24px;background:#f8fafc;border-bottom: 1px solid #d1fae5;flex-shrink:0;">
                             <h3 style="margin:0;font-size:18px;color:#1e293b;">👁️ 报告预览</h3>
                             <div style="display:flex;gap:10px;">
-                                <button type="button" onclick="(function(){var p=document.getElementById('tpi-preview-body');if(p){var w=window.open('','_blank');if(w){w.document.write('<html><head><meta charset=UTF-8><title>全维效能管理系统（TPI，V1.53）</title><style>body{font-family:Arial,sans-serif;max-width:900px;margin:40px auto;padding:20px;}h2{color:#0d9488;}table{width:100%;border-collapse:collapse;margin:20px 0;}th,td{padding:10px;border: 1px solid #bbf7d0;}th{background:#f3f4f6;}.btn{padding:10px 20px;margin:10px 5px;cursor:pointer;border: 1px solid #86efac;border-radius:6px;background:#fff;}</style><\/head><body>'+p.innerHTML+'<div style=text-align:center;margin-top:30px><button type="button" class=btn onclick=window.print()>🖨️ 打印</button><button type="button" class=btn onclick=window.close()>关闭</button></div><\/body></html>');w.document.close();}}})()" style="padding:6px 14px;border: 1px solid #6ee7b7;border-radius:6px;background:#fff;cursor:pointer;font-size:13px;color:#334155;transition:all 0.15s;" onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background='#fff'">🌐 新窗口打开</button>
+                                <button type="button" onclick="(function(){var p=document.getElementById('tpi-preview-body');if(p){var w=window.open('','_blank');if(w){w.document.write('<html><head><meta charset=UTF-8><title>全维效能管理系统（TPI，V1.55）</title><style>body{font-family:Arial,sans-serif;max-width:900px;margin:40px auto;padding:20px;}h2{color:#0d9488;}table{width:100%;border-collapse:collapse;margin:20px 0;}th,td{padding:10px;border: 1px solid #bbf7d0;}th{background:#f3f4f6;}.btn{padding:10px 20px;margin:10px 5px;cursor:pointer;border: 1px solid #86efac;border-radius:6px;background:#fff;}</style><\/head><body>'+p.innerHTML+'<div style=text-align:center;margin-top:30px><button type="button" class=btn onclick=window.print()>🖨️ 打印</button><button type="button" class=btn onclick=window.close()>关闭</button></div><\/body></html>');w.document.close();}}})()" style="padding:6px 14px;border: 1px solid #6ee7b7;border-radius:6px;background:#fff;cursor:pointer;font-size:13px;color:#334155;transition:all 0.15s;" onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background='#fff'">🌐 新窗口打开</button>
                                 <button class="tpi-preview-close-btn" type="button" onclick="document.getElementById('tpi-preview-modal').remove()" style="padding:6px 14px;border: 1px solid #86efac;border-radius:6px;background:#f9fafb;color:#374151;cursor:pointer;font-size:13px;font-weight:600;transition:background 0.15s;">✕ 关闭</button>
                             </div>
                         </div>
@@ -22289,7 +22289,7 @@ window.addEventListener('resize', function() {
                 filename = 'TPI_数据导出_' + new Date().toISOString().split('T')[0] + '.txt';
                 mimeType = 'text/plain';
             } else if (format === 'html') {
-                let html = `<html><head><meta charset="UTF-8"><title>全维效能管理系统（TPI，V1.53）</title><\/head><body>
+                let html = `<html><head><meta charset="UTF-8"><title>全维效能管理系统（TPI，V1.55）</title><\/head><body>
 
         <div id="score-dashboard" style="background: linear-gradient(135deg, #e0e7ff 0%, #ddd6fe 100%); padding: 8px 16px; border-radius: 0; margin: 0; color: #1e293b; box-shadow: 0 2px 6px rgba(0,0,0,0.1);">
             <div style="max-width: 1400px; margin: 0 auto; display: flex; align-items: center; justify-content: center; gap: 10px; flex-wrap: nowrap;">
@@ -23304,7 +23304,7 @@ window.archiveOldDataComplete = function() {
                         alert('✅ JSON导出成功！');
                     }
                     else if (format === 'html') {
-                        let html = '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>全维效能管理系统（TPI，V1.53）</title>';
+                        let html = '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>全维效能管理系统（TPI，V1.55）</title>';
                         html += `<style>
 
     .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 10001; align-items: center; justify-content: center; }
@@ -25614,7 +25614,7 @@ window.addEventListener('unhandledrejection', function(event) {
   }
 
   function backupAllDataNow(){
-    const out = { _meta: { version: (window.TPI_VERSION||'全维效能管理系统（TPI，V1.53）'), appVersion: (window.TPI_APP_VERSION||'1.51'), exportedAt: new Date().toISOString() }, localStorage: {} };
+    const out = { _meta: { version: (window.TPI_VERSION||'全维效能管理系统（TPI，V1.55）'), appVersion: (window.TPI_APP_VERSION||'1.51'), exportedAt: new Date().toISOString() }, localStorage: {} };
     for(let i=0;i<__tpi_ls_length();i++){
       const k = __tpi_ls_key(i);
       if(!k) continue;
@@ -25908,7 +25908,7 @@ try{
       }
       window.__tpi_backup_lock = true;
 
-      const out = { _meta: { version: (window.TPI_VERSION||'全维效能管理系统（TPI，V1.53）'), appVersion: (window.TPI_APP_VERSION||'1.51'), exportedAt: new Date().toISOString() }, localStorage: {} };
+      const out = { _meta: { version: (window.TPI_VERSION||'全维效能管理系统（TPI，V1.55）'), appVersion: (window.TPI_APP_VERSION||'1.51'), exportedAt: new Date().toISOString() }, localStorage: {} };
 
       for(let i=0;i<__tpi_ls_length();i++){
         const k = __tpi_ls_key(i);
@@ -26461,7 +26461,7 @@ try{
       }
       window.__tpi_backup_lock = true;
 
-      const out = { _meta: { version: (window.TPI_VERSION||'全维效能管理系统（TPI，V1.53）'), appVersion: (window.TPI_APP_VERSION||'1.51'), exportedAt: new Date().toISOString() }, localStorage: {} };
+      const out = { _meta: { version: (window.TPI_VERSION||'全维效能管理系统（TPI，V1.55）'), appVersion: (window.TPI_APP_VERSION||'1.51'), exportedAt: new Date().toISOString() }, localStorage: {} };
 
       for(let i=0;i<__tpi_ls_length();i++){
         const k = __tpi_ls_key(i);
@@ -27621,18 +27621,28 @@ var databases = window.__appwriteDatabases || (window.__appwriteDatabases = new 
     if (window.__tpi_explicitly_logged_out) return;
     const auth = document.getElementById('tpi-auth-panel');
     const sync = document.getElementById('tpi-sync-panel');
+    const awBody = document.getElementById('submod-appwrite-body');
     const cu = document.getElementById('tpi-current-user');
     if (cu) cu.textContent = user || '';
     if (auth) auth.style.display = 'none';
     if (sync) sync.style.display = '';
+    // V1.54修复：CSS类状态控制，防止异步竞争导致面板错误残留
+    if (awBody) { awBody.classList.remove('tpi-aw-logged-out'); awBody.classList.add('tpi-aw-logged-in'); }
+    // V1.55修复：仅在登录状态下显示退出登录按钮
+    try { var _lb = document.getElementById('tpi-logout-btn'); if (_lb) _lb.style.display = ''; } catch(_) {}
     try{ syncMainDateToSyncUI(); }catch(e){}
   }
 
   function setLoggedOutUI(){
     const auth = document.getElementById('tpi-auth-panel');
     const sync = document.getElementById('tpi-sync-panel');
+    const awBody = document.getElementById('submod-appwrite-body');
     if (auth) auth.style.display = '';
     if (sync) sync.style.display = 'none';
+    // V1.54修复：CSS类状态控制，强制隐藏同步面板，防止异步回调重新显示
+    if (awBody) { awBody.classList.remove('tpi-aw-logged-in'); awBody.classList.add('tpi-aw-logged-out'); }
+    // V1.55修复：退出登录后立即隐藏退出登录按钮
+    try { var _lb = document.getElementById('tpi-logout-btn'); if (_lb) _lb.style.display = 'none'; } catch(_) {}
     tpiShowMsg('tpi-sync-msg', '');
   }
 
@@ -27836,6 +27846,8 @@ window.__tpi_syncDateToMain = function(){
   };
 
   window.tpiLogout = async function(){
+    // V1.55修复：立即隐藏退出登录按钮，防止重复点击及按钮在退出后仍可见
+    try { var _lb = document.getElementById('tpi-logout-btn'); if (_lb) _lb.style.display = 'none'; } catch(_) {}
     // V1.53修复：立即标记退出并隐藏同步面板，防止任何异步检测重新显示
     window.__tpi_explicitly_logged_out = true;
     try { setLoggedOutUI(); } catch(_) {}
@@ -32680,7 +32692,7 @@ window.__tpiDirectExport = function(fmt) {
           hint.style.cssText = [
             'padding:6px 10px;margin:6px 0;border-radius:6px;',
             'background:#fef3c7;border: 1px solid #10b981;',
-            'font-size:11px;color:#92400e;line-height:1.4;'
+            'font-size:11px;color:#92400e;line-height:1.4;text-align:center;'
           ].join('');
           hint.textContent = '⚠️ 安全提示：请勿在公共或共享设备上使用云端同步功能，Token 信息将存储在本地浏览器中。';
           panel.insertBefore(hint, panel.firstChild);
@@ -39488,6 +39500,18 @@ button[onclick*="tpiResetPassword"]:hover {
 }
 #tpi-sync-panel button[onclick*="tpiLoadToday"] {
   box-shadow: 0 3px 10px rgba(6,182,212,0.25) !important;
+}
+
+/* V1.54 修复：CSS强制控制登录/退出状态面板可见性，防止异步竞争导致面板错误显示 */
+#submod-appwrite-body.tpi-aw-logged-out #tpi-sync-panel {
+  display: none !important;
+}
+#submod-appwrite-body.tpi-aw-logged-in #tpi-auth-panel {
+  display: none !important;
+}
+/* V1.55 修复：CSS双重保障——未登录态下强制隐藏退出登录按钮 */
+#submod-appwrite-body.tpi-aw-logged-out #tpi-logout-btn {
+  display: none !important;
 }
 
 .badge-tier1, .tier-badge-large.tier-1 { letter-spacing: 0.03em; }
