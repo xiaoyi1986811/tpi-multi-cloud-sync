@@ -119,13 +119,13 @@
   };
 })();
 </script>
-<meta content="全维效能管理系统（TPI，V1.55）" property="og:title"/>
+<meta content="全维效能管理系统（TPI，V1.56）" property="og:title"/>
 <meta content="全维效能管理系统（TPI）| 全面追踪 · 科学管理 · 高效提升" property="og:description"/>
 <meta content="website" property="og:type"/>
 <meta content="https://mytpi.netlify.app/" property="og:url"/>
 <meta content="zh_CN" property="og:locale"/>
 <meta name="twitter:card" content="summary"/>
-<meta name="twitter:title" content="全维效能管理系统（TPI，V1.55）"/>
+<meta name="twitter:title" content="全维效能管理系统（TPI，V1.56）"/>
 <meta name="twitter:description" content="全维效能管理系统（TPI）"/>
 <meta content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=5.0, user-scalable=yes, viewport-fit=cover" name="viewport"/>
 <meta content="全维效能管理系统（TPI）- 跨设备同步 | 支持电脑/手机/平板访问" name="description"/>
@@ -2279,7 +2279,7 @@ window.getTpiDayDataAsync = async function(dateStr) {
   } catch (e) {}
 })();
 </script>
-<title>全维效能管理系统（TPI，V1.55）</title>
+<title>全维效能管理系统（TPI，V1.56）</title>
 <script>
    'use strict';
         const getCurrentDate = () => {
@@ -2290,8 +2290,8 @@ window.getTpiDayDataAsync = async function(dateStr) {
             return `${year}-${month}-${day}`;
         };
 
-        window.TPI_VERSION = '全维效能管理系统（TPI，V1.55）';
-        window.TPI_APP_VERSION = '1.55';
+        window.TPI_VERSION = '全维效能管理系统（TPI，V1.56）';
+        window.TPI_APP_VERSION = '1.56';
 
         // V1.50: 检查是否有待恢复的数据（import后不刷新，直接恢复）
         // 此标志由各导入函数设置，用于在初始化完成后自动加载
@@ -2385,7 +2385,7 @@ window.TPI.DOM = window.TPI.DOM || {
                             : '三十';
             const lunarStr = `农历${lunarMonth}${lunarDay}${lunar.isLeap ? '(闰)' : ''}`;
 
-            document.title = `全维效能管理系统（TPI，V1.55）（${window.TPI_BUILD_DATE} ${weekday} ${lunarStr}）`;
+            document.title = `全维效能管理系统（TPI，V1.56）（${window.TPI_BUILD_DATE} ${weekday} ${lunarStr}）`;
 
             const dateDisplay = document.getElementById('current-date-display');
             if (dateDisplay) {
@@ -6494,7 +6494,7 @@ hr { border-color: #bbf7d0 !important; }
 <div class="header-content">
 <div class="header-title">
 <h1 style="font-size:clamp(1.5rem, 3vw, 2.5rem);font-weight:800;background:linear-gradient(135deg,#0f766e 0%,#0d9488 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;letter-spacing:-0.02em;">
-        全维效能管理系统（TPI，V1.55）
+        全维效能管理系统（TPI，V1.56）
        </h1>
 
 <div style="display:inline-flex;align-items:center;gap:6px;flex-shrink:0;">
@@ -21481,7 +21481,7 @@ window.addEventListener('resize', function() {
                         <div style="display:flex;justify-content:space-between;align-items:center;padding:16px 24px;background:#f8fafc;border-bottom: 1px solid #d1fae5;flex-shrink:0;">
                             <h3 style="margin:0;font-size:18px;color:#1e293b;">👁️ 报告预览</h3>
                             <div style="display:flex;gap:10px;">
-                                <button type="button" onclick="(function(){var p=document.getElementById('tpi-preview-body');if(p){var w=window.open('','_blank');if(w){w.document.write('<html><head><meta charset=UTF-8><title>全维效能管理系统（TPI，V1.55）</title><style>body{font-family:Arial,sans-serif;max-width:900px;margin:40px auto;padding:20px;}h2{color:#0d9488;}table{width:100%;border-collapse:collapse;margin:20px 0;}th,td{padding:10px;border: 1px solid #bbf7d0;}th{background:#f3f4f6;}.btn{padding:10px 20px;margin:10px 5px;cursor:pointer;border: 1px solid #86efac;border-radius:6px;background:#fff;}</style><\/head><body>'+p.innerHTML+'<div style=text-align:center;margin-top:30px><button type="button" class=btn onclick=window.print()>🖨️ 打印</button><button type="button" class=btn onclick=window.close()>关闭</button></div><\/body></html>');w.document.close();}}})()" style="padding:6px 14px;border: 1px solid #6ee7b7;border-radius:6px;background:#fff;cursor:pointer;font-size:13px;color:#334155;transition:all 0.15s;" onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background='#fff'">🌐 新窗口打开</button>
+                                <button type="button" onclick="(function(){var p=document.getElementById('tpi-preview-body');if(p){var w=window.open('','_blank');if(w){w.document.write('<html><head><meta charset=UTF-8><title>全维效能管理系统（TPI，V1.56）</title><style>body{font-family:Arial,sans-serif;max-width:900px;margin:40px auto;padding:20px;}h2{color:#0d9488;}table{width:100%;border-collapse:collapse;margin:20px 0;}th,td{padding:10px;border: 1px solid #bbf7d0;}th{background:#f3f4f6;}.btn{padding:10px 20px;margin:10px 5px;cursor:pointer;border: 1px solid #86efac;border-radius:6px;background:#fff;}</style><\/head><body>'+p.innerHTML+'<div style=text-align:center;margin-top:30px><button type="button" class=btn onclick=window.print()>🖨️ 打印</button><button type="button" class=btn onclick=window.close()>关闭</button></div><\/body></html>');w.document.close();}}})()" style="padding:6px 14px;border: 1px solid #6ee7b7;border-radius:6px;background:#fff;cursor:pointer;font-size:13px;color:#334155;transition:all 0.15s;" onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background='#fff'">🌐 新窗口打开</button>
                                 <button class="tpi-preview-close-btn" type="button" onclick="document.getElementById('tpi-preview-modal').remove()" style="padding:6px 14px;border: 1px solid #86efac;border-radius:6px;background:#f9fafb;color:#374151;cursor:pointer;font-size:13px;font-weight:600;transition:background 0.15s;">✕ 关闭</button>
                             </div>
                         </div>
@@ -22289,7 +22289,7 @@ window.addEventListener('resize', function() {
                 filename = 'TPI_数据导出_' + new Date().toISOString().split('T')[0] + '.txt';
                 mimeType = 'text/plain';
             } else if (format === 'html') {
-                let html = `<html><head><meta charset="UTF-8"><title>全维效能管理系统（TPI，V1.55）</title><\/head><body>
+                let html = `<html><head><meta charset="UTF-8"><title>全维效能管理系统（TPI，V1.56）</title><\/head><body>
 
         <div id="score-dashboard" style="background: linear-gradient(135deg, #e0e7ff 0%, #ddd6fe 100%); padding: 8px 16px; border-radius: 0; margin: 0; color: #1e293b; box-shadow: 0 2px 6px rgba(0,0,0,0.1);">
             <div style="max-width: 1400px; margin: 0 auto; display: flex; align-items: center; justify-content: center; gap: 10px; flex-wrap: nowrap;">
@@ -23304,7 +23304,7 @@ window.archiveOldDataComplete = function() {
                         alert('✅ JSON导出成功！');
                     }
                     else if (format === 'html') {
-                        let html = '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>全维效能管理系统（TPI，V1.55）</title>';
+                        let html = '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>全维效能管理系统（TPI，V1.56）</title>';
                         html += `<style>
 
     .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 10001; align-items: center; justify-content: center; }
@@ -25614,7 +25614,7 @@ window.addEventListener('unhandledrejection', function(event) {
   }
 
   function backupAllDataNow(){
-    const out = { _meta: { version: (window.TPI_VERSION||'全维效能管理系统（TPI，V1.55）'), appVersion: (window.TPI_APP_VERSION||'1.51'), exportedAt: new Date().toISOString() }, localStorage: {} };
+    const out = { _meta: { version: (window.TPI_VERSION||'全维效能管理系统（TPI，V1.56）'), appVersion: (window.TPI_APP_VERSION||'1.51'), exportedAt: new Date().toISOString() }, localStorage: {} };
     for(let i=0;i<__tpi_ls_length();i++){
       const k = __tpi_ls_key(i);
       if(!k) continue;
@@ -25908,7 +25908,7 @@ try{
       }
       window.__tpi_backup_lock = true;
 
-      const out = { _meta: { version: (window.TPI_VERSION||'全维效能管理系统（TPI，V1.55）'), appVersion: (window.TPI_APP_VERSION||'1.51'), exportedAt: new Date().toISOString() }, localStorage: {} };
+      const out = { _meta: { version: (window.TPI_VERSION||'全维效能管理系统（TPI，V1.56）'), appVersion: (window.TPI_APP_VERSION||'1.51'), exportedAt: new Date().toISOString() }, localStorage: {} };
 
       for(let i=0;i<__tpi_ls_length();i++){
         const k = __tpi_ls_key(i);
@@ -26461,7 +26461,7 @@ try{
       }
       window.__tpi_backup_lock = true;
 
-      const out = { _meta: { version: (window.TPI_VERSION||'全维效能管理系统（TPI，V1.55）'), appVersion: (window.TPI_APP_VERSION||'1.51'), exportedAt: new Date().toISOString() }, localStorage: {} };
+      const out = { _meta: { version: (window.TPI_VERSION||'全维效能管理系统（TPI，V1.56）'), appVersion: (window.TPI_APP_VERSION||'1.51'), exportedAt: new Date().toISOString() }, localStorage: {} };
 
       for(let i=0;i<__tpi_ls_length();i++){
         const k = __tpi_ls_key(i);
@@ -41226,72 +41226,30 @@ h3.card-title, h4.card-title,
       _progress('tpi-bulk-sync-progress','',true); return;
     }
 
-    // V1.53修复：使用游标分页 + pageSize=25（兼容 Appwrite 免费版单次查询限制）
-    // 同时保留 offset 兜底，确保所有数据都能被完整拉取
-    var allDocs=[], pageSize=25, lastDocId=null, offset=0, useCursor=true;
+    // V1.56修复：恢复 V1.46 验证可行的 offset 分页（pageSize=100）
+    // V1.53/V1.55 的游标分页在第2页后失败时会因 allDocs.length>0 跳过重试直接 return，
+    // 导致只能下载前25条数据（部分下载）。offset 分页更稳定且无此缺陷。
+    var allDocs=[], pageSize=100, offset=0;
     try{
       while(true){
         _progress('tpi-bulk-sync-progress','正在拉取文档列表… 已获取 '+allDocs.length+' 条');
-        var qArr;
-        if(useCursor){
-          qArr = [
-            window.Appwrite.Query.equal('userId', userId),
-            window.Appwrite.Query.limit(pageSize),
-            window.Appwrite.Query.orderAsc('$id')
-          ];
-          if(lastDocId) qArr.push(window.Appwrite.Query.cursorAfter(lastDocId));
-        } else {
-          // 降级为 offset 分页
-          qArr = [
-            window.Appwrite.Query.equal('userId', userId),
-            window.Appwrite.Query.limit(pageSize),
-            window.Appwrite.Query.offset(offset)
-          ];
-        }
-        var resp = await db.listDocuments(DB, COL, qArr);
+        var resp = await db.listDocuments(DB, COL, [
+          window.Appwrite.Query.equal('userId', userId),
+          window.Appwrite.Query.limit(pageSize),
+          window.Appwrite.Query.offset(offset)
+        ]);
         var docs = (resp && resp.documents) ? resp.documents : [];
         allDocs = allDocs.concat(docs);
-        if(docs.length < pageSize) break;  // 最后一页，结束循环
-        if(useCursor){
-          lastDocId = docs[docs.length - 1].$id;
-        } else {
-          offset += pageSize;
-        }
+        if(docs.length < pageSize) break;
+        offset += pageSize;
         // 安全上限：避免无限循环（最多拉取 2000 天）
         if(allDocs.length >= 2000) break;
       }
     }catch(e){
-      // V1.53：游标分页失败时降级为 offset 分页重试
-      if(useCursor && allDocs.length === 0){
-        console.warn('[AppwriteDownload] 游标分页失败，降级为 offset 分页:', e.message||e);
-        useCursor = false; allDocs = []; offset = 0; lastDocId = null;
-        try{
-          while(true){
-            _progress('tpi-bulk-sync-progress','(offset模式) 已获取 '+allDocs.length+' 条');
-            var qFb = [
-              window.Appwrite.Query.equal('userId', userId),
-              window.Appwrite.Query.limit(pageSize),
-              window.Appwrite.Query.offset(offset)
-            ];
-            var rFb = await db.listDocuments(DB, COL, qFb);
-            var dFb = (rFb && rFb.documents) ? rFb.documents : [];
-            allDocs = allDocs.concat(dFb);
-            if(dFb.length < pageSize) break;
-            offset += pageSize;
-            if(allDocs.length >= 2000) break;
-          }
-        }catch(e2){
-          _toast('❌ 拉取文档列表失败：'+((e2&&e2.message)||String(e2)),'error');
-          alert('❌ 拉取失败\n\n'+((e2&&e2.message)||String(e2)));
-          _setBtns(['btn-bulk-upload','btn-bulk-download'],false);
-          _progress('tpi-bulk-sync-progress','',true); return;
-        }
-      } else {
-        _toast('❌ 拉取文档列表失败：'+((e&&e.message)||String(e)),'error');
-        alert('❌ 拉取失败\n\n'+((e&&e.message)||String(e)));
-        _setBtns(['btn-bulk-upload','btn-bulk-download'],false);
-        _progress('tpi-bulk-sync-progress','',true); return;
-      }
+      _toast('❌ 拉取文档列表失败：'+((e&&e.message)||String(e)),'error');
+      alert('❌ 拉取失败\n\n'+((e&&e.message)||String(e)));
+      _setBtns(['btn-bulk-upload','btn-bulk-download'],false);
+      _progress('tpi-bulk-sync-progress','',true); return;
     }
 
     if(!allDocs.length){
