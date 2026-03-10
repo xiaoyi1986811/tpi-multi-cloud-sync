@@ -119,13 +119,13 @@
   };
 })();
 </script>
-<meta content="全维效能管理系统（TPI，V1.59）" property="og:title"/>
+<meta content="全维效能管理系统（TPI，V1.69）" property="og:title"/>
 <meta content="全维效能管理系统（TPI）| 全面追踪 · 科学管理 · 高效提升" property="og:description"/>
 <meta content="website" property="og:type"/>
 <meta content="https://mytpi.netlify.app/" property="og:url"/>
 <meta content="zh_CN" property="og:locale"/>
 <meta name="twitter:card" content="summary"/>
-<meta name="twitter:title" content="全维效能管理系统（TPI，V1.59）"/>
+<meta name="twitter:title" content="全维效能管理系统（TPI，V1.69）"/>
 <meta name="twitter:description" content="全维效能管理系统（TPI）"/>
 <meta content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=5.0, user-scalable=yes, viewport-fit=cover" name="viewport"/>
 <meta content="全维效能管理系统（TPI）- 跨设备同步 | 支持电脑/手机/平板访问" name="description"/>
@@ -601,25 +601,25 @@
       return (cv!==null && cv!==undefined) ? cv : (defaultValue===undefined ? null : defaultValue);
     }
 
-    if(_isWhitelist(key)){
-      try{
-        var ls = _getLS(); if(!ls) return (defaultValue===undefined?null:defaultValue);
-        var v  = ls.getItem(key);
-        if(v!==null && v!==undefined){ _mem[key]=v; return v; }
-      }catch(e){ _warn('读取', key, e); }
-    }
+    /* V1.60修复：对所有key回退到localStorage（含tpi_data_等数据键），
+       防止IDB异步未就绪时数据读取失败（重载/部署场景下的核心bug修复）*/
+    try{
+      var ls = _getLS(); if(!ls) return (defaultValue===undefined?null:defaultValue);
+      var v  = ls.getItem(key);
+      if(v!==null && v!==undefined){ _mem[key]=v; return v; }
+    }catch(e){ _warn('读取', key, e); }
     return (defaultValue===undefined?null:defaultValue);
   };
 
   window.__tpi_ls_set = function(key, value){
     _idbSet(key, value);
 
-    if(_isWhitelist(key)){
-      try{
-        var ls = _getLS(); if(!ls) return true;
-        ls.setItem(key, value);
-      }catch(e){ _warn('写入(LS)', key, e); }
-    }
+    /* V1.60修复：对所有key都写入localStorage作为双重保障，
+       确保IDB异步写入失败/未完成时，reload后仍能从localStorage读到数据 */
+    try{
+      var ls = _getLS(); if(!ls) return true;
+      ls.setItem(key, value);
+    }catch(e){ _warn('写入(LS)', key, e); }
     return true;
   };
 
@@ -635,21 +635,63 @@
 
   window.__tpi_ls_clear = function(){
     _idbClear();
+    /* V1.60：同时清理localStorage */
+    try{
+      var ls = _getLS(); if(ls){
+        var keysToRemove = [];
+        for(var i=0;i<ls.length;i++){ var k=ls.key(i); if(k) keysToRemove.push(k); }
+        keysToRemove.forEach(function(k){ try{ ls.removeItem(k); }catch(_){} });
+      }
+    }catch(e){}
     return true;
   };
 
   window.__tpi_ls_length = function(defaultValue){
-
+    /* V1.60修复：合并 _mem 和 localStorage 中的所有键，确保备份不遗漏 */
+    try{
+      var ls = _getLS();
+      if(ls){
+        for(var i=0;i<ls.length;i++){
+          var k=ls.key(i);
+          if(k && !Object.prototype.hasOwnProperty.call(_mem,k)){
+            try{ _mem[k]=ls.getItem(k); }catch(_){}
+          }
+        }
+      }
+    }catch(e){}
     return Object.keys(_mem).length;
   };
 
   window.__tpi_ls_key = function(i, defaultValue){
+    /* V1.60修复：确保 _mem 中包含 localStorage 的所有键 */
+    try{
+      var ls = _getLS();
+      if(ls){
+        for(var j=0;j<ls.length;j++){
+          var k=ls.key(j);
+          if(k && !Object.prototype.hasOwnProperty.call(_mem,k)){
+            try{ _mem[k]=ls.getItem(k); }catch(_){}
+          }
+        }
+      }
+    }catch(e){}
     var keys = Object.keys(_mem);
     return (i>=0 && i<keys.length) ? keys[i] : (defaultValue===undefined?null:defaultValue);
   };
 
   window.__tpi_ls_obj = function(){
-
+    /* V1.60修复：合并 localStorage 确保返回完整数据 */
+    try{
+      var ls = _getLS();
+      if(ls){
+        for(var i=0;i<ls.length;i++){
+          var k=ls.key(i);
+          if(k && !Object.prototype.hasOwnProperty.call(_mem,k)){
+            try{ _mem[k]=ls.getItem(k); }catch(_){}
+          }
+        }
+      }
+    }catch(e){}
     return Object.assign({}, _mem);
   };
 
@@ -658,6 +700,45 @@
     var div = document.createElement('div');
     div.textContent = str;
     return div.innerHTML;
+  };
+
+  /* ============================================================
+     V1.60：__tpi_softReload — 无刷新全量UI恢复
+     替代所有 location.reload()，避免数据丢失风险
+     ============================================================ */
+  window.__tpi_softReload = function(delayMs) {
+    delayMs = typeof delayMs === 'number' ? delayMs : 300;
+    setTimeout(function() {
+      try {
+        /* 1. 重载当前日期表单数据 */
+        if (window.TPI && typeof window.TPI.loadFromLocalStorage === 'function') {
+          try { window.TPI.loadFromLocalStorage(); } catch(e) {}
+        }
+        /* 2. 更新杂事记录 */
+        try { if (window.MiscLog && typeof window.MiscLog.render === 'function') window.MiscLog.render(); } catch(e) {}
+        /* 3. 刷新分数仪表盘 */
+        setTimeout(function() {
+          try { if (window.ScoreDashboard && typeof window.ScoreDashboard.update === 'function') window.ScoreDashboard.update(); } catch(e) {}
+          try { if (window.TPI && typeof window.TPI.calculateTPI === 'function') window.TPI.calculateTPI(); } catch(e) {}
+          try { if (typeof updateCheckInStatus === 'function') updateCheckInStatus(); } catch(e) {}
+          try { if (typeof updateStatistics === 'function') updateStatistics(); } catch(e) {}
+          /* 4. 刷新打卡状态 */
+          try {
+            var checkinRaw = (function(){ try{ return localStorage.getItem('tpi_checkin_data')||window.__tpi_ls_get('tpi_checkin_data'); }catch(_){ return null; } })();
+            if (checkinRaw && window.TPI && window.TPI.state) {
+              try { var cd = JSON.parse(checkinRaw); window.TPI.state.checkinData = cd; } catch(_) {}
+            }
+          } catch(e) {}
+          /* 5. 刷新当前模式 */
+          try {
+            var modeRaw = window.__tpi_ls_get('tpi_selected_mode') || localStorage.getItem('tpi_selected_mode');
+            if (modeRaw && window.TPI && typeof window.TPI.selectMode === 'function') window.TPI.selectMode(modeRaw);
+          } catch(e) {}
+        }, 150);
+      } catch(globalErr) {
+        console.warn('[__tpi_softReload] 部分UI刷新失败:', globalErr);
+      }
+    }, delayMs);
   };
 
   window.TPI = window.TPI || {};
@@ -2279,7 +2360,7 @@ window.getTpiDayDataAsync = async function(dateStr) {
   } catch (e) {}
 })();
 </script>
-<title>全维效能管理系统（TPI，V1.59）</title>
+<title>全维效能管理系统（TPI，V1.69）</title>
 <script>
    'use strict';
         const getCurrentDate = () => {
@@ -2290,8 +2371,8 @@ window.getTpiDayDataAsync = async function(dateStr) {
             return `${year}-${month}-${day}`;
         };
 
-        window.TPI_VERSION = '全维效能管理系统（TPI，V1.59）';
-        window.TPI_APP_VERSION = '1.57';
+        window.TPI_VERSION = '全维效能管理系统（TPI，V1.69）';
+        window.TPI_APP_VERSION = '1.69';
 
         // V1.50: 检查是否有待恢复的数据（import后不刷新，直接恢复）
         // 此标志由各导入函数设置，用于在初始化完成后自动加载
@@ -2385,7 +2466,7 @@ window.TPI.DOM = window.TPI.DOM || {
                             : '三十';
             const lunarStr = `农历${lunarMonth}${lunarDay}${lunar.isLeap ? '(闰)' : ''}`;
 
-            document.title = `全维效能管理系统（TPI，V1.59）（${window.TPI_BUILD_DATE} ${weekday} ${lunarStr}）`;
+            document.title = `全维效能管理系统（TPI，V1.69）（${window.TPI_BUILD_DATE} ${weekday} ${lunarStr}）`;
 
             const dateDisplay = document.getElementById('current-date-display');
             if (dateDisplay) {
@@ -3809,8 +3890,8 @@ window.restoreBackup = async function(backupKey) {
             __tpi_ls_set(key, backupData[key]);
         });
 
-        if(window.tpiToast) window.tpiToast('✅ 备份恢复成功！页面将自动刷新...', 'success');
-        setTimeout(() => location.reload(), 1000);
+        if(window.tpiToast) window.tpiToast('✅ 备份恢复成功！正在刷新页面数据…', 'success');
+        window.__tpi_softReload(500);
     } catch (error) {
         console.error('❌ [restoreBackup] 恢复失败:', error);
         console.error('❌ [restoreBackup] 错误堆栈:', error.stack);
@@ -4135,7 +4216,7 @@ window.importDataComplete = async function() {
                 } else {
                     resultMsg = `✅ 全量导入完成！\n\n成功恢复：${success} 条\n跳过：${skipped} 条` +
                         (errors.length ? `\n失败：${errors.slice(0,5).join(', ')}` : '') +
-                        '\n\n请点击【立即刷新】或手动刷新页面以加载所有恢复的数据。';
+                        '\n\n数据已恢复，页面正在自动刷新显示最新数据。';
                     alert(resultMsg);
                     if(window.tpiToast) window.tpiToast(`✅ 全量导入完成：${success} 条记录`, 'success');
                     // 尝试无刷新加载当前日期
@@ -4147,9 +4228,9 @@ window.importDataComplete = async function() {
                 }
 
                 if (fileInput) fileInput.value = '';
-                // V1.50: 对于全量导入，提供刷新按钮而不是强制刷新
+                // V1.60: 全量导入后无刷新恢复，避免数据丢失
                 if (importMode !== 'single_day') {
-                    setTimeout(() => { try { location.reload(); } catch(e){} }, 1200);
+                    window.__tpi_softReload(400);
                 }
 
             } catch (error) {
@@ -6347,6 +6428,168 @@ textarea:focus {
 hr { border-color: #bbf7d0 !important; }
 </style>
 
+<!-- ===== TPI V1.69 排版美化：标题居中 + 副标题/段落最优对齐 ===== -->
+<style id="tpi-v168-layout-polish">
+
+/* ── 1. 模块标题（card-title）：居中 ── */
+.card-title,
+.card-header .card-title {
+  text-align: center !important;
+  justify-content: center !important;
+  width: 100% !important;
+}
+
+/* ── 2. 子模块标题（tpi-submodule-header）：标题文字真正居中，箭头绝对定位于右侧 ── */
+.tpi-submodule-header {
+  position: relative !important;
+  justify-content: center !important;
+  padding-right: 38px !important;  /* 为右侧箭头留出空间 */
+  padding-left: 14px !important;
+}
+
+/* 子模块内标题内容块：使其水平居中 */
+.tpi-submodule-header > div {
+  flex: unset !important;
+  justify-content: center !important;
+}
+
+/* 箭头固定在右侧 */
+.tpi-submodule-arrow {
+  position: absolute !important;
+  right: 14px !important;
+  top: 50% !important;
+  transform: translateY(-50%) !important;
+  font-size: 11px !important;
+  color: #9ca3af !important;
+  transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  pointer-events: none !important;
+  flex-shrink: 0 !important;
+}
+
+/* 子模块折叠时箭头旋转 */
+.tpi-submodule.collapsed .tpi-submodule-arrow {
+  transform: translateY(-50%) rotate(-90deg) !important;
+}
+
+/* ── 3. 段落标题（h3/h4/h5）：居中 ── */
+.card-content h3,
+.card-content h4,
+.card-content h5,
+.card-content h6,
+.tpi-submodule-body h3,
+.tpi-submodule-body h4,
+.tpi-submodule-body h5,
+.tpi-submodule-body h6,
+.alert h3,
+.alert h4,
+.alert h5 {
+  text-align: center !important;
+  justify-content: center !important;
+}
+
+/* ── 4. 正文段落：左对齐（提升可读性）── */
+.card-content p,
+.tpi-submodule-body p,
+.alert p,
+.rules-content p {
+  text-align: left !important;
+}
+
+/* 但保留带有显式居中标记的段落 */
+.card-content p.text-center,
+.tpi-submodule-body p.text-center,
+p[style*="text-align:center"],
+p[style*="text-align: center"] {
+  text-align: center !important;
+}
+
+/* ── 5. 表单 label：左对齐，缩进与输入控件对齐 ── */
+label:not(.tpi-inline-03):not(.tpi-inline-04):not([class*="tpi-u-"]) {
+  text-align: left !important;
+  display: inline-block;
+}
+
+/* checkbox / radio 行内组合：左对齐，自然排列 */
+.tpi-inline-03,
+.tpi-inline-04 {
+  text-align: left !important;
+}
+
+/* ── 6. alert 内的描述文字：左对齐 ── */
+.alert ul,
+.alert ol,
+.alert li {
+  text-align: left !important;
+}
+
+/* ── 7. rules-header（规则折叠标题）：居中 ── */
+.rules-header {
+  text-align: center !important;
+  justify-content: center !important;
+}
+
+/* ── 8. 模块 card-header：相对定位，以支持内容正确居中 ── */
+.card-header {
+  position: relative !important;
+}
+
+/* ── 9. 顶部计分板：内容居中 ── */
+#tpi-top-scoreboard .inner {
+  justify-content: center !important;
+}
+
+/* ── 10. 页面 header 标题区：居中 ── */
+.header-content {
+  text-align: center !important;
+  align-items: center !important;
+}
+.header-title {
+  justify-content: center !important;
+  text-align: center !important;
+}
+
+/* ── 11. 图表/可视化区块标题：居中 ── */
+.visualization-section h3,
+.visualization-section h4,
+.data-processing-card h4 {
+  text-align: center !important;
+}
+
+/* ── 12. 表格行标题列：居中 ── */
+td.row-header,
+th.row-header {
+  text-align: center !important;
+}
+
+/* ── 13. tbody 数据单元格：居中（统计型表格更美观）── */
+tbody td:not(.task-column):not(.notes-column) {
+  text-align: center !important;
+  vertical-align: middle !important;
+}
+
+/* 任务/备注等文字型列保持左对齐 */
+td.task-column,
+td.notes-column,
+td[class*="text-left"] {
+  text-align: left !important;
+  vertical-align: top !important;
+}
+
+/* ── 14. 输入框数值型：居中 ── */
+input[type="number"],
+input[type="time"],
+input[readonly] {
+  text-align: center !important;
+}
+
+/* ── 15. 文字型输入框：左对齐更自然 ── */
+input[type="text"]:not([readonly]),
+textarea {
+  text-align: left !important;
+}
+
+</style>
+
 </head>
 <body>
 
@@ -6413,31 +6656,476 @@ hr { border-color: #bbf7d0 !important; }
 })();
 </script>
 
-<div class="quick-nav-container-v19">
-<div class="quick-nav-v19" id="quickNavV17" data-static="1">
+<!-- ===== TPI V1.63 两级模块导航 Two-Level Navigation ===== -->
+<style>
+/* ── V1.63 Nav overrides ── */
+.quick-nav-v19.tpi-nav-v161 {
+  flex-direction: column !important;
+  align-items: stretch !important;
+  gap: 0 !important;
+  padding: 0 !important;
+  overflow: visible !important;
+  min-width: 300px;
+  max-width: 98vw;
+}
+.tpi-nav-v161 .nav-row-modules {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  padding: 10px 14px 10px 14px;
+  justify-content: center;
+  align-items: center;
+}
+/* Module button that has submodules */
+.tpi-nav-v161 .qnb-has-sub {
+  position: relative;
+}
+.tpi-nav-v161 .qnb-sub-arrow {
+  display: inline-block;
+  font-size: 9px;
+  margin-left: 3px;
+  opacity: 0.75;
+  transition: transform 0.22s cubic-bezier(.4,0,.2,1);
+  vertical-align: middle;
+}
+.tpi-nav-v161 .qnb-has-sub.qnb-active .qnb-sub-arrow {
+  transform: rotate(180deg);
+  opacity: 1;
+}
+.tpi-nav-v161 .qnb-has-sub.qnb-active {
+  background: #ffffff !important;
+  color: #0d9488 !important;
+  border: 2px solid #0d9488 !important;
+  box-shadow: 0 0 12px rgba(13,148,136,0.25) !important;
+}
+/* Sub-module row */
+.tpi-nav-v161 .nav-row-submods {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.32s cubic-bezier(.4,0,.2,1), opacity 0.25s ease, padding 0.25s ease;
+  opacity: 0;
+  background: linear-gradient(135deg, rgba(240,253,250,0.97) 0%, rgba(255,255,255,0.97) 100%);
+  border-top: 1.5px dashed rgba(13,148,136,0.2);
+}
+.tpi-nav-v161 .nav-row-submods.sub-open {
+  max-height: 220px;
+  opacity: 1;
+  padding: 8px 14px 10px 14px;
+}
+body.dark-mode .tpi-nav-v161 .nav-row-submods {
+  background: linear-gradient(135deg, rgba(12,25,22,0.97) 0%, rgba(18,35,30,0.97) 100%);
+  border-top-color: rgba(13,148,136,0.3);
+}
+/* Inner sub-row */
+.tpi-nav-v161 .sub-row-inner {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  justify-content: center;
+}
+/* Sub-module label tag */
+.tpi-nav-v161 .sub-module-label {
+  font-size: 10.5px;
+  font-weight: 700;
+  color: rgba(13,148,136,0.65);
+  white-space: nowrap;
+  padding: 0 2px;
+  letter-spacing: 0.02em;
+  user-select: none;
+}
+/* Sub-module separator */
+.tpi-nav-v161 .sub-sep {
+  width: 1px;
+  height: 18px;
+  background: rgba(13,148,136,0.18);
+  flex-shrink: 0;
+}
+/* Sub-module buttons */
+.tpi-nav-v161 .nav-sub-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 11px;
+  background: white;
+  color: #0d9488;
+  border: 1.5px solid #99f6e4;
+  border-radius: 8px;
+  font-size: 11.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  white-space: nowrap;
+  text-decoration: none !important;
+  box-shadow: 0 1px 3px rgba(13,148,136,0.08);
+  font-family: var(--font-body, inherit);
+  -webkit-tap-highlight-color: transparent;
+}
+.tpi-nav-v161 .nav-sub-btn:hover {
+  background: #f0fdfa;
+  border-color: #0d9488;
+  transform: translateY(-1px);
+  box-shadow: 0 3px 8px rgba(13,148,136,0.2);
+  text-decoration: none !important;
+  color: #0d9488;
+}
+.tpi-nav-v161 .nav-sub-btn:active {
+  transform: translateY(0);
+  box-shadow: none;
+}
+body.dark-mode .tpi-nav-v161 .nav-sub-btn {
+  background: rgba(13,148,136,0.1);
+  color: #5eead4;
+  border-color: rgba(13,148,136,0.3);
+}
+body.dark-mode .tpi-nav-v161 .nav-sub-btn:hover {
+  background: rgba(13,148,136,0.2);
+  border-color: #14b8a6;
+}
+/* Scroll hint fade on right for overflow */
+.tpi-nav-v161 .sub-row-inner-wrap {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+.tpi-nav-v161 .sub-row-inner-wrap::-webkit-scrollbar { display: none; }
+@media (max-width: 768px) {
+  .tpi-nav-v161 .nav-sub-btn { font-size: 10.5px; padding: 5px 9px; }
+  .tpi-nav-v161 .nav-row-submods.sub-open { max-height: 280px; }
+  .tpi-nav-v161 .nav-row-modules { padding: 8px 10px; gap: 5px; }
+}
+</style>
 
-<a class="quick-nav-btn-v19" href="#daily-checkin-section" data-target="daily-checkin-section" title="每日签到 Daily Check-in（DC）">✅ 每日签到 Check-in</a>
-<a class="quick-nav-btn-v19" href="#local-storage-section" data-target="local-storage-section" title="本地存储 Local Storage（LS）">💾 本地存储 LS</a>
-<a class="quick-nav-btn-v19" href="#cloud-sync-section" data-target="cloud-sync-section" title="云端同步 Cloud Sync（CS）">☁️ 云端同步 Cloud Sync</a>
-<a class="quick-nav-btn-v19" href="#misc-log-section" data-target="misc-log-section" title="杂事记录 · 快速备忘 Misc Log">🗒️ 杂事记录 Misc Log</a>
-<a class="quick-nav-btn-v19" href="#tpi-dashboard" data-target="tpi-dashboard" title="TPI 全维效能仪表盘 Dashboard">📊 TPI仪表盘 Dashboard</a>
-<a class="quick-nav-btn-v19" href="#core-axioms" data-target="core-axioms" title="核心信条与最高裁判原则 Core Axioms">🚩 核心信条 Core Axioms</a>
-<a class="quick-nav-btn-v19" href="#sop" data-target="sop" title="标准操作程序与填写规范 Standard Operating Procedure（SOP）">📋 操作规范 SOP</a>
-<a class="quick-nav-btn-v19" href="#quarterback" data-target="quarterback" title="每日四分卫：模式选择与意图声明 Daily Quarterback">🧭 每日四分卫 Quarterback</a>
-<a class="quick-nav-btn-v19" href="#bonus" data-target="bonus" title="韧性与突破加分 Resilience Bonus">💖 韧性加分 Bonus</a>
-<a class="quick-nav-btn-v19" href="#ami" data-target="ami" title="第一部分：学术战力指标 Academic Momentum Index（AMI）">⚔️ 学术战力 AMI</a>
-<a class="quick-nav-btn-v19" href="#bcm" data-target="bcm" title="第二部分：基石系统 Behavior &amp; Core Metrics（BCM）">🔧 基石系统 BCM</a>
-<a class="quick-nav-btn-v19" href="#hsm" data-target="hsm" title="第三部分：健康与稳定性 Health &amp; Stability Metrics（HSM）">🛡️ 健康稳定 HSM</a>
-<a class="quick-nav-btn-v19" href="#fli" data-target="fli" title="第四部分：外语技能实验室 Foreign Language Index（FLI）">🗣️ 外语实验室 FLI</a>
-<a class="quick-nav-btn-v19" href="#logistics" data-target="logistics" title="第五部分：后勤与维护 Logistics &amp; Maintenance">🧹 后勤维护 Logistics</a>
-<a class="quick-nav-btn-v19" href="#daily-review" data-target="daily-review" title="每日复盘与交接 Daily Review">📝 每日复盘 Review</a>
-<a class="quick-nav-btn-v19" href="#data-analytics" data-target="data-analytics" title="数据分析与可视化 Data Analytics">📈 数据分析 Analytics</a>
-<a class="quick-nav-btn-v19" href="#data-processing" data-target="data-processing" title="数据工坊 Data Workshop">🛠️ 数据工坊 Workshop</a>
+<div class="quick-nav-container-v19">
+<div class="quick-nav-v19 tpi-nav-v161" id="quickNavV17" data-static="1">
+
+<!-- ── Row 1: Module Buttons ── -->
+<div class="nav-row-modules" id="navModulesRow161">
+
+  <!-- 无子模块 -->
+  <a class="quick-nav-btn-v19" href="#daily-checkin-section" data-target="daily-checkin-section" title="每日签到 Daily Check-in (DC)" onclick="tpiNavClearSub()">✅ 每日签到 DC</a>
+
+  <a class="quick-nav-btn-v19" href="#local-storage-section" data-target="local-storage-section" title="本地存储 Local Storage (LS)" onclick="tpiNavClearSub()">💾 本地存储 LS</a>
+
+  <!-- 有子模块 -->
+  <button type="button" class="quick-nav-btn-v19 qnb-has-sub" data-module="cloud" title="云端同步 Cloud Sync (CS) — 点击展开子模块" onclick="tpiNavToggleSub(this,'cloud')">☁️ 云端同步 CS<span class="qnb-sub-arrow">▾</span></button>
+
+  <button type="button" class="quick-nav-btn-v19 qnb-has-sub" data-module="misc-log" title="杂事记录 · 快速备忘 Misc Log — 点击展开子模块" onclick="tpiNavToggleSub(this,'misc-log')">🗒️ 杂事记录 ML<span class="qnb-sub-arrow">▾</span></button>
+
+  <button type="button" class="quick-nav-btn-v19 qnb-has-sub" data-module="dashboard" title="TPI全维效能仪表盘 Dashboard (DB) — 点击展开子模块" onclick="tpiNavToggleSub(this,'dashboard')">📊 TPI仪表盘 DB<span class="qnb-sub-arrow">▾</span></button>
+
+  <button type="button" class="quick-nav-btn-v19 qnb-has-sub" data-module="axioms" title="核心信条与最高裁判原则 Core Axioms (CA) — 点击展开子模块" onclick="tpiNavToggleSub(this,'axioms')">🚩 核心信条 CA<span class="qnb-sub-arrow">▾</span></button>
+
+  <button type="button" class="quick-nav-btn-v19 qnb-has-sub" data-module="sop" title="标准操作程序 Standard Operating Procedure (SOP) — 点击展开子模块" onclick="tpiNavToggleSub(this,'sop')">📋 操作规范 SOP<span class="qnb-sub-arrow">▾</span></button>
+
+  <button type="button" class="quick-nav-btn-v19 qnb-has-sub" data-module="qb" title="每日四分卫 Quarterback (QB) — 点击展开子模块" onclick="tpiNavToggleSub(this,'qb')">🧭 每日四分卫 QB<span class="qnb-sub-arrow">▾</span></button>
+
+  <button type="button" class="quick-nav-btn-v19 qnb-has-sub" data-module="bonus" title="韧性与突破加分 Resilience Bonus (RB) — 点击展开子模块" onclick="tpiNavToggleSub(this,'bonus')">💖 韧性加分 RB<span class="qnb-sub-arrow">▾</span></button>
+
+  <button type="button" class="quick-nav-btn-v19 qnb-has-sub" data-module="ami" title="学术战力指标 Academic Momentum Index (AMI) — 点击展开子模块" onclick="tpiNavToggleSub(this,'ami')">⚔️ 学术战力 AMI<span class="qnb-sub-arrow">▾</span></button>
+
+  <button type="button" class="quick-nav-btn-v19 qnb-has-sub" data-module="bcm" title="基石系统 Behavioral Control Module (BCM) — 点击展开子模块" onclick="tpiNavToggleSub(this,'bcm')">🔧 基石系统 BCM<span class="qnb-sub-arrow">▾</span></button>
+
+  <button type="button" class="quick-nav-btn-v19 qnb-has-sub" data-module="hsm" title="健康与稳定性 Health Stability Module (HSM) — 点击展开子模块" onclick="tpiNavToggleSub(this,'hsm')">🛡️ 健康稳定 HSM<span class="qnb-sub-arrow">▾</span></button>
+
+  <button type="button" class="quick-nav-btn-v19 qnb-has-sub" data-module="fli" title="外语技能实验室 Foreign Language Institute (FLI) — 点击展开子模块" onclick="tpiNavToggleSub(this,'fli')">🗣️ 外语实验室 FLI<span class="qnb-sub-arrow">▾</span></button>
+
+  <button type="button" class="quick-nav-btn-v19 qnb-has-sub" data-module="log" title="后勤与维护 Logistics (LOG) — 点击展开子模块" onclick="tpiNavToggleSub(this,'log')">🧹 后勤维护 LOG<span class="qnb-sub-arrow">▾</span></button>
+
+  <button type="button" class="quick-nav-btn-v19 qnb-has-sub" data-module="review" title="每日复盘与交接 Daily Review (DR) — 点击展开子模块" onclick="tpiNavToggleSub(this,'review')">📝 每日复盘 DR<span class="qnb-sub-arrow">▾</span></button>
+
+  <button type="button" class="quick-nav-btn-v19 qnb-has-sub" data-module="data-analytics" title="数据分析与可视化 Data Analytics &amp; Visualization (DAV) — 点击展开子模块" onclick="tpiNavToggleSub(this,'data-analytics')">📈 数据分析 DAV<span class="qnb-sub-arrow">▾</span></button>
+
+  <button type="button" class="quick-nav-btn-v19 qnb-has-sub" data-module="workshop" title="数据工坊 Data Workshop (DW) — 点击展开子模块" onclick="tpiNavToggleSub(this,'workshop')">🛠️ 数据工坊 DW<span class="qnb-sub-arrow">▾</span></button>
+
 </div>
+
+<!-- ── Row 2: Sub-module Tray (dynamic) ── -->
+<div class="nav-row-submods" id="navSubTray161">
+  <div class="sub-row-inner-wrap">
+    <div class="sub-row-inner" id="navSubInner161">
+      <!-- populated by JS -->
+    </div>
+  </div>
 </div>
+
+</div><!-- end quick-nav-v19 -->
+</div><!-- end quick-nav-container-v19 -->
 <button type="button" class="quick-nav-toggle-第18版" id="navToggleV17" onclick="toggleQuickNavV17()" title="显示/隐藏导航栏" aria-label="显示/隐藏导航栏">
     ☰
    </button>
+
+<script>
+(function(){
+'use strict';
+
+/* ─── Sub-module definitions ─── */
+var TPI_SUBMODS = {
+  cloud: {
+    label: '☁️ 云端同步 CS',
+    anchor: '#cloud-sync-section',
+    subs: [
+      { icon: '📖', name: '同步操作指南 SOG', id: 'submod-sync-guide' },
+      { icon: '🔷', name: 'Appwrite 云同步 ACS', id: 'submod-appwrite' },
+      { icon: '🐙', name: 'GIT / Gist 同步 GGS', id: 'submod-gist' }
+    ]
+  },
+  'misc-log': {
+    label: '🗒️ 杂事记录 ML',
+    anchor: '#misc-log-section',
+    subs: [
+      { icon: '📋', name: '当日记录列表 DRL', id: 'misc-log-list' },
+      { icon: '📅', name: '近7天全部记录 W7R', id: 'misc-log-weekly-section' }
+    ]
+  },
+  dashboard: {
+    label: '📊 TPI仪表盘 DB',
+    anchor: '#tpi-dashboard',
+    subs: [
+      { icon: '📈', name: 'E效能执行分总览 EES', id: 'submod-tpi-e-score' },
+      { icon: '🗂️', name: '维度得分表 DST', id: 'submod-dash-table' },
+      { icon: '⏱️', name: '结算时机与原则 STP', id: 'submod-dash-timing' },
+      { icon: '🧮', name: '总分计算公式 SCF', id: 'submod-dash-formula' },
+      { icon: '🛡️', name: '安全协议与分级标准 SPS', id: 'submod-dash-safety' }
+    ]
+  },
+  axioms: {
+    label: '🚩 核心信条 CA',
+    anchor: '#core-axioms',
+    subs: [
+      { icon: '💡', name: '核心信条 CA', id: 'submod-ca-axioms' },
+      { icon: '⚖️', name: '最高裁判原则 SJP', id: 'submod-ca-supreme' },
+      { icon: '🔓', name: '豁免与限制体系 ELS', id: 'submod-ca-exemption' }
+    ]
+  },
+  sop: {
+    label: '📋 操作规范 SOP',
+    anchor: '#sop',
+    subs: [
+      { icon: '📅', name: '填报时序 CRO', id: 'sop-chronology' },
+      { icon: '💡', name: '核心逻辑澄清 CLC', id: 'sop-logic' },
+      { icon: '🎯', name: '心态校准 MC', id: 'sop-mindset' }
+    ]
+  },
+  qb: {
+    label: '🧭 每日四分卫 QB',
+    anchor: '#quarterback',
+    subs: [
+      { icon: '📝', name: '操作顺序提示 OSH', id: 'submod-qb-sequence' },
+      { icon: '🔍', name: '态势诊断 SD', id: 'submod-qb-diagnosis' },
+      { icon: '🔓', name: '豁免情况 ES', id: 'submod-qb-exemption' },
+      { icon: '🎯', name: '模式诊断 MD', id: 'submod-qb-decision' },
+      { icon: '🧠', name: '场景化模式解析 SDR', id: 'mode-rules' }
+    ]
+  },
+  bonus: {
+    label: '💖 韧性加分 RB',
+    anchor: '#bonus',
+    subs: [
+      { icon: '🚀', name: '势能感知系统 MSR', id: 'bonus-rules' },
+      { icon: '🏆', name: '各维度进步奖励 DPA', id: 'submod-bonus-reward' }
+    ]
+  },
+  ami: {
+    label: '⚔️ 学术战力 AMI',
+    anchor: '#ami',
+    subs: [
+      { icon: '📘', name: 'AMI 使用说明 G&R', id: 'ami-rules' },
+      { icon: '🔥', name: '点火启动协议记录 ISPR', id: 'submod-ami-ignition' },
+      { icon: '🌅', name: 'AMI记录表(上午) AMIRF-AM', id: 'ami-sub-morning' },
+      { icon: '☀️', name: 'AMI记录表(下午) AMIRF-PM', id: 'ami-sub-afternoon' },
+      { icon: '🌆', name: 'AMI记录表(晚上1) AMIRF-EI', id: 'ami-sub-evening1' },
+      { icon: '🌙', name: 'AMI记录表(晚上2) AMIRF-EII', id: 'ami-sub-evening2' },
+      { icon: '🎯', name: 'AMI记录表(机动) AMIRF-FX', id: 'ami-sub-flexible' },
+      { icon: '📊', name: '时段效率分布 SEDR', id: 'v8-ami-slot-chart' }
+    ]
+  },
+  bcm: {
+    label: '🔧 基石系统 BCM',
+    anchor: '#bcm',
+    subs: [
+      { icon: '📖', name: 'BCM 使用说明 G&R', id: 'submod-bcm-rules' },
+      { icon: '📋', name: 'BCM 行为记录表 BRT', id: 'submod-bcm-table' }
+    ]
+  },
+  hsm: {
+    label: '🛡️ 健康稳定 HSM',
+    anchor: '#hsm',
+    subs: [
+      { icon: '📖', name: 'HSM 使用说明 G&R', id: 'submod-hsm-rules' },
+      { icon: '📋', name: 'HSM 健康维护记录表 HMRT', id: 'submod-hsm-table' }
+    ]
+  },
+  fli: {
+    label: '🗣️ 外语实验室 FLI',
+    anchor: '#fli',
+    subs: [
+      { icon: '📘', name: 'FLI 使用说明 G&R', id: 'fli-rules' },
+      { icon: '📋', name: 'FLI 记录表 FRT', id: 'submod-fli-table' }
+    ]
+  },
+  log: {
+    label: '🧹 后勤维护 LOG',
+    anchor: '#logistics',
+    subs: [
+      { icon: '📖', name: 'Logistics 使用说明 G&R', id: 'submod-log-rules' },
+      { icon: '📋', name: '待办杂事 A 组 LA', id: 'submod-log-1' },
+      { icon: '📋', name: '待办杂事 B 组 LB', id: 'submod-log-2' },
+      { icon: '📋', name: '待办杂事 C 组 LC', id: 'submod-log-3' }
+    ]
+  },
+  review: {
+    label: '📝 每日复盘 DR',
+    anchor: '#daily-review',
+    subs: [
+      { icon: '🔍', name: '今日复盘 DR', id: 'submod-dr-review' },
+      { icon: '🌉', name: '明日交接 HB', id: 'submod-dr-handoff' },
+      { icon: '📌', name: '事后批注 PAN', id: 'submod-dr-history-note' }
+    ]
+  },
+  'data-analytics': {
+    label: '📈 数据分析 DAV',
+    anchor: '#data-analytics',
+    subs: [
+      { icon: '📊', name: '时间序列趋势图 TSC', id: 'submod-da-trend' },
+      { icon: '🏆', name: '里程碑徽章 MBS', id: 'submod-da-badges' },
+      { icon: '🔥', name: '点火完成率趋势 ICR', id: 'submod-da-ignition' },
+      { icon: '🏅', name: '评级分布时间线 RDT', id: 'submod-da-rating' },
+      { icon: '🔬', name: '高级分析工具 AAT', id: 'submod-da-advanced' }
+    ]
+  },
+  workshop: {
+    label: '🛠️ 数据工坊 DW',
+    anchor: '#data-processing',
+    subs: [
+      { icon: '📥', name: '数据导入/导出 DIE', id: 'submod-dp-import' },
+      { icon: '📊', name: '数据统计与快捷操作 DSQO', id: 'submod-dp-stats' }
+    ]
+  }
+};
+
+var _activeModule = null;
+
+window.tpiNavClearSub = function() {
+  var tray = document.getElementById('navSubTray161');
+  var inner = document.getElementById('navSubInner161');
+  if (tray) tray.classList.remove('sub-open');
+  if (inner) inner.innerHTML = '';
+  document.querySelectorAll('.qnb-has-sub.qnb-active').forEach(function(el){
+    el.classList.remove('qnb-active');
+  });
+  _activeModule = null;
+};
+
+/* Expand parent card (if collapsed) and scroll to its top */
+window.tpiNavGoToModuleTop = function(e, cardId) {
+  if (e && typeof e.preventDefault === 'function') e.preventDefault();
+  tpiNavClearSub();
+  try {
+    var card = document.getElementById(cardId);
+    if (card) {
+      if (card.classList.contains('collapsed')) {
+        if (window.TPI && typeof window.TPI.toggleCard === 'function') {
+          window.TPI.toggleCard(cardId);
+        } else {
+          card.classList.remove('collapsed');
+        }
+      }
+      setTimeout(function(){
+        card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 120);
+    }
+  } catch(err) {}
+};
+
+window.tpiNavToggleSub = function(btn, moduleKey) {
+  var def = TPI_SUBMODS[moduleKey];
+  if (!def) return;
+
+  /* If already open for same module → close */
+  if (_activeModule === moduleKey) {
+    tpiNavClearSub();
+    return;
+  }
+
+  /* Activate button */
+  document.querySelectorAll('.qnb-has-sub.qnb-active').forEach(function(el){
+    el.classList.remove('qnb-active');
+  });
+  if (btn) btn.classList.add('qnb-active');
+  _activeModule = moduleKey;
+
+  /* Build sub-button HTML */
+  var inner = document.getElementById('navSubInner161');
+  if (!inner) return;
+  var html = '<span class="sub-module-label">' + def.label + ' ›</span>';
+  html += '<span class="sub-sep"></span>';
+  /* 模块顶部 button removed per V1.66 */
+  def.subs.forEach(function(sub) {
+    html += '<a class="nav-sub-btn" href="#' + sub.id + '" onclick="tpiNavSubClick(event,\'' + sub.id + '\')" title="跳转到：' + sub.name + '">' + sub.icon + ' ' + sub.name + '</a>';
+  });
+  inner.innerHTML = html;
+
+  /* Open tray */
+  var tray = document.getElementById('navSubTray161');
+  if (tray) tray.classList.add('sub-open');
+};
+
+window.tpiNavSubClick = function(e, subId) {
+  /* Expand parent card + submodule if collapsed, then scroll */
+  if (e && typeof e.preventDefault === 'function') e.preventDefault();
+  try {
+    var el = document.getElementById(subId);
+    if (el) {
+      /* Step 1: Expand parent card if collapsed */
+      var parentCard = el.closest ? el.closest('.card') : null;
+      if (!parentCard) {
+        var p = el.parentElement;
+        while (p) { if (p.classList && p.classList.contains('card')) { parentCard = p; break; } p = p.parentElement; }
+      }
+      if (parentCard && parentCard.classList.contains('collapsed')) {
+        if (window.TPI && typeof window.TPI.toggleCard === 'function') {
+          window.TPI.toggleCard(parentCard.id);
+        } else {
+          parentCard.classList.remove('collapsed');
+        }
+      }
+      /* Step 2: Expand the submodule itself if collapsed */
+      if (el.classList.contains('collapsed')) {
+        if (el.classList.contains('rules-section')) {
+          /* Handle rules-section expand */
+          if (window.TPI && typeof window.TPI.toggleRules === 'function') {
+            window.TPI.toggleRules(subId);
+          } else {
+            el.classList.remove('collapsed');
+          }
+        } else if (typeof tpiToggleSubmodule === 'function') {
+          tpiToggleSubmodule(subId);
+        } else if (typeof window.tpiToggleSubmodule === 'function') {
+          window.tpiToggleSubmodule(subId);
+        }
+      }
+      /* Step 3: Scroll to the submodule (delay to allow animations) */
+      setTimeout(function(){
+        el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 180);
+    }
+  } catch(err) {}
+  /* Don't close sub-tray on submodule click so user can navigate further */
+};
+
+/* Close sub-tray when clicking outside nav */
+document.addEventListener('click', function(e) {
+  if (!_activeModule) return;
+  var nav = document.getElementById('quickNavV17');
+  if (nav && !nav.contains(e.target)) {
+    tpiNavClearSub();
+  }
+}, true);
+
+})();
+</script>
 
 <div class="quick-nav-group" id="scroll-nav-group">
 <button type="button" class="quick-btn quick-btn-top" onclick="window.scrollTo({top: 0, behavior: 'smooth'})" title="回到顶部">
@@ -6494,7 +7182,7 @@ hr { border-color: #bbf7d0 !important; }
 <div class="header-content">
 <div class="header-title">
 <h1 style="font-size:clamp(1.5rem, 3vw, 2.5rem);font-weight:800;background:linear-gradient(135deg,#0f766e 0%,#0d9488 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;letter-spacing:-0.02em;">
-        全维效能管理系统（TPI，V1.59）
+        全维效能管理系统（TPI，V1.69）
        </h1>
 
 <div style="display:inline-flex;align-items:center;gap:6px;flex-shrink:0;">
@@ -6594,8 +7282,8 @@ hr { border-color: #bbf7d0 !important; }
 
 <div class="checkin-help" style="padding: 15px; background: var(--color-bg-tertiary); border-left: 4px solid rgba(13,148,136,0.55); border-radius: 8px;">
 <div style="font-weight: 700; margin-bottom: 10px; color: var(--color-text-secondary); text-align:center;">💡 使用说明</div>
-<div style="font-size: 14px; line-height: 1.6; color: var(--color-text-secondary);">
-<ul class="tpi-u-ml-20px">
+<div style="font-size: 14px; line-height: 1.6; color: var(--color-text-secondary); text-align:center;">
+<ul class="tpi-u-ml-20px" style="list-style:none;padding-left:0;">
 <li>每天只能签到一次，签到后按钮会变为"已签到"状态</li>
 <li>连续签到会累计天数，中断后会重新从1天开始计算</li>
 <li>建议配合云端同步功能使用，确保数据安全</li>
@@ -6616,30 +7304,73 @@ hr { border-color: #bbf7d0 !important; }
   </div>
   <div class="card-content">
 
-<div class="data-processing-card" id="folder-storage-card" style="border: 1px solid #bbf7d0;border-radius:14px;padding:14px 16px;margin:0 0 14px 0;background:#fff;">
-<div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+<!-- ===== V1.63 本地存储模块（全量重设计）===== -->
+<div id="folder-storage-card" style="border:1px solid #bbf7d0;border-radius:14px;padding:16px 18px;margin:0 0 14px 0;background:#fff;">
+
+  <!-- 文件夹选择区域 -->
+  <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px;">
     <button id="select-folder-btn" class="btn btn-primary" type="button">📂 选择本地存储文件夹</button>
-    <span id="folder-status" style="color:#666;">未选择</span>
+    <span id="folder-status-icon" style="font-size:18px;">⚪</span>
+    <span id="folder-status" style="color:#666;font-size:13px;">未选择文件夹</span>
+    <button id="migrate-to-folder-btn" class="btn btn-secondary" type="button" style="margin-left:auto;">🔄 迁移旧数据到文件夹</button>
   </div>
-  <div style="margin-top:10px; display:flex; gap:10px; flex-wrap:wrap;">
-    <button id="migrate-to-folder-btn" class="btn btn-secondary" type="button">🔄 迁移现有数据到文件夹</button>
-    <button id="load-selected-date-btn" class="btn" type="button" title="从文件夹读取所选日期数据并恢复到页面">⬇️ 从文件夹加载所选日期</button>
-    <button id="save-selected-date-btn" class="btn" type="button" title="将当前页面快照保存到文件夹的所选日期文件">⬆️ 保存当前快照到所选日期</button>
-    <button id="manual-save-all-btn" class="btn btn-success" type="button" onclick="window.FolderStorage.performManualSave &amp;&amp; window.FolderStorage.performManualSave()" title="智能保存：如果有新增内容则增量保存，如果没有重复则全量保存">💾 手动保存全部数据</button>
+
+  <!-- 状态信息栏 -->
+  <div id="ls-status-bar" style="display:none;margin-bottom:12px;padding:10px 14px;background:#f0fdfa;border:1px solid #a7f3d0;border-radius:8px;font-size:12px;color:#065f46;line-height:1.7;">
+    <div style="display:flex;flex-wrap:wrap;gap:16px;">
+      <span>📁 文件夹：<strong id="ls-folder-name">—</strong></span>
+      <span>📅 已存天数：<strong id="ls-day-count">0</strong> 天</span>
+      <span>⏱ 上次保存：<strong id="ls-last-save-time">—</strong></span>
+      <span id="ls-next-auto-info">⏰ 下次自动保存：<strong id="ls-next-save-time">—</strong></span>
+    </div>
   </div>
-  <div style="margin-top:8px; padding:8px 12px; background:#f0fdfa; border-left: 3px solid #0d9488; border-radius:6px; font-size:12px;">
-    <strong style="display:block;text-align:center;">💡 手动保存说明：</strong>
-    <ul style="margin:4px 0 0 16px; padding:0; font-size:11px;">
-      <li>点击"💾 手动保存全部数据"会智能判断保存方式</li>
-      <li><strong>增量保存</strong>：如果检测到与上次保存有重复，只保存新增和修改的内容</li>
-      <li><strong>全量保存</strong>：如果是首次保存或没有重复，保存当前所有内容</li>
-      <li>保存完成后会显示保存的日期数量和保存方式</li>
-    </ul>
+
+  <!-- 自动保存设置区域 -->
+  <div style="margin-bottom:12px;padding:12px 14px;background:linear-gradient(135deg,#f0fdf4,#ecfdf5);border:1.5px solid #6ee7b7;border-radius:10px;">
+    <div style="font-size:13px;font-weight:700;color:#065f46;margin-bottom:8px;text-align:center;">⏰ 自动保存设置（每日定时）</div>
+    <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;justify-content:center;">
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;user-select:none;">
+        <input type="checkbox" id="ls-auto-save-enabled" style="width:16px;height:16px;accent-color:#0d9488;">
+        <span style="font-weight:600;color:#374151;font-size:13px;">启用每日自动保存</span>
+      </label>
+      <label style="display:flex;align-items:center;gap:6px;">
+        <span style="color:#6b7280;font-size:13px;">保存时间：</span>
+        <input type="time" id="ls-auto-save-time" value="23:30" style="padding:6px 10px;border:1.5px solid #6ee7b7;border-radius:8px;font-size:13px;font-weight:600;color:#0d9488;">
+      </label>
+      <span id="ls-auto-save-status" style="font-size:12px;color:#059669;font-weight:600;"></span>
+    </div>
+    <div style="margin-top:8px;font-size:11px;color:#6b7280;text-align:center;">每天在设定时间自动保存 <strong>所有历史日期</strong> 数据到文件夹（每天一个 JSON 文件）。页面需保持打开状态。</div>
   </div>
-  <div id="folder-storage-warning" style="margin-top:10px; display:none; color:#ef4444; font-weight:700;">
-    您的浏览器不支持文件夹存储，请使用 Chrome/Edge 86+ 以获得完整功能。
+
+  <!-- 手动操作区域 -->
+  <div style="margin-bottom:12px;padding:12px 14px;background:#fff7ed;border:1.5px solid #fed7aa;border-radius:10px;">
+    <div style="font-size:13px;font-weight:700;color:#92400e;margin-bottom:8px;text-align:center;">🖐 手动操作</div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:8px;">
+      <button id="manual-save-all-btn" class="btn btn-success" type="button">💾 手动保存全部数据（所有历史天）</button>
+      <button id="load-selected-date-btn" class="btn" type="button">⬇️ 从文件夹加载所选日期</button>
+      <button id="save-selected-date-btn" class="btn" type="button">⬆️ 保存当前日期到文件夹</button>
+      <button id="ls-load-all-btn" class="btn btn-secondary" type="button">📥 从文件夹恢复全部历史数据</button>
+    </div>
+    <div style="font-size:11px;color:#92400e;line-height:1.6;text-align:center;">
+      <strong>💾 手动保存全部数据</strong>：将 <strong>所有历史日期</strong> 数据各自生成一个 JSON 文件（N 天 → N 个文件）。<br>
+      <strong>📥 从文件夹恢复全部历史数据</strong>：读取文件夹中所有日期 JSON 文件，100% 恢复到本地（跨版本升级后使用）。
+    </div>
+  </div>
+
+  <!-- 保存进度显示 -->
+  <div id="ls-save-progress" style="display:none;margin-bottom:10px;padding:10px 14px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;font-size:12px;color:#1e40af;">
+    <div id="ls-progress-text">正在保存...</div>
+    <div style="margin-top:6px;background:#dbeafe;border-radius:4px;overflow:hidden;height:6px;">
+      <div id="ls-progress-bar" style="background:#3b82f6;height:6px;width:0%;transition:width 0.3s;"></div>
+    </div>
+  </div>
+
+  <!-- 不支持提示 -->
+  <div id="folder-storage-warning" style="display:none;margin-top:8px;padding:10px 14px;background:#fef2f2;border:1px solid #fca5a5;border-radius:8px;color:#dc2626;font-weight:600;font-size:13px;">
+    ⚠️ 您的浏览器不支持文件夹存储（File System Access API）。请使用 <strong>Chrome / Edge 86+</strong> 以获得完整本地存储功能。
   </div>
 </div>
+
   </div>
 </section>
 </div>
@@ -6810,7 +7541,7 @@ hr { border-color: #bbf7d0 !important; }
         <div id="tpi-bulk-sync-progress" style="font-size:12px;color:#92400e;display:none;margin-top:8px;"></div>
       </div>
 
-      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:8px;">
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:8px;justify-content:center;">
         <button type="button" onclick="try{window.__tpi_exportSyncLogs&amp;&amp;window.__tpi_exportSyncLogs()}catch(e){console.warn(e)}" style="padding:3px 10px; background:transparent; color:#6b7280; border: 1px solid #86efac; border-radius:6px; font-size:12px; cursor:pointer;">
           🧾 导出日志
         </button>
@@ -6856,31 +7587,40 @@ hr { border-color: #bbf7d0 !important; }
     </div>
 
     <div id="gist-backup-panel" style="max-width: 820px;">
-      <div style="display:flex; gap:12px; flex-wrap:wrap; align-items:end; justify-content:center; margin-bottom:16px;">
-        <div class="form-group" style="min-width:min(400px, 100%); flex:1;">
-          <label for="gist-token" style="font-weight:600; color:#374151; margin-bottom:5px; display:block;">
-            🔑 GitHub Personal Access Token <span style="color:#6b7280;font-weight:400;">(需勾选 gist 权限)</span>:
-          </label>
+      <!-- Token & Gist ID — symmetric two-column layout -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;">
+        <!-- Left column: GitHub Token -->
+        <div style="background:linear-gradient(135deg,#fffbeb,#fef9f0);border:1.5px solid #fcd34d;border-radius:12px;padding:14px 16px;">
+          <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;">
+            <span style="font-size:16px;">🔑</span>
+            <label for="gist-token" style="font-weight:700;color:#92400e;font-size:13px;">GitHub Personal Access Token</label>
+          </div>
+          <div style="font-size:11px;color:#b45309;margin-bottom:8px;padding:4px 8px;background:#fef3c7;border-radius:6px;">(需勾选 gist 权限)</div>
           <input id="gist-token" type="text" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx"
-                 style="width:100%; padding:10px; border: 2px solid #bbf7d0; border-radius:8px; font-size:14px; font-family:monospace; letter-spacing:0.5px;" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false">
-          <div style="font-size:12px; color:#6b7280; margin-top:4px;">
+                 style="width:100%;padding:9px 10px;border:2px solid #fcd34d;border-radius:8px;font-size:13px;font-family:monospace;letter-spacing:0.5px;margin-bottom:8px;" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false">
+          <div style="font-size:12px;color:#6b7280;margin-bottom:10px;">
             🔗 <a href="https://github.com/settings/tokens/new?scopes=gist&description=TPI%20Backup" target="_blank" style="color:#0d9488;" rel="noopener noreferrer">点击这里创建 Token</a>（跨设备同步时，两端填写同一 Token）
           </div>
-          <div style="display:flex; gap:8px; margin-top:8px; align-items:center; flex-wrap:wrap;">
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
             <button type="button" id="btn-verify-token" onclick="window.verifyAndSaveGistToken()"
-              style="padding:8px 16px; background:linear-gradient(135deg,#7c3aed,#6d28d9); color:white; border:none; border-radius:7px; font-size:13px; font-weight:700; cursor:pointer; white-space:nowrap;">
+              style="padding:9px 18px;background:linear-gradient(135deg,#7c3aed,#6d28d9);color:white;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;">
               🔍 验证并保存 Token
             </button>
-            <span id="gist-token-status" style="font-size:12px; color:#6b7280;"></span>
+            <span id="gist-token-status" style="font-size:12px;color:#6b7280;"></span>
           </div>
         </div>
-        <div class="form-group" style="min-width:200px; flex:1;">
-          <label for="gist-id" style="font-weight:600; color:#374151; margin-bottom:5px; display:block;">
-            🔖 Gist ID <span style="color:#6b7280;font-weight:400;">(可选)</span>:
-          </label>
+        <!-- Right column: Gist ID -->
+        <div style="background:linear-gradient(135deg,#f0fdf4,#ecfdf5);border:1.5px solid #6ee7b7;border-radius:12px;padding:14px 16px;">
+          <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;">
+            <span style="font-size:16px;">📌</span>
+            <label for="gist-id" style="font-weight:700;color:#065f46;font-size:13px;">Gist ID</label>
+          </div>
+          <div style="font-size:11px;color:#047857;margin-bottom:8px;padding:4px 8px;background:#d1fae5;border-radius:6px;">(可选 · 跨设备同步时填写)</div>
           <input id="gist-id" type="text" placeholder="自动创建或输入已有ID"
-                 style="width:100%; padding:10px; border: 2px solid #bbf7d0; border-radius:8px; font-size:14px;">
-          <div style="font-size:12px; color:#6b7280; margin-top:4px;">首次备份会自动创建 Secret Gist，同步时需两端填入同一 Gist ID</div>
+                 style="width:100%;padding:9px 10px;border:2px solid #6ee7b7;border-radius:8px;font-size:13px;margin-bottom:8px;">
+          <div style="font-size:12px;color:#6b7280;line-height:1.6;padding:8px 10px;background:#f0fdf4;border-radius:6px;border-left:3px solid #10b981;">
+            首次备份会自动创建 Secret Gist，同步时需两端填入同一 Gist ID
+          </div>
         </div>
       </div>
 
@@ -6992,7 +7732,7 @@ hr { border-color: #bbf7d0 !important; }
 
        <div id="misc-log-list" style="display:flex; flex-direction:column; gap:10px;"></div>
 
-       <div id="misc-log-empty" class="alert alert-warning" style="display:none; margin-top:12px;">
+       <div id="misc-log-empty" class="alert alert-warning" style="display:none; margin-top:12px;text-align:center;">
         暂无记录。点击「➕ 新增记录」开始。
        </div>
 
@@ -7382,8 +8122,8 @@ hr { border-color: #bbf7d0 !important; }
     <span class="tpi-submodule-arrow" aria-hidden="true">▼</span>
   </div>
   <div class="tpi-submodule-body" id="submod-dash-timing-body">
-    <p><strong>建议结算时间</strong>：晚间23:00 或 次日开工前10分钟。</p>
-    <p style="margin-top:8px;"><strong>核心原则</strong>：<strong>分数不是审判，是导航。</strong> Context is King. 数据服务你，而非审判你。</p>
+    <p style="text-align:center;"><strong>建议结算时间</strong>：晚间23:00 或 次日开工前10分钟。</p>
+    <p style="margin-top:8px;text-align:center;"><strong>核心原则</strong>：<strong>分数不是审判，是导航。</strong> Context is King. 数据服务你，而非审判你。</p>
   </div>
 </div>
 <div class="tpi-submodule collapsed" id="submod-dash-formula" style="border-color: #6ee7b7;margin-bottom:16px;">
@@ -7821,7 +8561,7 @@ hr { border-color: #bbf7d0 !important; }
 <h4 style="text-align:center;">
            ✅ 客观豁免 (Objective Exemption)
           </h4>
-<p>
+<p style="text-align:center;">
            因
            <strong>
             客观因素
@@ -7841,7 +8581,7 @@ hr { border-color: #bbf7d0 !important; }
 <h4 style="text-align:center;">
            ⚠️ 主观豁免 (Subjective Exemption)
           </h4>
-<p>
+<p style="text-align:center;">
            因
            <strong>
             主观意愿
@@ -7884,7 +8624,7 @@ hr { border-color: #bbf7d0 !important; }
 <h4 style="text-align:center;">
           📢 豁免声明
          </h4>
-<p>
+<p style="text-align:center;">
           所有豁免必须在
           <strong>
            [每日四分卫 - 豁免声明区]
@@ -7902,7 +8642,7 @@ hr { border-color: #bbf7d0 !important; }
 <div class="card-title">
 <span class="icon">📋</span>
 <span>
-         标准操作程序 (SOP) 与填写规范
+         <span style="display:block;text-align:center;">标准操作程序与填写规范 Standard Operating Procedure (SOP)</span>
         </span>
 </div>
 </div>
@@ -7911,7 +8651,7 @@ hr { border-color: #bbf7d0 !important; }
 <div class="rules-section" id="sop-chronology">
 <div class="rules-header" onclick="window.TPI.toggleRules('sop-chronology')">
 <span>
-          填报时序 (Chronology)
+          <span style="display:block;text-align:center;">填报时序 Chronological Reporting Order (CRO)</span>
          </span>
 </div>
 <div class="rules-content">
@@ -7919,7 +8659,7 @@ hr { border-color: #bbf7d0 !important; }
 <h4 style="text-align:center;">
            🌅 晨间 (08:00-10:00)
           </h4>
-<p>
+<p style="text-align:center;">
            填写顶部日期 → 完成 [每日四分卫] 诊断 →
            <strong>
             在 [豁免声明区] 统一处理特权
@@ -8002,7 +8742,7 @@ hr { border-color: #bbf7d0 !important; }
 <div class="rules-section collapsed" id="sop-logic">
 <div class="rules-header" onclick="window.TPI.toggleRules('sop-logic')">
 <span>
-          核心逻辑澄清 (Logic Clarification)
+          <span style="display:block;text-align:center;">核心逻辑澄清 Core Logic Clarification (CLC)</span>
          </span>
 </div>
 <div class="rules-content">
@@ -8014,10 +8754,10 @@ hr { border-color: #bbf7d0 !important; }
            </sub>
            (基石系统)
           </h4>
-<p>
+<p style="text-align:center;">
            这是一个聚合指标。
           </p>
-<p>
+<p style="text-align:center;">
 <strong>
             公式
            </strong>
@@ -8027,7 +8767,7 @@ hr { border-color: #bbf7d0 !important; }
            </sub>
            = BCM (Part 3) + Logistics (Part 4) + HSM (Part 5)
           </p>
-<p class="text-muted">
+<p class="text-muted" style="text-align:center;">
 <em>
             注：Part 3 虽名为 BCM，但仅代表"行为纪律"，需加上 Part 4/5 才是完整的 Sys 系统。
            </em>
@@ -8037,13 +8777,13 @@ hr { border-color: #bbf7d0 !important; }
 <h4 style="text-align:center;">
            ⚠️ AMI 计数原则
           </h4>
-<p>
+<p style="text-align:center;">
 <strong>
             严禁双重计分
            </strong>
            : 若某任务已按 [Type D] 的"当量法"计分，则字数/页数记为 0。
           </p>
-<p>
+<p style="text-align:center;">
 <strong>
             Type D (特殊攻坚) 定义
            </strong>
@@ -8068,7 +8808,7 @@ hr { border-color: #bbf7d0 !important; }
 <div class="rules-section collapsed" id="sop-mindset">
 <div class="rules-header" onclick="window.TPI.toggleRules('sop-mindset')">
 <span>
-          心态校准 (Mindset)
+          <span style="display:block;text-align:center;">心态校准 Mindset Calibration (MC)</span>
          </span>
 </div>
 <div class="rules-content">
@@ -8080,7 +8820,7 @@ hr { border-color: #bbf7d0 !important; }
 <h4 class="axiom-title">
             去道德化
            </h4>
-<p class="axiom-content">
+<p class="axiom-content" style="text-align:center;">
             分数低不代表"失败"，只代表"需要调整策略"。
            </p>
 </div>
@@ -8091,7 +8831,7 @@ hr { border-color: #bbf7d0 !important; }
 <h4 class="axiom-title">
             真实性
            </h4>
-<p class="axiom-content">
+<p class="axiom-content" style="text-align:center;">
             诚实记录是系统生效的前提。不要为了凑分而修改系数。
            </p>
 </div>
@@ -8106,7 +8846,7 @@ hr { border-color: #bbf7d0 !important; }
 <div class="card-title">
 <span class="icon">🧭</span>
 <span>
-         每日四分卫：模式选择与意图声明 <span style="font-weight:400;font-size:0.82em;color:#64748b;letter-spacing:0.02em;">Daily Quarterback</span>
+         <span style="display:block;text-align:center;">每日四分卫：模式选择与意图声明 Daily Quarterback (QB)</span>
         </span>
 </div>
 </div>
@@ -8122,7 +8862,7 @@ hr { border-color: #bbf7d0 !important; }
     <span class="tpi-submodule-arrow" aria-hidden="true">▼</span>
   </div>
   <div class="tpi-submodule-body" id="submod-qb-sequence-body">
-<p>
+<p style="text-align:center;">
          请在
          <strong>
           上午 10:00 前
@@ -8151,7 +8891,7 @@ hr { border-color: #bbf7d0 !important; }
 <h4>
            🔋 身心电量
           </h4>
-<p class="text-muted mb-3">
+<p class="text-muted mb-3" style="text-align:center;">
            今日醒来感到精力充沛吗？
           </p>
 <div style="display: flex; gap: var(--spacing-4);">
@@ -8173,7 +8913,7 @@ hr { border-color: #bbf7d0 !important; }
 <h4>
            🚧 客观干扰
           </h4>
-<p class="text-muted mb-3">
+<p class="text-muted mb-3" style="text-align:center;">
            今日是否有 &gt;2小时 的行政/杂事占用？
           </p>
 <div style="display: flex; gap: var(--spacing-4);">
@@ -8197,7 +8937,7 @@ hr { border-color: #bbf7d0 !important; }
 <h3>
          💭 认知状态速记 (Cognitive Snapshot) [T1]
         </h3>
-<p class="text-muted">
+<p class="text-muted" style="text-align:center;">
 <em>
           👇
           <strong>
@@ -8214,7 +8954,7 @@ hr { border-color: #bbf7d0 !important; }
           当下的心理状态，用于长期模式识别。
          </em>
 </p>
-<p class="text-muted tpi-u-mt-4px">
+<p class="text-muted tpi-u-mt-4px" style="text-align:center;">
 <em>
           💡
           <strong>
@@ -8329,7 +9069,7 @@ hr { border-color: #bbf7d0 !important; }
 <h4 style="text-align:center;">
          🏳️ 豁免声明区 (Exemption Declaration Area)
         </h4>
-<p>
+<p style="text-align:center;">
 <em>
           所有涉及积分扣除、特殊情况豁免的操作，
           <strong>
@@ -8447,7 +9187,7 @@ hr { border-color: #bbf7d0 !important; }
 <h5 style="margin: 0 0 8px 0;">
            🏆 豁免与连胜规则
           </h5>
-<ul style="margin: 0; padding-left: 20px; font-size: 0.9em;">
+<ul style="margin: 0; padding-left: 0; font-size: 0.9em; list-style: none; text-align:center;">
 <li>
             使用
             <strong>
@@ -8482,7 +9222,7 @@ hr { border-color: #bbf7d0 !important; }
     <span class="tpi-submodule-arrow" aria-hidden="true">▼</span>
   </div>
   <div class="tpi-submodule-body" id="submod-qb-decision-body">
-<p class="text-muted mb-4">
+<p class="text-muted mb-4" style="text-align:center;">
 <em>
           逻辑：默认模式选择具有
           <strong>
@@ -8829,7 +9569,7 @@ hr { border-color: #bbf7d0 !important; }
 <div class="rules-container mt-6">
 <div class="rules-section collapsed" id="mode-rules">
 <div class="rules-header" onclick="window.TPI.toggleRules('mode-rules')">
-          <span style="display:block;text-align:center;flex:1;">🧠 场景化模式解析与细则 (Scenario Definition - Reference)</span>
+          <span style="display:block;text-align:center;flex:1;">🧠 场景化模式解析与细则 Scenario Definition Reference (SDR)</span>
          </div>
 <div class="rules-content">
 <h4>
@@ -8972,11 +9712,10 @@ hr { border-color: #bbf7d0 !important; }
               ：工作时段按基础分 (100%)，休息时段不计分。
              </li>
 <li>
-<strong>
-               ⚖️ TPI 动态达标线 (查表法)
+<strong style="display:block;text-align:center;">
+               ⚖️ TPI 动态达标线
               </strong>
-              ：
-              <table style="margin: 8px 0; border-collapse: collapse; font-size: 0.9em;">
+              <table style="margin: 8px auto; border-collapse: collapse; font-size: 0.9em;">
 <tr class="tpi-u-bg-varcolorbgsecondary">
 <th class="tpi-u-a8fa85">
                  休息时段数量
@@ -9275,7 +10014,7 @@ hr { border-color: #bbf7d0 !important; }
 <div class="rules-container mb-6">
 <div class="rules-section" id="bonus-rules">
 <div class="rules-header" onclick="window.TPI.toggleRules('bonus-rules')">
-          <span style="display:block;text-align:center;flex:1;">🚀 势能感知系统与加分规则 (Momentum Sensing - Rules)</span>
+          <span style="display:block;text-align:center;flex:1;">🚀 势能感知系统与加分规则 Momentum Sensing Rules (MSR)</span>
          </div>
 <div class="rules-content">
 <p>
@@ -9617,158 +10356,15 @@ hr { border-color: #bbf7d0 !important; }
 <div class="card-header" onclick="window.TPI.toggleCard('ami')">
 <div class="card-title">
 <span class="icon">⚔️</span>
-<span>第一部分：学术战力指标 (AMI - Academic Momentum Index)</span>
+<span style="display:block;text-align:center;">第一部分：学术战力指标 Academic Momentum Index (AMI)</span>
 </div>
 </div>
 <div class="card-content">
 
-<div class="tpi-submodule" id="submod-ami-ignition" style="border-color: #a7f3d0;margin-bottom:16px;">
-  <div class="tpi-submodule-header" onclick="tpiToggleSubmodule('submod-ami-ignition')" role="button" tabindex="0" aria-expanded="true" aria-controls="submod-ami-ignition-body" title="展开/折叠 点火程序与启动仪式" style="background:linear-gradient(135deg,#fffbeb,#fffdf5);border-bottom-color: #a7f3d0;">
-    <div style="display:flex;align-items:center;gap:8px;">
-      <span style="font-size:18px;">🔥</span>
-      <span style="font-size:15px;font-weight:700;color:#b45309;">点火程序与启动仪式</span>
-      <span style="font-size:11px;font-weight:600;color:#92400e;background:#fef3c7;padding:3px 10px;border-radius:12px;letter-spacing:0.03em;">点火启动 · Ignition Protocol</span>
-    </div>
-    <span class="tpi-submodule-arrow" aria-hidden="true">▼</span>
-  </div>
-  <div class="tpi-submodule-body" id="submod-ami-ignition-body">
-<div class="alert alert-warning mb-6">
-<h4 style="text-align:center;">
-         🔥 点火程序 (Ignition Protocol)
-        </h4>
-<p>
-<em>
-          <span style="display:block;text-align:center;">微小动作是对抗拖延的唯一解药。</span>
-         </em>
-</p>
-<div id="yesterday-bridge" style="background: rgba(255,255,255,0.6); padding: 8px; border-radius: 4px; border-left: 3px solid #10b981; margin-bottom: 10px; font-size: 0.85rem; display: none;">
-<strong>
-          🌉 昨日悬念：
-         </strong>
-<span id="yesterday-cliffhanger-text">
-          读取中...
-         </span>
-</div>
-<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: var(--spacing-3); margin-top: var(--spacing-3);">
-<label class="tpi-inline-03">
-<input aria-label="物理就位" id="ignition-physical" onchange="TPI.calculateAMI()" type="checkbox"/>
-<span>
-           🧼 物理就位：手机已锁入/放入远离处，水杯已满。
-          </span>
-</label>
-<label class="tpi-inline-03">
-<input aria-label="微观目标" id="ignition-micro-target" onchange="TPI.calculateAMI()" type="checkbox"/>
-<span>
-           🤏 微观目标：已写下前 5 分钟要做的一件极小的事（如"打开文档并重读最后一段"）。
-          </span>
-</label>
-<label class="tpi-inline-03">
-<input aria-label="无痛启动" id="ignition-painless-start" onchange="TPI.calculateAMI()" type="checkbox"/>
-<span>
-           🚀 无痛启动：已完成最初的 5 分钟投入（
-           <strong>
-            若有 [海明威桥] 指令，必须优先执行
-           </strong>
-           ）。 →
-           <strong>
-            +2 分
-           </strong>
-</span>
-</label>
-</div>
-<div style="margin-top: 12px; padding: 10px; background: #fef3c7; border-left: 3px solid #10b981; font-size: 0.9em;">
-<p style="margin: 0;">
-<strong>
-           🌉 断桥豁免机制
-          </strong>
-          ：若昨日设定的"第一动作"今日因故未执行，可消耗
-          <strong>
-           1次A类主观豁免
-          </strong>
-          进行"断桥重连"，则启动分仅扣除第一个板块的 +2 分（而非全部失效）。
-         </p>
-</div>
-</div>
-<div class="alert alert-info mb-6">
-<h4 style="text-align:center;">
-         🚀 启动仪式与学术共同体 (Protocol Details)
-        </h4>
-<p>
-<strong style="display:block;text-align:center;">
-          启动规则
-         </strong>
-         ：落座即进入 Zotero 或史料库，
-         <strong>
-          立即
-         </strong>
-         进行
-         <strong>
-          深潜
-         </strong>
-         （禁止先处理杂事）。
-        </p>
-<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: var(--spacing-3); margin-top: var(--spacing-3);">
-<label class="tpi-inline-03">
-<input aria-label="第一板块启动" id="start-morning-block" onchange="TPI.calculateAMI()" type="checkbox"/>
-<span>
-           🌅 第一板块启动 (建议08:30) →
-           <strong>
-            +2分
-           </strong>
-</span>
-</label>
-<label class="tpi-inline-03">
-<input aria-label="第二板块启动" id="start-afternoon-block" onchange="TPI.calculateAMI()" type="checkbox"/>
-<span>
-           ☀️ 第二板块启动 (建议14:30) →
-           <strong>
-            +2分
-           </strong>
-</span>
-</label>
-<label class="tpi-inline-03">
-<input aria-label="第三板块启动" id="start-evening-block" onchange="TPI.calculateAMI()" type="checkbox"/>
-<span>
-           🌙 第三板块启动 (建议18:30) →
-           <strong>
-            +2分
-           </strong>
-</span>
-</label>
-<label class="tpi-inline-03">
-<input aria-label="学术对话" id="academic-dialogue" onchange="TPI.calculateAMI()" type="checkbox"/>
-<span>
-           💬 学术对话/有效沟通 (与导师/同僚实质性探讨) →
-           <strong>
-            +2分
-           </strong>
-</span>
-</label>
-
-<label class="tpi-inline-03">
-<input aria-label="学术论著扫描奖励" id="ami-scan-reading" onchange="TPI.calculateAMI()" type="checkbox" value="1"/>
-<span>
-<strong>📖 学术论著扫描</strong>
-(每日扫描阅读 ≥ 100 页 →
-<strong>独立奖励 +1 分</strong>
-)
-</span>
-</label>
-</div>
-<div style="margin-top: var(--spacing-3);">
-<p class="text-bold" style="text-align:center;">
-          协议加分小计:
-          <span id="ignition-total">
-           0
-          </span>
-          分 (填入AMI总分)
-         </p>
-</div>
-</div>
 <div class="rules-container mb-6">
 <div class="rules-section collapsed" id="ami-rules">
 <div class="rules-header" onclick="window.TPI.toggleRules('ami-rules')">
-          <span style="display:block;text-align:center;flex:1;">📘 AMI 使用说明与规则 (Guide & Rules)</span>
+          <span style="display:block;text-align:center;flex:1;">📘 AMI 使用说明与规则 Academic Momentum Index Guide & Rules (AMI G&R)</span>
          </div>
 <div class="rules-content">
 <h4>
@@ -10381,12 +10977,167 @@ hr { border-color: #bbf7d0 !important; }
 </div>
 </div>
 </div>
-<div id="ami-table">
-<div class="rules-section" id="ami-sub-morning">
-<div class="rules-header" onclick="window.TPI.toggleRules('ami-sub-morning')" style="background:linear-gradient(135deg,#e0f2fe,#bfdbfe);color:#0369a1;border-left: 4px solid #0d9488;font-size:13px;padding:10px 14px;font-weight:700;display:flex;flex-direction:column;align-items:center;text-align:center;">
-<span style="font-size:14px;font-weight:800;">🌅 上午 (Morning)</span><span style="font-size:11px;color:#0f766e;background:#ccfbf1;padding:3px 10px;border-radius:12px;font-weight:600;margin-top:2px;">⏰ 08:00 – 11:00（3小时）</span>
+<div class="tpi-submodule" id="submod-ami-ignition" style="border-color: #a7f3d0;margin-bottom:16px;">
+  <div class="tpi-submodule-header" onclick="tpiToggleSubmodule('submod-ami-ignition')" role="button" tabindex="0" aria-expanded="true" aria-controls="submod-ami-ignition-body" title="展开/折叠 点火启动协议记录表" style="background:linear-gradient(135deg,#fffbeb,#fffdf5);border-bottom-color: #a7f3d0;">
+    <div style="display:flex;align-items:center;gap:8px;justify-content:center;flex:1;text-align:center;">
+      <span style="font-size:18px;">🔥</span>
+      <span style="font-size:15px;font-weight:700;color:#b45309;">点火启动协议记录表</span>
+      <span style="font-size:11px;font-weight:600;color:#92400e;background:#fef3c7;padding:3px 10px;border-radius:12px;letter-spacing:0.03em;">Ignition &amp; Startup Protocol Record · ISPR</span>
+    </div>
+    <span class="tpi-submodule-arrow" aria-hidden="true">▼</span>
+  </div>
+  <div class="tpi-submodule-body" id="submod-ami-ignition-body">
+<div class="alert alert-warning mb-6">
+<h4 style="text-align:center;">
+         🔥 点火程序 (Ignition Protocol)
+        </h4>
+<p>
+<em>
+          <span style="display:block;text-align:center;">微小动作是对抗拖延的唯一解药。</span>
+         </em>
+</p>
+<div id="yesterday-bridge" style="background: rgba(255,255,255,0.6); padding: 8px; border-radius: 4px; border-left: 3px solid #10b981; margin-bottom: 10px; font-size: 0.85rem; display: none;">
+<strong>
+          🌉 昨日悬念：
+         </strong>
+<span id="yesterday-cliffhanger-text">
+          读取中...
+         </span>
 </div>
-<div class="rules-content">
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: var(--spacing-3); margin-top: var(--spacing-3);">
+<label class="tpi-inline-03">
+<input aria-label="物理就位" id="ignition-physical" onchange="TPI.calculateAMI()" type="checkbox"/>
+<span>
+           🧼 物理就位：手机已锁入/放入远离处，水杯已满。
+          </span>
+</label>
+<label class="tpi-inline-03">
+<input aria-label="微观目标" id="ignition-micro-target" onchange="TPI.calculateAMI()" type="checkbox"/>
+<span>
+           🤏 微观目标：已写下前 5 分钟要做的一件极小的事（如"打开文档并重读最后一段"）。
+          </span>
+</label>
+<label class="tpi-inline-03">
+<input aria-label="无痛启动" id="ignition-painless-start" onchange="TPI.calculateAMI()" type="checkbox"/>
+<span>
+           🚀 无痛启动：已完成最初的 5 分钟投入（
+           <strong>
+            若有 [海明威桥] 指令，必须优先执行
+           </strong>
+           ）。 →
+           <strong>
+            +2 分
+           </strong>
+</span>
+</label>
+</div>
+<div style="margin-top: 12px; padding: 10px; background: #fef3c7; border-left: 3px solid #10b981; font-size: 0.9em;">
+<p style="margin: 0;">
+<strong>
+           🌉 断桥豁免机制
+          </strong>
+          ：若昨日设定的"第一动作"今日因故未执行，可消耗
+          <strong>
+           1次A类主观豁免
+          </strong>
+          进行"断桥重连"，则启动分仅扣除第一个板块的 +2 分（而非全部失效）。
+         </p>
+</div>
+</div>
+<div class="alert alert-info mb-6">
+<h4 style="text-align:center;">
+         🚀 启动仪式与学术共同体 (Protocol Details)
+        </h4>
+<p>
+<strong style="display:block;text-align:center;">
+          启动规则
+         </strong>
+         ：落座即进入 Zotero 或史料库，
+         <strong>
+          立即
+         </strong>
+         进行
+         <strong>
+          深潜
+         </strong>
+         （禁止先处理杂事）。
+        </p>
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: var(--spacing-3); margin-top: var(--spacing-3);">
+<label class="tpi-inline-03">
+<input aria-label="第一板块启动" id="start-morning-block" onchange="TPI.calculateAMI()" type="checkbox"/>
+<span>
+           🌅 第一板块启动 (建议08:30) →
+           <strong>
+            +2分
+           </strong>
+</span>
+</label>
+<label class="tpi-inline-03">
+<input aria-label="第二板块启动" id="start-afternoon-block" onchange="TPI.calculateAMI()" type="checkbox"/>
+<span>
+           ☀️ 第二板块启动 (建议14:30) →
+           <strong>
+            +2分
+           </strong>
+</span>
+</label>
+<label class="tpi-inline-03">
+<input aria-label="第三板块启动" id="start-evening-block" onchange="TPI.calculateAMI()" type="checkbox"/>
+<span>
+           🌙 第三板块启动 (建议18:30) →
+           <strong>
+            +2分
+           </strong>
+</span>
+</label>
+<label class="tpi-inline-03">
+<input aria-label="学术对话" id="academic-dialogue" onchange="TPI.calculateAMI()" type="checkbox"/>
+<span>
+           💬 学术对话/有效沟通 (与导师/同僚实质性探讨) →
+           <strong>
+            +2分
+           </strong>
+</span>
+</label>
+
+<label class="tpi-inline-03">
+<input aria-label="学术论著扫描奖励" id="ami-scan-reading" onchange="TPI.calculateAMI()" type="checkbox" value="1"/>
+<span>
+<strong>📖 学术论著扫描</strong>
+(每日扫描阅读 ≥ 100 页 →
+<strong>独立奖励 +1 分</strong>
+)
+</span>
+</label>
+</div>
+<div style="margin-top: var(--spacing-3);">
+<p class="text-bold" style="text-align:center;">
+          协议加分小计:
+          <span id="ignition-total">
+           0
+          </span>
+          分 (填入AMI总分)
+         </p>
+</div>
+</div>
+</div>
+</div>
+
+<div id="ami-table">
+<div class="tpi-submodule" id="ami-sub-morning" style="border-color:#6ee7b7;margin-bottom:16px;">
+<div class="tpi-submodule-header" onclick="tpiToggleSubmodule('ami-sub-morning')" role="button" tabindex="0" aria-expanded="true" aria-controls="ami-sub-morning-body" title="展开/折叠 AMI记录表(上午)" style="background:linear-gradient(135deg,#e0f2fe,#f0f9ff);border-bottom-color:#6ee7b7;">
+    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+      <span style="font-size:18px;">🌅</span>
+      <div style="display:flex;flex-direction:column;gap:1px;">
+        <span style="font-size:15px;font-weight:700;color:#0369a1;">AMI记录表(上午)</span>
+        <span style="font-size:11px;color:#6b7280;">AMI Record Form (Morning)</span>
+      </div>
+      <span style="font-size:11px;font-weight:600;color:#0369a1;background:#e0f2fe;padding:2px 8px;border-radius:10px;">AMIRF-AM</span>
+      <span style="font-size:11px;color:#0f766e;background:#ccfbf1;padding:2px 8px;border-radius:10px;font-weight:600;">⏰ 08:00–11:00（3小时）</span>
+    </div>
+    <span class="tpi-submodule-arrow" aria-hidden="true">▼</span>
+  </div>
+<div class="tpi-submodule-body" id="ami-sub-morning-body">
 
 <div class="ami-responsive-section">
 <table style="width:100%;border-collapse:collapse;">
@@ -10526,11 +11277,20 @@ hr { border-color: #bbf7d0 !important; }
 </div>
 </div>
 </div>
-<div class="rules-section" id="ami-sub-afternoon">
-<div class="rules-header" onclick="window.TPI.toggleRules('ami-sub-afternoon')" style="background:linear-gradient(135deg,#fef9c3,#fde68a);color:#78350f;border-left: 4px solid #059669;font-size:13px;padding:10px 14px;font-weight:700;display:flex;flex-direction:column;align-items:center;text-align:center;">
-<span style="font-size:14px;font-weight:800;">☀️ 下午 (Afternoon)</span><span style="font-size:11px;color:#92400e;background:#fef3c7;padding:3px 10px;border-radius:12px;font-weight:600;margin-top:2px;">⏰ 15:00–17:00（2小时）</span>
-</div>
-<div class="rules-content">
+<div class="tpi-submodule" id="ami-sub-afternoon" style="border-color:#fde68a;margin-bottom:16px;">
+<div class="tpi-submodule-header" onclick="tpiToggleSubmodule('ami-sub-afternoon')" role="button" tabindex="0" aria-expanded="true" aria-controls="ami-sub-afternoon-body" title="展开/折叠 AMI记录表(下午)" style="background:linear-gradient(135deg,#fef9c3,#fffdf0);border-bottom-color:#fde68a;">
+    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+      <span style="font-size:18px;">☀️</span>
+      <div style="display:flex;flex-direction:column;gap:1px;">
+        <span style="font-size:15px;font-weight:700;color:#78350f;">AMI记录表(下午)</span>
+        <span style="font-size:11px;color:#6b7280;">AMI Record Form (Afternoon)</span>
+      </div>
+      <span style="font-size:11px;font-weight:600;color:#78350f;background:#fef3c7;padding:2px 8px;border-radius:10px;">AMIRF-PM</span>
+      <span style="font-size:11px;color:#92400e;background:#fef9c3;padding:2px 8px;border-radius:10px;font-weight:600;">⏰ 15:00–17:00（2小时）</span>
+    </div>
+    <span class="tpi-submodule-arrow" aria-hidden="true">▼</span>
+  </div>
+<div class="tpi-submodule-body" id="ami-sub-afternoon-body">
 <div class="ami-responsive-section">
 <table style="width:100%;border-collapse:collapse;">
 <tbody>
@@ -10669,11 +11429,20 @@ hr { border-color: #bbf7d0 !important; }
 </div>
 </div>
 </div>
-<div class="rules-section" id="ami-sub-evening1">
-<div class="rules-header" onclick="window.TPI.toggleRules('ami-sub-evening1')" style="background:#fce7f3;color:#9d174d;border-left: 4px solid #0d9488;font-size:13px;padding:8px 14px;display:flex;flex-direction:column;align-items:center;text-align:center;">
-<span style="font-size:14px;font-weight:700;">🌆 晚上1 (Evening I)</span><span style="font-size:11px;color:#9d174d;background:#fce7f3;padding:2px 8px;border-radius:10px;margin-top:2px;">18:30–20:00（1.5小时）</span>
-</div>
-<div class="rules-content">
+<div class="tpi-submodule" id="ami-sub-evening1" style="border-color:#f9a8d4;margin-bottom:16px;">
+<div class="tpi-submodule-header" onclick="tpiToggleSubmodule('ami-sub-evening1')" role="button" tabindex="0" aria-expanded="true" aria-controls="ami-sub-evening1-body" title="展开/折叠 AMI记录表(晚上1)" style="background:linear-gradient(135deg,#fce7f3,#fdf4ff);border-bottom-color:#f9a8d4;">
+    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+      <span style="font-size:18px;">🌆</span>
+      <div style="display:flex;flex-direction:column;gap:1px;">
+        <span style="font-size:15px;font-weight:700;color:#9d174d;">AMI记录表(晚上1)</span>
+        <span style="font-size:11px;color:#6b7280;">AMI Record Form (Evening I)</span>
+      </div>
+      <span style="font-size:11px;font-weight:600;color:#9d174d;background:#fce7f3;padding:2px 8px;border-radius:10px;">AMIRF-EI</span>
+      <span style="font-size:11px;color:#9d174d;background:#fce7f3;padding:2px 8px;border-radius:10px;font-weight:600;">⏰ 18:30–20:00（1.5小时）</span>
+    </div>
+    <span class="tpi-submodule-arrow" aria-hidden="true">▼</span>
+  </div>
+<div class="tpi-submodule-body" id="ami-sub-evening1-body">
 <div class="ami-responsive-section">
 <table style="width:100%;border-collapse:collapse;">
 <tbody>
@@ -10812,11 +11581,20 @@ hr { border-color: #bbf7d0 !important; }
 </div>
 </div>
 </div>
-<div class="rules-section" id="ami-sub-evening2">
-<div class="rules-header" onclick="window.TPI.toggleRules('ami-sub-evening2')" style="background:#ede9fe;color:#5b21b6;border-left: 4px solid #0d9488;font-size:13px;padding:8px 14px;display:flex;flex-direction:column;align-items:center;text-align:center;">
-<span style="font-size:14px;font-weight:700;">🌙 晚上2 (Evening II)</span><span style="font-size:11px;color:#5b21b6;background:#ede9fe;padding:2px 8px;border-radius:10px;margin-top:2px;">20:40–23:00（约2.3小时）</span>
-</div>
-<div class="rules-content">
+<div class="tpi-submodule" id="ami-sub-evening2" style="border-color:#c4b5fd;margin-bottom:16px;">
+<div class="tpi-submodule-header" onclick="tpiToggleSubmodule('ami-sub-evening2')" role="button" tabindex="0" aria-expanded="true" aria-controls="ami-sub-evening2-body" title="展开/折叠 AMI记录表(晚上2)" style="background:linear-gradient(135deg,#ede9fe,#f5f3ff);border-bottom-color:#c4b5fd;">
+    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+      <span style="font-size:18px;">🌙</span>
+      <div style="display:flex;flex-direction:column;gap:1px;">
+        <span style="font-size:15px;font-weight:700;color:#5b21b6;">AMI记录表(晚上2)</span>
+        <span style="font-size:11px;color:#6b7280;">AMI Record Form (Evening II)</span>
+      </div>
+      <span style="font-size:11px;font-weight:600;color:#5b21b6;background:#ede9fe;padding:2px 8px;border-radius:10px;">AMIRF-EII</span>
+      <span style="font-size:11px;color:#5b21b6;background:#ede9fe;padding:2px 8px;border-radius:10px;font-weight:600;">⏰ 20:40–23:00（约2.3小时）</span>
+    </div>
+    <span class="tpi-submodule-arrow" aria-hidden="true">▼</span>
+  </div>
+<div class="tpi-submodule-body" id="ami-sub-evening2-body">
 <div class="ami-responsive-section">
 <table style="width:100%;border-collapse:collapse;">
 <tbody>
@@ -10955,11 +11733,20 @@ hr { border-color: #bbf7d0 !important; }
 </div>
 </div>
 </div>
-<div class="rules-section" id="ami-sub-flexible">
-<div class="rules-header" onclick="window.TPI.toggleRules('ami-sub-flexible')" style="background:#d1fae5;color:#064e3b;border-left: 4px solid #10b981;font-size:13px;padding:8px 14px;display:flex;flex-direction:column;align-items:center;text-align:center;">
-<span style="font-size:14px;font-weight:700;">⚡ 机动 (Flexible)</span><span style="font-size:11px;color:#064e3b;background:#d1fae5;padding:2px 8px;border-radius:10px;margin-top:2px;">灵活安排</span>
-</div>
-<div class="rules-content">
+<div class="tpi-submodule" id="ami-sub-flexible" style="border-color:#6ee7b7;margin-bottom:16px;">
+<div class="tpi-submodule-header" onclick="tpiToggleSubmodule('ami-sub-flexible')" role="button" tabindex="0" aria-expanded="true" aria-controls="ami-sub-flexible-body" title="展开/折叠 AMI记录表(机动)" style="background:linear-gradient(135deg,#d1fae5,#ecfdf5);border-bottom-color:#6ee7b7;">
+    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+      <span style="font-size:18px;">🎯</span>
+      <div style="display:flex;flex-direction:column;gap:1px;">
+        <span style="font-size:15px;font-weight:700;color:#064e3b;">AMI记录表(机动)</span>
+        <span style="font-size:11px;color:#6b7280;">AMI Record Form (Flexible)</span>
+      </div>
+      <span style="font-size:11px;font-weight:600;color:#064e3b;background:#d1fae5;padding:2px 8px;border-radius:10px;">AMIRF-FX</span>
+      <span style="font-size:11px;color:#064e3b;background:#d1fae5;padding:2px 8px;border-radius:10px;font-weight:600;">⚡ 灵活安排</span>
+    </div>
+    <span class="tpi-submodule-arrow" aria-hidden="true">▼</span>
+  </div>
+<div class="tpi-submodule-body" id="ami-sub-flexible-body">
 <div class="ami-responsive-section">
 <table style="width:100%;border-collapse:collapse;">
 <tbody>
@@ -11106,7 +11893,6 @@ hr { border-color: #bbf7d0 !important; }
 </div>
 </div>
 </section>
-</div>
 <section class="card fade-in stagger-3" id="bcm">
 <div class="card-header" onclick="window.TPI.toggleCard('bcm')">
 <div class="card-title">
@@ -12440,7 +13226,7 @@ hr { border-color: #bbf7d0 !important; }
 <div class="card-header" onclick="window.TPI.toggleCard('fli')">
 <div class="card-title">
 <span class="icon">🗣️</span>
-<span>第四部分：外语技能实验室 (FLI - Foreign Language Index)</span>
+<span style="display:block;text-align:center;">第四部分：外语技能实验室 Foreign Language Index (FLI)</span>
 </div>
 </div>
 <div class="card-content">
@@ -12448,7 +13234,7 @@ hr { border-color: #bbf7d0 !important; }
 <div class="rules-container mb-6">
 <div class="rules-section collapsed" id="fli-rules">
 <div class="rules-header" onclick="window.TPI.toggleRules('fli-rules')">
-          <span style="display:block;text-align:center;flex:1;">📘 FLI 使用说明与规则 (Foreign Language Index - Guide & Rules)</span>
+          <span style="display:block;text-align:center;flex:1;">📘 FLI 使用说明与规则 Foreign Language Index Guide & Rules (FLI G&R)</span>
          </div>
 <div class="rules-content">
 <h4>
@@ -13344,16 +14130,22 @@ hr { border-color: #bbf7d0 !important; }
 <div class="card-title">
 <span class="icon">📈</span>
 <span>
-         数据分析与可视化 <span style="font-weight:400;font-size:0.82em;color:#64748b;letter-spacing:0.02em;">Data Analytics &amp; Visualization</span>
+         <span style="display:block;text-align:center;">数据分析与可视化 Data Analytics &amp; Visualization (DAV)</span>
         </span>
 </div>
 </div>
 <div class="card-content">
 
-<div class="mb-6">
-<h3>
-         📊 时间序列趋势图
-        </h3>
+<div class="tpi-submodule" id="submod-da-trend" style="border-color:#a7f3d0;margin-bottom:16px;">
+  <div class="tpi-submodule-header" onclick="tpiToggleSubmodule('submod-da-trend')" role="button" tabindex="0" aria-expanded="true" aria-controls="submod-da-trend-body" title="展开/折叠 时间序列趋势图" style="background:linear-gradient(135deg,#ecfdf5,#f0fdf4);border-bottom-color:#a7f3d0;">
+    <div style="display:flex;align-items:center;gap:8px;justify-content:center;flex:1;text-align:center;">
+      <span style="font-size:18px;">📊</span>
+      <span style="font-size:15px;font-weight:700;color:#065f46;">时间序列趋势图</span>
+      <span style="font-size:11px;font-weight:600;color:#065f46;background:#d1fae5;padding:3px 10px;border-radius:12px;letter-spacing:0.03em;">Time Series Chart · TSC</span>
+    </div>
+    <span class="tpi-submodule-arrow" aria-hidden="true">▼</span>
+  </div>
+  <div class="tpi-submodule-body" id="submod-da-trend-body">
 <div class="chart-container">
 <canvas id="trendChart">
 </canvas>
@@ -13393,20 +14185,36 @@ hr { border-color: #bbf7d0 !important; }
           </button>
 </div>
 </div>
+  </div>
 </div>
 
-<div class="mb-6">
-<h3>
-         🏆 里程碑徽章
-        </h3>
+<div class="tpi-submodule" id="submod-da-badges" style="border-color:#a7f3d0;margin-bottom:16px;">
+  <div class="tpi-submodule-header" onclick="tpiToggleSubmodule('submod-da-badges')" role="button" tabindex="0" aria-expanded="true" aria-controls="submod-da-badges-body" title="展开/折叠 里程碑徽章" style="background:linear-gradient(135deg,#fffbeb,#fef9c3);border-bottom-color:#a7f3d0;">
+    <div style="display:flex;align-items:center;gap:8px;justify-content:center;flex:1;text-align:center;">
+      <span style="font-size:18px;">🏆</span>
+      <span style="font-size:15px;font-weight:700;color:#92400e;">里程碑徽章</span>
+      <span style="font-size:11px;font-weight:600;color:#92400e;background:#fef3c7;padding:3px 10px;border-radius:12px;letter-spacing:0.03em;">Milestone Badges · MBS</span>
+    </div>
+    <span class="tpi-submodule-arrow" aria-hidden="true">▼</span>
+  </div>
+  <div class="tpi-submodule-body" id="submod-da-badges-body">
 <div class="badges-container" id="badgesContainer">
 
 </div>
+  </div>
 </div>
 
-<div class="mt-6 mb-6">
-<h3>🔥 点火程序完成率趋势 (近30天)</h3>
-<p style="font-size:0.85em;color:var(--color-text-muted);margin-bottom:10px;">统计每日三项点火程序（物理就位、微观目标、无痛启动）的勾选情况。</p>
+<div class="tpi-submodule" id="submod-da-ignition" style="border-color:#a7f3d0;margin-bottom:16px;">
+  <div class="tpi-submodule-header" onclick="tpiToggleSubmodule('submod-da-ignition')" role="button" tabindex="0" aria-expanded="true" aria-controls="submod-da-ignition-body" title="展开/折叠 点火程序完成率趋势 (近30天)" style="background:linear-gradient(135deg,#fff7ed,#ffedd5);border-bottom-color:#a7f3d0;">
+    <div style="display:flex;align-items:center;gap:8px;justify-content:center;flex:1;text-align:center;">
+      <span style="font-size:18px;">🔥</span>
+      <span style="font-size:15px;font-weight:700;color:#b45309;">点火程序完成率趋势 (近30天)</span>
+      <span style="font-size:11px;font-weight:600;color:#b45309;background:#fef3c7;padding:3px 10px;border-radius:12px;letter-spacing:0.03em;">Ignition Completion Rate · ICR</span>
+    </div>
+    <span class="tpi-submodule-arrow" aria-hidden="true">▼</span>
+  </div>
+  <div class="tpi-submodule-body" id="submod-da-ignition-body">
+<p style="font-size:0.85em;color:var(--color-text-muted);margin-bottom:10px;text-align:center;">统计每日三项点火程序（物理就位、微观目标、无痛启动）的勾选情况。</p>
 <div style="position:relative;height:200px;width:100%;">
   <canvas id="ignitionTrendChart"></canvas>
   <div id="ignition-chart-placeholder" style="display:none;position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--color-text-muted);font-size:0.9em;background:var(--color-bg-tertiary);border-radius:8px;">暂无数据或图表库未加载</div>
@@ -13416,11 +14224,20 @@ hr { border-color: #bbf7d0 !important; }
   <button type="button" class="btn btn-secondary" style="font-size:12px;padding:5px 12px;" onclick="window.__tpiRenderIgnitionTrend&amp;&amp;window.__tpiRenderIgnitionTrend(60)">60天</button>
   <button type="button" class="btn btn-secondary" style="font-size:12px;padding:5px 12px;" onclick="window.__tpiRenderIgnitionTrend&amp;&amp;window.__tpiRenderIgnitionTrend(90)">90天</button>
 </div>
+  </div>
 </div>
 
-<div class="mt-6 mb-6" id="rating-timeline-section">
-<h3>🏅 评级分布时间线 (近30天)</h3>
-<p style="font-size:0.85em;color:var(--color-text-muted);margin-bottom:10px;">每日评级色块序列，鼠标悬停显示详情，点击跳转对应日期。</p>
+<div class="tpi-submodule" id="submod-da-rating" style="border-color:#a7f3d0;margin-bottom:16px;">
+  <div class="tpi-submodule-header" onclick="tpiToggleSubmodule('submod-da-rating')" role="button" tabindex="0" aria-expanded="true" aria-controls="submod-da-rating-body" title="展开/折叠 评级分布时间线 (近30天)" style="background:linear-gradient(135deg,#f5f3ff,#ede9fe);border-bottom-color:#a7f3d0;">
+    <div style="display:flex;align-items:center;gap:8px;justify-content:center;flex:1;text-align:center;">
+      <span style="font-size:18px;">🏅</span>
+      <span style="font-size:15px;font-weight:700;color:#5b21b6;">评级分布时间线 (近30天)</span>
+      <span style="font-size:11px;font-weight:600;color:#5b21b6;background:#ede9fe;padding:3px 10px;border-radius:12px;letter-spacing:0.03em;">Rating Distribution Timeline · RDT</span>
+    </div>
+    <span class="tpi-submodule-arrow" aria-hidden="true">▼</span>
+  </div>
+  <div class="tpi-submodule-body" id="submod-da-rating-body">
+<p style="font-size:0.85em;color:var(--color-text-muted);margin-bottom:10px;text-align:center;">每日评级色块序列，鼠标悬停显示详情，点击跳转对应日期。</p>
 <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:8px;">
   <span style="font-size:12px;color:var(--color-text-muted);">图例：</span>
   <span style="display:inline-flex;align-items:center;gap:3px;font-size:11px;"><span style="width:14px;height:14px;border-radius:3px;background:#a855f7;display:inline-block;"></span>传奇</span>
@@ -13439,12 +14256,20 @@ hr { border-color: #bbf7d0 !important; }
   <button type="button" class="btn btn-secondary" style="font-size:12px;padding:5px 12px;" onclick="window.__tpiRenderRatingTimeline&amp;&amp;window.__tpiRenderRatingTimeline(90)">90天</button>
 </div>
 </div>
+  </div>
+</div>
 
-<div class="mt-6">
-<h3>
-         🔬 高级分析工具
-        </h3>
-<div class="export-buttons tpi-u-mt-varspacing4">
+<div class="tpi-submodule" id="submod-da-advanced" style="border-color:#a7f3d0;margin-bottom:16px;">
+  <div class="tpi-submodule-header" onclick="tpiToggleSubmodule('submod-da-advanced')" role="button" tabindex="0" aria-expanded="true" aria-controls="submod-da-advanced-body" title="展开/折叠 高级分析工具" style="background:linear-gradient(135deg,#eff6ff,#dbeafe);border-bottom-color:#a7f3d0;">
+    <div style="display:flex;align-items:center;gap:8px;justify-content:center;flex:1;text-align:center;">
+      <span style="font-size:18px;">🔬</span>
+      <span style="font-size:15px;font-weight:700;color:#1e40af;">高级分析工具</span>
+      <span style="font-size:11px;font-weight:600;color:#1e40af;background:#dbeafe;padding:3px 10px;border-radius:12px;letter-spacing:0.03em;">Advanced Analytics Tools · AAT</span>
+    </div>
+    <span class="tpi-submodule-arrow" aria-hidden="true">▼</span>
+  </div>
+  <div class="tpi-submodule-body" id="submod-da-advanced-body">
+<div class="export-buttons tpi-u-mt-varspacing4" style="text-align:center;">
 <button type="button" class="btn btn-secondary" onclick="if(window.TPIAdvanced &amp;&amp; window.TPIAdvanced.openComparison){window.TPIAdvanced.openComparison()}else{window.tpiToast &amp;&amp; window.tpiToast('⚠️ 数据对比功能正在初始化，请稍后重试', 'warning')}">
           📊 数据对比分析
          </button>
@@ -13452,6 +14277,8 @@ hr { border-color: #bbf7d0 !important; }
           📝 生成报告
          </button>
 </div>
+</div>
+  </div>
 </div>
 
 </div>
@@ -13461,7 +14288,7 @@ hr { border-color: #bbf7d0 !important; }
 <div class="card-title">
 <span class="icon">🛠️</span>
 <span>
-         数据工坊 <span style="font-weight:400;font-size:0.82em;color:#64748b;letter-spacing:0.02em;">Data Workshop</span>
+         <span style="display:block;text-align:center;">数据工坊 Data Workshop (Workshop)</span>
         </span>
 </div>
 </div>
@@ -13479,7 +14306,7 @@ hr { border-color: #bbf7d0 !important; }
   <div class="tpi-submodule-body" id="submod-dp-import-body">
 
     <!-- 操作指南 -->
-    <div style="margin-bottom:14px;padding:12px 14px;background:linear-gradient(135deg,#f0fdf4,#eff6ff);border:1.5px solid #6ee7b7;border-radius:8px;font-size:13px;line-height:1.8;color:#374151;">
+    <div style="margin-bottom:14px;padding:12px 14px;background:linear-gradient(135deg,#f0fdf4,#eff6ff);border:1.5px solid #6ee7b7;border-radius:8px;font-size:13px;line-height:1.8;color:#374151;text-align:center;">
       <b>📘 跨版本 / 跨设备操作指南（必读）</b><br>
       <b>版本升级迁移：</b>① 在<b>旧版本</b>点击「备份所有数据（全量JSON）」下载文件 → ② 打开<b>新版本</b> → ③ 选择该文件点击「导入JSON数据」→ ④ 刷新页面确认数据完整。<br>
       <b>跨设备恢复：</b>在设备A导出全量备份文件 → 将文件传输到设备B → 在设备B导入 → 刷新确认。<br>
@@ -13567,28 +14394,32 @@ hr { border-color: #bbf7d0 !important; }
       阶段归档查阅 → 按时间范围导出。
     </div>
 
-    <div class="data-processing-card" style="margin-top:14px;">
-      <h4>📋 复制前一天</h4>
-      <p class="text-muted mb-3" style="font-size:13px;text-align:center;">快速复制前一天的数据到当前日期，适合日程相似的情况。</p>
-      <button type="button" class="btn btn-primary" onclick="window.copyPreviousDayDataComplete()">
-        📋 复制前一天数据
-      </button>
-    </div>
-
   </div>
 </div>
 
-<!-- ===== 数据统计与维护 ===== -->
+<!-- ===== 数据统计与快捷操作 ===== -->
 <div class="tpi-submodule" id="submod-dp-stats" style="border-color: #6ee7b7;margin-bottom:16px;">
-  <div class="tpi-submodule-header" onclick="tpiToggleSubmodule('submod-dp-stats')" role="button" tabindex="0" aria-expanded="true" aria-controls="submod-dp-stats-body" title="展开/折叠 数据统计与维护" style="background:linear-gradient(135deg,#f5f3ff,#faf5ff);border-bottom-color: #6ee7b7;">
-    <div style="display:flex;align-items:center;gap:8px;">
-      <span style="font-size:18px;">📈</span>
-      <span style="font-size:15px;font-weight:700;color:#7c3aed;">数据统计与维护</span>
-      <span style="font-size:11px;font-weight:500;color:#64748b;background:#ede9fe;padding:2px 8px;border-radius:10px;letter-spacing:0.03em;">Data Statistics &amp; Maintenance</span>
+  <div class="tpi-submodule-header" onclick="tpiToggleSubmodule('submod-dp-stats')" role="button" tabindex="0" aria-expanded="true" aria-controls="submod-dp-stats-body" title="展开/折叠 数据统计与快捷操作" style="background:linear-gradient(135deg,#f5f3ff,#faf5ff);border-bottom-color: #6ee7b7;">
+    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+      <span style="font-size:18px;">📊</span>
+      <div style="display:flex;flex-direction:column;gap:1px;">
+        <span style="font-size:15px;font-weight:700;color:#7c3aed;">数据统计与快捷操作</span>
+        <span style="font-size:11px;color:#6b7280;">Data Statistics &amp; Quick Operations</span>
+      </div>
+      <span style="font-size:11px;font-weight:500;color:#7c3aed;background:#ede9fe;padding:2px 8px;border-radius:10px;letter-spacing:0.03em;">DSQO</span>
     </div>
     <span class="tpi-submodule-arrow" aria-hidden="true">▼</span>
   </div>
   <div class="tpi-submodule-body" id="submod-dp-stats-body">
+    <div class="data-processing-card" style="margin-bottom:16px;padding:14px;background:linear-gradient(135deg,#eff6ff,#f0fdf4);border:1.5px solid #a7f3d0;border-radius:10px;">
+      <h4 style="display:flex;align-items:center;gap:8px;margin-bottom:8px;justify-content:center;">📋 复制前一天 <span style="font-size:12px;font-weight:400;color:#6b7280;">Copy Previous Day Data</span></h4>
+      <p class="text-muted mb-3" style="font-size:13px;text-align:center;">快速复制前一天的数据到当前日期，适合日程相似的情况。</p>
+      <div style="display:flex;justify-content:center;">
+        <button type="button" class="btn btn-primary" onclick="window.copyPreviousDayDataComplete()">
+          📋 复制前一天数据
+        </button>
+      </div>
+    </div>
     <div style="display:flex;flex-direction:column;gap:12px;">
       <div>
         <div class="tpi-stats-row" style="display:flex;gap:8px;margin-top:10px;flex-wrap:nowrap;overflow-x:auto;">
@@ -16426,7 +17257,6 @@ window.MixedModeCalculator = (function() {
                     const sysScoreElem = document.getElementById('sys-score');
                     if (sysScoreElem) sysScoreElem.value = sysNet.toFixed(1);
 
-            const amiAdjusted = ami;
 
                     if (sysNet < CONSTANTS.SYS_NET_SAFETY_THRESHOLD) {
                         showSafetyAlert("Sys < 12: 触发自动保护，次日强制复苏模式");
@@ -16534,7 +17364,7 @@ window.MixedModeCalculator = (function() {
                     }
 
                     if (selectedMode === 'stoic') {
-                        const amiStoic = amiAdjusted * 1.2;
+                        const amiStoic = ami * 1.2;
                         let rawStoic = amiStoic + fli;
 
                         const _stoicBaseline = CONSTANTS.RECOVERY_MODE_CAP; // 95
@@ -16547,7 +17377,7 @@ window.MixedModeCalculator = (function() {
                         }
 
                     } else {
-                tpiTotal = amiAdjusted + fli + sysNet + bonus;
+                tpiTotal = ami + fli + sysNet + bonus;
             }
 
                     if (selectedMode === 'recovery') {
@@ -17709,8 +18539,8 @@ try {
                                     if (/token|secret|password|pat/i.test(k)) return;
                                     try { __tpi_ls_set(k, bag[k]); } catch(_) {}
                                 });
-                                showNotification('✅ 备份恢复成功，即将刷新页面', 'success');
-                                setTimeout(() => { try { location.reload(); } catch(_) {} }, 800);
+                                showNotification('✅ 备份恢复成功，正在刷新数据…', 'success');
+                                window.__tpi_softReload(500);
                                 return;
                             }
 
@@ -17758,8 +18588,8 @@ try {
                                     if (v && typeof v === 'object') { try { __tpi_ls_set('tpi_data_' + d, JSON.stringify(v)); } catch(_) {} }
                                 });
                                 try { if (obj.checkin) __tpi_ls_set('tpi_checkin_data', JSON.stringify(obj.checkin)); } catch(_) {}
-                                showNotification('✅ 全量数据已恢复（' + dayCount2 + ' 天），即将刷新', 'success');
-                                setTimeout(() => { try { location.reload(); } catch(_) {} }, 800);
+                                showNotification('✅ 全量数据已恢复（' + dayCount2 + ' 天），正在刷新数据…', 'success');
+                                window.__tpi_softReload(500);
                                 return;
                             }
 
@@ -17771,8 +18601,8 @@ try {
                                     const v = obj[d];
                                     if (v && typeof v === 'object') { try { __tpi_ls_set('tpi_data_' + d, JSON.stringify(v)); } catch(_) {} }
                                 });
-                                showNotification('✅ 数据已恢复（' + dateKeys.length + ' 天），即将刷新', 'success');
-                                setTimeout(() => { try { location.reload(); } catch(_) {} }, 800);
+                                showNotification('✅ 数据已恢复（' + dateKeys.length + ' 天），正在刷新数据…', 'success');
+                                window.__tpi_softReload(500);
                                 return;
                             }
 
@@ -21502,7 +22332,7 @@ window.addEventListener('resize', function() {
                         <div style="display:flex;justify-content:space-between;align-items:center;padding:16px 24px;background:#f8fafc;border-bottom: 1px solid #d1fae5;flex-shrink:0;">
                             <h3 style="margin:0;font-size:18px;color:#1e293b;">👁️ 报告预览</h3>
                             <div style="display:flex;gap:10px;">
-                                <button type="button" onclick="(function(){var p=document.getElementById('tpi-preview-body');if(p){var w=window.open('','_blank');if(w){w.document.write('<html><head><meta charset=UTF-8><title>全维效能管理系统（TPI，V1.59）</title><style>body{font-family:Arial,sans-serif;max-width:900px;margin:40px auto;padding:20px;}h2{color:#0d9488;}table{width:100%;border-collapse:collapse;margin:20px 0;}th,td{padding:10px;border: 1px solid #bbf7d0;}th{background:#f3f4f6;}.btn{padding:10px 20px;margin:10px 5px;cursor:pointer;border: 1px solid #86efac;border-radius:6px;background:#fff;}</style><\/head><body>'+p.innerHTML+'<div style=text-align:center;margin-top:30px><button type="button" class=btn onclick=window.print()>🖨️ 打印</button><button type="button" class=btn onclick=window.close()>关闭</button></div><\/body></html>');w.document.close();}}})()" style="padding:6px 14px;border: 1px solid #6ee7b7;border-radius:6px;background:#fff;cursor:pointer;font-size:13px;color:#334155;transition:all 0.15s;" onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background='#fff'">🌐 新窗口打开</button>
+                                <button type="button" onclick="(function(){var p=document.getElementById('tpi-preview-body');if(p){var w=window.open('','_blank');if(w){w.document.write('<html><head><meta charset=UTF-8><title>全维效能管理系统（TPI，V1.69）</title><style>body{font-family:Arial,sans-serif;max-width:900px;margin:40px auto;padding:20px;}h2{color:#0d9488;}table{width:100%;border-collapse:collapse;margin:20px 0;}th,td{padding:10px;border: 1px solid #bbf7d0;}th{background:#f3f4f6;}.btn{padding:10px 20px;margin:10px 5px;cursor:pointer;border: 1px solid #86efac;border-radius:6px;background:#fff;}</style><\/head><body>'+p.innerHTML+'<div style=text-align:center;margin-top:30px><button type="button" class=btn onclick=window.print()>🖨️ 打印</button><button type="button" class=btn onclick=window.close()>关闭</button></div><\/body></html>');w.document.close();}}})()" style="padding:6px 14px;border: 1px solid #6ee7b7;border-radius:6px;background:#fff;cursor:pointer;font-size:13px;color:#334155;transition:all 0.15s;" onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background='#fff'">🌐 新窗口打开</button>
                                 <button class="tpi-preview-close-btn" type="button" onclick="document.getElementById('tpi-preview-modal').remove()" style="padding:6px 14px;border: 1px solid #86efac;border-radius:6px;background:#f9fafb;color:#374151;cursor:pointer;font-size:13px;font-weight:600;transition:background 0.15s;">✕ 关闭</button>
                             </div>
                         </div>
@@ -21688,11 +22518,9 @@ window.addEventListener('resize', function() {
                             recoveryModal.remove();
                         }
 
-                        if(window.tpiToast) window.tpiToast('✅ 备份恢复成功！已恢复 ' + restoredCount + ' 条记录，页面即将刷新', 'success', 4000);
+                        if(window.tpiToast) window.tpiToast('✅ 备份恢复成功！已恢复 ' + restoredCount + ' 条记录，正在刷新数据', 'success', 4000);
 
-                        setTimeout(() => {
-                            location.reload();
-                        }, 1000);
+                        window.__tpi_softReload(600);
                     } catch (error) {
                         console.error('❌ 恢复备份失败:', error);
                         if(window.tpiToast) window.tpiToast('❌ 恢复备份失败: ' + error.message, 'error');
@@ -22101,8 +22929,8 @@ window.addEventListener('resize', function() {
 
             if (confirm('确认要复制 ' + prevDate + ' 的数据到当前日期吗?')) {
                 __tpi_ls_set('tpi_data_' + currentDate.value, prevData);
-                if(window.tpiToast) window.tpiToast('✅ 已成功复制前一天的数据！页面即将刷新', 'success');
-                location.reload();
+                if(window.tpiToast) window.tpiToast('✅ 已成功复制前一天的数据！', 'success');
+                window.__tpi_softReload(300);
             }
         } catch (e) {
             console.error('复制数据失败:', e);
@@ -22178,7 +23006,7 @@ window.addEventListener('resize', function() {
 
                 alert(successMsg);
 
-                location.reload();
+                window.__tpi_softReload(300);
 
             } catch (parseError) {
                 console.error('❌ [copyPreviousDayDataComplete] 数据解析失败:', parseError);
@@ -22260,7 +23088,7 @@ window.addEventListener('resize', function() {
                         if(window.tpiToast) window.tpiToast('✅ 数据导入成功','success');
                         else alert('✅ 数据导入成功！即将刷新页面');
                         if (fileInput) { fileInput.value = ''; }
-                        setTimeout(()=>{ try{ location.reload(); }catch(_){} }, 800);
+                        setTimeout(()=>{ try{ window.__tpi_softReload(400); }catch(_){} }, 0);
                     }
 
                 } catch (error) {
@@ -22310,7 +23138,7 @@ window.addEventListener('resize', function() {
                 filename = 'TPI_数据导出_' + new Date().toISOString().split('T')[0] + '.txt';
                 mimeType = 'text/plain';
             } else if (format === 'html') {
-                let html = `<html><head><meta charset="UTF-8"><title>全维效能管理系统（TPI，V1.59）</title><\/head><body>
+                let html = `<html><head><meta charset="UTF-8"><title>全维效能管理系统（TPI，V1.69）</title><\/head><body>
 
         <div id="score-dashboard" style="background: linear-gradient(135deg, #e0e7ff 0%, #ddd6fe 100%); padding: 8px 16px; border-radius: 0; margin: 0; color: #1e293b; box-shadow: 0 2px 6px rgba(0,0,0,0.1);">
             <div style="max-width: 1400px; margin: 0 auto; display: flex; align-items: center; justify-content: center; gap: 10px; flex-wrap: nowrap;">
@@ -23325,7 +24153,7 @@ window.archiveOldDataComplete = function() {
                         alert('✅ JSON导出成功！');
                     }
                     else if (format === 'html') {
-                        let html = '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>全维效能管理系统（TPI，V1.59）</title>';
+                        let html = '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>全维效能管理系统（TPI，V1.69）</title>';
                         html += `<style>
 
     .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 10001; align-items: center; justify-content: center; }
@@ -23421,7 +24249,7 @@ html += `<\/head><body>
                                     __tpi_ls_set(key, data[key]);
                                 });
                                 alert(`✅ 数据导入成功！\n\n已导入 ${Object.keys(data).length} 条记录`);
-                                location.reload();
+                                window.__tpi_softReload(400);
                             } else {
                                 alert('❌ 仅支持 JSON 格式导入');
                                 return;
@@ -25635,7 +26463,7 @@ window.addEventListener('unhandledrejection', function(event) {
   }
 
   function backupAllDataNow(){
-    const out = { _meta: { version: (window.TPI_VERSION||'全维效能管理系统（TPI，V1.59）'), appVersion: (window.TPI_APP_VERSION||'1.51'), exportedAt: new Date().toISOString() }, localStorage: {} };
+    const out = { _meta: { version: (window.TPI_VERSION||'全维效能管理系统（TPI，V1.69）'), appVersion: (window.TPI_APP_VERSION||'1.51'), exportedAt: new Date().toISOString() }, localStorage: {} };
     for(let i=0;i<__tpi_ls_length();i++){
       const k = __tpi_ls_key(i);
       if(!k) continue;
@@ -25652,7 +26480,7 @@ window.addEventListener('unhandledrejection', function(event) {
     const blob = new Blob([JSON.stringify(out, null, 2)], {type:'application/json'});
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
-    a.download = `TPI_V1.52_full_backup_${(new Date()).toISOString().slice(0,10)}.json`;
+    a.download = `TPI_V1.69_full_backup_${(new Date()).toISOString().slice(0,10)}.json`;
     a.click();
     tpiToast('✅ 已导出“备份所有数据”JSON（可用于全量恢复）');
   }
@@ -25693,8 +26521,8 @@ window.addEventListener('unhandledrejection', function(event) {
                 if(dk && snap[dk]) __tpi_ls_set('tpi_data_'+dk, JSON.stringify(snap[dk]));
               }
             }catch(e){}
-            tpiToast('✅ 备份已恢复（'+restored+'条）：即将刷新页面');
-            setTimeout(()=>{ try{ location.reload(); }catch(_){} }, 800);
+            tpiToast('✅ 备份已恢复（'+restored+'条），正在刷新数据…');
+            window.__tpi_softReload(500);
             return;
           }
 
@@ -25786,8 +26614,8 @@ window.addEventListener('unhandledrejection', function(event) {
                 }catch(e){}
               });
             }catch(e){ console.warn('[V1.57 rawKV restore]',e); }
-            tpiToast('✅ 全量备份已恢复（'+restored+'天），即将刷新');
-            setTimeout(()=>{ try{ location.reload(); }catch(_){} }, 800);
+            tpiToast('✅ 全量备份已恢复（'+restored+'天），正在刷新数据…');
+            window.__tpi_softReload(500);
             return;
           }
 
@@ -25800,8 +26628,8 @@ window.addEventListener('unhandledrejection', function(event) {
                 if(v && typeof v === 'object'){ __tpi_ls_set('tpi_data_'+d, JSON.stringify(v)); restored++; }
               }catch(e){ skipped++; }
             });
-            tpiToast('✅ 旧版数据已恢复（'+restored+'天），即将刷新');
-            setTimeout(()=>{ try{ location.reload(); }catch(_){} }, 800);
+            tpiToast('✅ 旧版数据已恢复（'+restored+'天），正在刷新数据…');
+            window.__tpi_softReload(500);
             return;
           }
 
@@ -25942,7 +26770,7 @@ try{
       }
       window.__tpi_backup_lock = true;
 
-      const out = { _meta: { version: (window.TPI_VERSION||'全维效能管理系统（TPI，V1.59）'), appVersion: (window.TPI_APP_VERSION||'1.51'), exportedAt: new Date().toISOString() }, localStorage: {} };
+      const out = { _meta: { version: (window.TPI_VERSION||'全维效能管理系统（TPI，V1.69）'), appVersion: (window.TPI_APP_VERSION||'1.51'), exportedAt: new Date().toISOString() }, localStorage: {} };
 
       for(let i=0;i<__tpi_ls_length();i++){
         const k = __tpi_ls_key(i);
@@ -26495,7 +27323,7 @@ try{
       }
       window.__tpi_backup_lock = true;
 
-      const out = { _meta: { version: (window.TPI_VERSION||'全维效能管理系统（TPI，V1.59）'), appVersion: (window.TPI_APP_VERSION||'1.51'), exportedAt: new Date().toISOString() }, localStorage: {} };
+      const out = { _meta: { version: (window.TPI_VERSION||'全维效能管理系统（TPI，V1.69）'), appVersion: (window.TPI_APP_VERSION||'1.51'), exportedAt: new Date().toISOString() }, localStorage: {} };
 
       for(let i=0;i<__tpi_ls_length();i++){
         const k = __tpi_ls_key(i);
@@ -33909,240 +34737,568 @@ window.addEventListener('load',function(){ setTimeout(_init,1500); },{once:true}
 <script>
 'use strict';
 
-(function() {
+/* ============================================================
+   TPI V1.63 — 本地存储模块（全量重设计）
+   功能：
+   1. 所有用户操作 + 系统生成内容，100% 保存
+   2. N 天 → N 个 JSON 文件（每天一个，文件名：YYYY-MM-DD.json）
+   3. 自动保存（每日指定时间，默认 23:30）
+   4. 手动保存（全部 / 单日）
+   5. 从文件夹恢复全部历史数据（版本升级后可用）
+   ============================================================ */
+(function () {
+  'use strict';
 
+  // ─── 浏览器能力检测 ──────────────────────────────────────────
   const supportsFileSystem = 'showDirectoryPicker' in window;
   window.FolderStorage = {};
 
-  let folderHandle = null;
-  let isStorageReady = false;
+  let folderHandle   = null;   // FileSystemDirectoryHandle
+  let isReady        = false;  // 已选文件夹 & 可写
+  let autoSaveTimer  = null;   // setInterval handle
 
-  const appData = {
-    days: Object.create(null),
-    misc: Object.create(null),
-  };
-
-  async function readJSONFile(filePath) {
+  // ─── 辅助：写/读 JSON 文件 ──────────────────────────────────
+  async function writeJSON(fileName, obj) {
     if (!folderHandle) throw new Error('未选择文件夹');
-    const parts = filePath.split('/');
-    let dir = folderHandle;
-    for (let i = 0; i < parts.length - 1; i++) {
-      dir = await dir.getDirectoryHandle(parts[i]);
-    }
-    const fh = await dir.getFileHandle(parts[parts.length - 1]);
-    const file = await fh.getFile();
-    const text = await file.text();
-    return JSON.parse(text);
-  }
-
-  async function writeJSONFile(filePath, data) {
-    if (!folderHandle) throw new Error('未选择文件夹');
-    const parts = filePath.split('/');
-    let dir = folderHandle;
-    for (let i = 0; i < parts.length - 1; i++) {
-      dir = await dir.getDirectoryHandle(parts[i], { create: true });
-    }
-    const fh = await dir.getFileHandle(parts[parts.length - 1], { create: true });
-    const w = await fh.createWritable();
-    await w.write(JSON.stringify(data, null, 2));
+    const fh = await folderHandle.getFileHandle(fileName, { create: true });
+    const w  = await fh.createWritable();
+    await w.write(JSON.stringify(obj, null, 2));
     await w.close();
   }
 
-  const Storage = {
-    async saveDayData(date, data) { await writeJSONFile(`data/${date}.json`, data); },
-    async loadDayData(date) {
-      try { return await readJSONFile(`data/${date}.json`); } catch (e) { return null; }
-    },
-    async saveRadar(data) { await writeJSONFile('radar.json', data); },
-    async loadRadar() {
-      try { return await readJSONFile('radar.json'); } catch (e) {
-        return { tempLife: [], tempAcademic: [], regularLife: [], regularAcademic: [] };
-      }
-    },
-    async saveCheckin(data) { await writeJSONFile('checkin.json', data); },
-    async loadCheckin() {
-      try { return await readJSONFile('checkin.json'); } catch (e) {
-        return { dates: [], currentStreak: 0, maxStreak: 0 };
-      }
-    },
-    async saveMisc(date, records) { await writeJSONFile(`misc/${date}.json`, records); },
-    async loadMisc(date) {
-      try { return await readJSONFile(`misc/${date}.json`); } catch (e) { return []; }
-    },
-    async saveSettings(settings) { await writeJSONFile('settings.json', settings); },
-    async loadSettings() {
-      try { return await readJSONFile('settings.json'); } catch (e) {
-        return { selectedMode: null, vacationPeriods: null };
-      }
-    }
-  };
-
-  async function loadAllData() {
-    const settings = await Storage.loadSettings();
-    const checkin = await Storage.loadCheckin();
-    appData.settings = settings;
-    appData.checkin = checkin;
+  async function readJSON(fileName) {
+    if (!folderHandle) throw new Error('未选择文件夹');
     try {
-      const di = document.getElementById('date-input');
-      const date = (di && di.value) ? di.value : null;
-      if (date) await ensureDateLoaded(date, { restore: true });
-    } catch (e) { }
+      const fh   = await folderHandle.getFileHandle(fileName);
+      const file = await fh.getFile();
+      return JSON.parse(await file.text());
+    } catch (e) { return null; }
   }
 
-  async function ensureDateLoaded(date, opts) {
-    opts = opts || {};
-    const day = await Storage.loadDayData(date);
-    if (day && typeof day === 'object') {
-      appData.days[date] = day;
-      if (opts.restore && typeof window.restoreUIFromData === 'function') {
-        try { window.restoreUIFromData(day); } catch (e) { console.warn('[FolderStorage] restoreUIFromData failed:', e); }
-        try { if (typeof window.__tpi_triggerRecalc === 'function') window.__tpi_triggerRecalc(); } catch (e) { }
+  // ─── 列出文件夹中所有 YYYY-MM-DD.json 文件 ──────────────────
+  async function listDayFiles() {
+    if (!folderHandle) return [];
+    const names = [];
+    try {
+      for await (const [name] of folderHandle.entries()) {
+        if (/^\d{4}-\d{2}-\d{2}\.json$/.test(name)) names.push(name);
       }
-    }
-    const misc = await Storage.loadMisc(date);
-    appData.misc[date] = Array.isArray(misc) ? misc : [];
-    return { day, misc };
+    } catch (e) { console.warn('[LS] listDayFiles:', e); }
+    return names.sort();
   }
 
-  window.FolderStorage.selectFolder = async function() {
-    if (!supportsFileSystem) {
-      alert('您的浏览器不支持文件夹存储，请使用 Chrome/Edge 86+');
-      return false;
-    }
+  // ─── 采集所有历史数据（localStorage 全量）───────────────────
+  function collectAllLocalStorageData() {
+    // 所有 tpi_data_YYYY-MM-DD 键
+    const result = {};
     try {
-      folderHandle = await window.showDirectoryPicker();
-      await writeJSONFile('_test_write_permission.json', { test: true, at: new Date().toISOString() });
-      isStorageReady = true;
-      const st = document.getElementById('folder-status');
-      if (st) st.textContent = '已选择';
-      await loadAllData();
-      return true;
-    } catch (err) {
-      console.error('选择文件夹失败', err);
-      alert('文件夹选择失败或无写入权限');
-      return false;
-    }
-  };
-
-  window.FolderStorage.saveSelectedDate = async function() {
-    if (!isStorageReady) { alert('请先选择存储文件夹'); return false; }
-    const di = document.getElementById('date-input');
-    const date = (di && di.value) ? di.value : null;
-    if (!date) { alert('请选择日期'); return false; }
-    if (typeof window.collectDailyData !== 'function') { alert('collectDailyData 不存在'); return false; }
-    const obj = window.collectDailyData();
-    const dayData = obj && obj[date] ? obj[date] : null;
-    if (!dayData) { alert('❌ 无可保存的数据'); return false; }
-    await Storage.saveDayData(date, dayData);
-    appData.days[date] = dayData;
-    alert(`✅ 已保存：data/${date}.json`);
-    return true;
-  };
-
-  window.FolderStorage.loadSelectedDate = async function() {
-    if (!isStorageReady) { alert('请先选择存储文件夹'); return false; }
-    const di = document.getElementById('date-input');
-    const date = (di && di.value) ? di.value : null;
-    if (!date) { alert('请选择日期'); return false; }
-    const { day } = await ensureDateLoaded(date, { restore: true });
-    if (!day) { alert('⚠️ 文件夹中未找到该日期数据：data/' + date + '.json'); return false; }
-    alert(`✅ 已加载：data/${date}.json`);
-    return true;
-  };
-
-  window.FolderStorage.migrateToFolder = async function() {
-    if (!folderHandle) { alert('请先选择文件夹'); return; }
-    if (!confirm('迁移会将（旧版本）localStorage 中所有相关数据复制到文件夹，确定继续？')) return;
-
-    try {
-      const ls = window.localStorage;
-      if (!ls) throw new Error('localStorage 不可用');
-
-      const dayKeys = Object.keys(ls).filter(k => k.startsWith('tpi_data_'));
-      for (const key of dayKeys) {
-        const date = key.replace('tpi_data_', '');
-        const data = JSON.parse(ls.getItem(key));
-        await Storage.saveDayData(date, data);
-      }
-
-      if (ls.getItem('tpi_checkin_data')) {
-        await Storage.saveCheckin(JSON.parse(ls.getItem('tpi_checkin_data')));
-      }
-
-      const miscKeys = Object.keys(ls).filter(k => k.startsWith('tpi_misc_records_'));
-      for (const key of miscKeys) {
-        const date = key.replace('tpi_misc_records_', '');
-        const data = JSON.parse(ls.getItem(key));
-        await Storage.saveMisc(date, data);
-      }
-
-      const settings = {
-        selectedMode: ls.getItem('selectedMode'),
-        vacationPeriods: ls.getItem('vacationPeriods')
-      };
-      await Storage.saveSettings(settings);
-
-      alert('迁移完成！所有数据已保存到文件夹。');
-    } catch (err) {
-      console.error('迁移失败', err);
-      alert('❌ 迁移失败：' + (err && err.message ? err.message : err));
-    }
-  };
-
-  window.FolderStorage.performManualSave = async function() {
-    if (!isStorageReady) { alert('请先选择文件夹！'); return; }
-    try {
-      const di = document.getElementById('date-input');
-      const currentDate = (di && di.value) ? di.value : null;
-      if (currentDate && typeof window.collectDailyData === 'function') {
-        const obj = window.collectDailyData();
-        const dayData = obj && obj[currentDate] ? obj[currentDate] : null;
-        if (dayData) {
-          await Storage.saveDayData(currentDate, dayData);
-          appData.days[currentDate] = dayData;
+      const lsObj = (typeof window.__tpi_ls_obj === 'function') ? window.__tpi_ls_obj() : window.localStorage;
+      if (!lsObj) return result;
+      for (const key of Object.keys(lsObj)) {
+        if (/^tpi_data_(\d{4}-\d{2}-\d{2})$/.test(key)) {
+          const date = key.replace('tpi_data_', '');
+          try { result[date] = JSON.parse(lsObj[key] || '{}'); } catch (e) { result[date] = {}; }
         }
       }
-      alert(`✅ 手动保存完成\n已保存当前日期的数据。`);
+    } catch (e) { console.warn('[LS] collectAllLocalStorageData:', e); }
+    return result;
+  }
+
+  // 采集当前页面状态（collectDailyData 全量快照）
+  function collectCurrentDaySnapshot(date) {
+    try {
+      if (typeof window.collectDailyData === 'function') {
+        const obj = window.collectDailyData();
+        if (obj && typeof obj === 'object') {
+          // collectDailyData 返回 {date: data} 或直接是 data
+          if (obj[date]) return obj[date];
+          if (obj['date-input'] === date || !obj['date-input']) return obj;
+        }
+      }
+    } catch (e) { console.warn('[LS] collectCurrentDaySnapshot:', e); }
+    return null;
+  }
+
+  // 采集全局设置数据（非按天数据）
+  function collectGlobalData() {
+    const global = { _type: 'tpi_global', _savedAt: new Date().toISOString() };
+    try {
+      const lsObj = (typeof window.__tpi_ls_obj === 'function') ? window.__tpi_ls_obj() : window.localStorage;
+      const globalKeys = [
+        'tpi_checkin_data', 'tpi_history', 'selectedMode', 'tpi_selected_mode',
+        'vacationPeriods', 'tpi_theme', 'tpi_dark_mode', 'tpi_compact_mode',
+        'tpi_font_size', 'tpi_date_bookmarks', 'tpi_exemption_weekly',
+        'tpi_rating_override', 'tpi_collapsed_state', 'tpi_submod_state',
+        'tpi_mobile_tips_enabled', 'tpi_device_id'
+      ];
+      globalKeys.forEach(k => {
+        try {
+          const v = lsObj[k];
+          if (v != null) {
+            try { global[k] = JSON.parse(v); } catch (_) { global[k] = v; }
+          }
+        } catch (e) {}
+      });
+      // tpi_misc_records_* 键
+      const miscData = {};
+      for (const key of Object.keys(lsObj)) {
+        if (key.startsWith('tpi_misc_records_') || key.startsWith('tpi_misc_')) {
+          try { miscData[key] = JSON.parse(lsObj[key] || 'null'); } catch (_) { miscData[key] = lsObj[key]; }
+        }
+      }
+      if (Object.keys(miscData).length > 0) global['_misc'] = miscData;
+    } catch (e) { console.warn('[LS] collectGlobalData:', e); }
+    return global;
+  }
+
+  // ─── 更新 UI 状态栏 ─────────────────────────────────────────
+  async function refreshStatusBar() {
+    try {
+      const bar      = document.getElementById('ls-status-bar');
+      const nameEl   = document.getElementById('ls-folder-name');
+      const countEl  = document.getElementById('ls-day-count');
+      const lastEl   = document.getElementById('ls-last-save-time');
+      const iconEl   = document.getElementById('folder-status-icon');
+      const statusEl = document.getElementById('folder-status');
+
+      if (!isReady) {
+        if (iconEl)   iconEl.textContent = '⚪';
+        if (statusEl) statusEl.textContent = '未选择文件夹';
+        if (bar)      bar.style.display = 'none';
+        return;
+      }
+
+      if (iconEl)   iconEl.textContent = '🟢';
+      if (statusEl) statusEl.textContent = '文件夹已就绪';
+      if (bar)      bar.style.display = 'block';
+
+      if (nameEl && folderHandle) nameEl.textContent = folderHandle.name;
+
+      const days = await listDayFiles();
+      if (countEl) countEl.textContent = days.length;
+
+      const meta = await readJSON('_tpi_meta.json');
+      if (lastEl) lastEl.textContent = (meta && meta.lastSavedAt) ? new Date(meta.lastSavedAt).toLocaleString('zh-CN') : '—';
+
+      updateNextAutoSaveDisplay();
+    } catch (e) { console.warn('[LS] refreshStatusBar:', e); }
+  }
+
+  // ─── 进度 UI ────────────────────────────────────────────────
+  function showProgress(text, pct) {
+    const box  = document.getElementById('ls-save-progress');
+    const txt  = document.getElementById('ls-progress-text');
+    const bar  = document.getElementById('ls-progress-bar');
+    if (box)  box.style.display = 'block';
+    if (txt)  txt.textContent = text;
+    if (bar)  bar.style.width = pct + '%';
+  }
+  function hideProgress() {
+    const box = document.getElementById('ls-save-progress');
+    if (box)  box.style.display = 'none';
+  }
+
+  // ─── 核心：保存全部历史数据到文件夹 ─────────────────────────
+  async function saveAllToFolder(silent) {
+    if (!isReady) { if (!silent) alert('请先选择存储文件夹'); return false; }
+
+    try {
+      if (!silent) showProgress('正在收集数据...', 10);
+
+      // 1. 先将当前页面快照强制写入 localStorage
+      const curDate = (function() {
+        try {
+          const di = document.getElementById('date-input');
+          return di ? di.value : null;
+        } catch (e) { return null; }
+      })();
+      if (curDate) {
+        try {
+          if (typeof window.TPI !== 'undefined' && typeof window.TPI.saveToLocalStorage === 'function') {
+            window.TPI.saveToLocalStorage();
+          }
+        } catch (e) {}
+        // 强制刷新当前日期快照
+        const snap = collectCurrentDaySnapshot(curDate);
+        if (snap) {
+          try {
+            const key = 'tpi_data_' + curDate;
+            const v = JSON.stringify(snap);
+            if (typeof window.__tpi_ls_set === 'function') window.__tpi_ls_set(key, v);
+            else window.localStorage.setItem(key, v);
+          } catch (e) {}
+        }
+      }
+
+      // 2. 采集全部历史数据
+      const allDays = collectAllLocalStorageData();
+      const dates   = Object.keys(allDays).sort();
+
+      if (!silent) showProgress('正在写入文件...', 20);
+
+      let saved = 0;
+      for (let i = 0; i < dates.length; i++) {
+        const date = dates[i];
+        const dayData = allDays[date];
+        dayData._savedAt      = new Date().toISOString();
+        dayData._tpi_version  = '1.63';
+        dayData._date         = date;
+        await writeJSON(date + '.json', dayData);
+        saved++;
+        if (!silent) {
+          const pct = 20 + Math.round((i / dates.length) * 70);
+          showProgress(`正在保存 ${date}（${i + 1}/${dates.length}）...`, pct);
+        }
+      }
+
+      // 3. 保存全局数据
+      await writeJSON('_tpi_global.json', collectGlobalData());
+
+      // 4. 更新元数据
+      await writeJSON('_tpi_meta.json', {
+        _type:         'tpi_meta',
+        version:       '1.63',
+        lastSavedAt:   new Date().toISOString(),
+        totalDays:     saved,
+        savedDates:    dates
+      });
+
+      if (!silent) showProgress('保存完成！', 100);
+
+      // 更新 UI
+      try {
+        const lastEl = document.getElementById('ls-last-save-time');
+        if (lastEl) lastEl.textContent = new Date().toLocaleString('zh-CN');
+        const countEl = document.getElementById('ls-day-count');
+        if (countEl) countEl.textContent = saved;
+      } catch (e) {}
+
+      if (!silent) {
+        setTimeout(hideProgress, 1500);
+        const msg = `✅ 本地保存完成！共保存 ${saved} 天数据（每天一个 JSON 文件）`;
+        if (typeof window.tpiToast === 'function') window.tpiToast(msg, 'success');
+        else alert(msg);
+      }
+      return true;
     } catch (e) {
-      console.error('❌ [手动保存] 失败:', e);
-      alert('❌ 手动保存失败: ' + (e.message || e));
+      if (!silent) hideProgress();
+      console.error('[LS] saveAllToFolder:', e);
+      if (!silent) alert('❌ 保存失败：' + (e.message || e));
+      return false;
+    }
+  }
+
+  // ─── 从文件夹恢复全部历史数据 ─────────────────────────────
+  async function loadAllFromFolder() {
+    if (!isReady) { alert('请先选择存储文件夹'); return false; }
+    if (!confirm('📥 将从文件夹读取所有日期 JSON 文件并恢复到本地存储。\n\n这会 100% 覆盖对应日期的现有数据，请确认后继续。')) return false;
+
+    try {
+      showProgress('正在扫描文件夹...', 10);
+      const dayFiles = await listDayFiles();
+
+      if (dayFiles.length === 0) {
+        hideProgress();
+        alert('⚠️ 文件夹中没有找到日期数据文件（YYYY-MM-DD.json）');
+        return false;
+      }
+
+      let restored = 0;
+      for (let i = 0; i < dayFiles.length; i++) {
+        const fileName = dayFiles[i];
+        const date     = fileName.replace('.json', '');
+        showProgress(`正在恢复 ${date}（${i + 1}/${dayFiles.length}）...`, 10 + Math.round((i / dayFiles.length) * 80));
+        const data = await readJSON(fileName);
+        if (data && typeof data === 'object') {
+          try {
+            const key = 'tpi_data_' + date;
+            const v   = JSON.stringify(data);
+            if (typeof window.__tpi_ls_set === 'function') window.__tpi_ls_set(key, v);
+            else window.localStorage.setItem(key, v);
+            restored++;
+          } catch (e) { console.warn('[LS] restore', date, e); }
+        }
+      }
+
+      // 恢复全局数据
+      const global = await readJSON('_tpi_global.json');
+      if (global && typeof global === 'object') {
+        const globalKeys = [
+          'tpi_checkin_data', 'tpi_history', 'selectedMode', 'tpi_selected_mode',
+          'vacationPeriods', 'tpi_theme', 'tpi_dark_mode', 'tpi_compact_mode',
+          'tpi_font_size', 'tpi_date_bookmarks', 'tpi_exemption_weekly',
+          'tpi_rating_override', 'tpi_device_id'
+        ];
+        globalKeys.forEach(k => {
+          if (global[k] != null) {
+            try {
+              const v = typeof global[k] === 'string' ? global[k] : JSON.stringify(global[k]);
+              if (typeof window.__tpi_ls_set === 'function') window.__tpi_ls_set(k, v);
+              else window.localStorage.setItem(k, v);
+            } catch (e) {}
+          }
+        });
+        // 恢复 misc
+        if (global['_misc'] && typeof global['_misc'] === 'object') {
+          Object.entries(global['_misc']).forEach(([k, v]) => {
+            try {
+              const sv = typeof v === 'string' ? v : JSON.stringify(v);
+              if (typeof window.__tpi_ls_set === 'function') window.__tpi_ls_set(k, sv);
+              else window.localStorage.setItem(k, sv);
+            } catch (e) {}
+          });
+        }
+      }
+
+      showProgress('恢复完成！', 100);
+      setTimeout(hideProgress, 1500);
+
+      const msg = `✅ 恢复完成！共恢复 ${restored} 天历史数据。\n\n点击确定后将刷新页面以应用所有数据。`;
+      alert(msg);
+      try { window.location.reload(); } catch (e) {}
+      return true;
+    } catch (e) {
+      hideProgress();
+      console.error('[LS] loadAllFromFolder:', e);
+      alert('❌ 恢复失败：' + (e.message || e));
+      return false;
+    }
+  }
+
+  // ─── 自动保存调度 ─────────────────────────────────────────
+  function updateNextAutoSaveDisplay() {
+    try {
+      const nextEl = document.getElementById('ls-next-save-time');
+      const infoEl = document.getElementById('ls-next-auto-info');
+      const enabled = document.getElementById('ls-auto-save-enabled');
+      if (!enabled || !enabled.checked) {
+        if (infoEl) infoEl.style.display = 'none';
+        return;
+      }
+      if (infoEl) infoEl.style.display = '';
+      const timeInput = document.getElementById('ls-auto-save-time');
+      if (!timeInput || !nextEl) return;
+      const [hh, mm] = (timeInput.value || '23:30').split(':').map(Number);
+      const now  = new Date();
+      const next = new Date();
+      next.setHours(hh, mm, 0, 0);
+      if (next <= now) next.setDate(next.getDate() + 1);
+      nextEl.textContent = next.toLocaleString('zh-CN', { month:'numeric', day:'numeric', hour:'2-digit', minute:'2-digit' });
+    } catch (e) {}
+  }
+
+  function scheduleAutoSave() {
+    if (autoSaveTimer) clearInterval(autoSaveTimer);
+    autoSaveTimer = setInterval(async function () {
+      try {
+        const enabled = document.getElementById('ls-auto-save-enabled');
+        if (!enabled || !enabled.checked) return;
+        if (!isReady) return;
+        const timeInput = document.getElementById('ls-auto-save-time');
+        const [hh, mm] = (timeInput ? timeInput.value : '23:30').split(':').map(Number);
+        const now = new Date();
+        if (now.getHours() === hh && now.getMinutes() === mm) {
+          console.log('[LS] 自动保存触发 at', now.toLocaleString());
+          const statusEl = document.getElementById('ls-auto-save-status');
+          if (statusEl) statusEl.textContent = '⏳ 自动保存中...';
+          await saveAllToFolder(true);
+          if (statusEl) statusEl.textContent = '✅ 已自动保存 ' + new Date().toLocaleTimeString('zh-CN');
+          updateNextAutoSaveDisplay();
+          if (typeof window.tpiToast === 'function') window.tpiToast('⏰ 已完成每日自动本地保存', 'success');
+        }
+      } catch (e) { console.warn('[LS] auto save error:', e); }
+    }, 60000); // 每分钟检查一次
+  }
+
+  function saveAutoSaveSettings() {
+    try {
+      const enabled   = document.getElementById('ls-auto-save-enabled');
+      const timeInput = document.getElementById('ls-auto-save-time');
+      const cfg = {
+        enabled: enabled ? enabled.checked : false,
+        time:    timeInput ? timeInput.value : '23:30'
+      };
+      if (typeof window.__tpi_ls_set === 'function') window.__tpi_ls_set('tpi_ls_autosave_cfg', JSON.stringify(cfg));
+      else window.localStorage.setItem('tpi_ls_autosave_cfg', JSON.stringify(cfg));
+    } catch (e) {}
+  }
+
+  function loadAutoSaveSettings() {
+    try {
+      let cfgRaw = null;
+      try { cfgRaw = typeof window.__tpi_ls_get === 'function' ? window.__tpi_ls_get('tpi_ls_autosave_cfg') : window.localStorage.getItem('tpi_ls_autosave_cfg'); } catch (_) {}
+      if (!cfgRaw) return;
+      const cfg = JSON.parse(cfgRaw);
+      const enabled   = document.getElementById('ls-auto-save-enabled');
+      const timeInput = document.getElementById('ls-auto-save-time');
+      if (enabled   && cfg.enabled  != null) enabled.checked = cfg.enabled;
+      if (timeInput && cfg.time)              timeInput.value  = cfg.time;
+    } catch (e) {}
+  }
+
+  // ─── 选择文件夹 ─────────────────────────────────────────────
+  window.FolderStorage.selectFolder = async function () {
+    if (!supportsFileSystem) { alert('您的浏览器不支持文件夹存储，请使用 Chrome/Edge 86+'); return false; }
+    try {
+      folderHandle = await window.showDirectoryPicker({ mode: 'readwrite' });
+      // 写入权限测试
+      await writeJSON('_tpi_permission_test.json', { ok: true, at: new Date().toISOString() });
+      isReady = true;
+      await refreshStatusBar();
+      // 尝试自动加载当前日期数据
+      try {
+        const di = document.getElementById('date-input');
+        if (di && di.value) {
+          const snap = await readJSON(di.value + '.json');
+          if (snap && typeof window.restoreUIFromData === 'function') {
+            window.restoreUIFromData(snap);
+            if (typeof window.__tpi_triggerRecalc === 'function') window.__tpi_triggerRecalc();
+          }
+        }
+      } catch (e) {}
+      if (typeof window.tpiToast === 'function') window.tpiToast('📂 文件夹已就绪：' + folderHandle.name, 'success');
+      return true;
+    } catch (e) {
+      console.error('[LS] selectFolder:', e);
+      if (e.name !== 'AbortError') alert('文件夹选择失败或无写入权限：' + e.message);
+      return false;
     }
   };
 
+  // ─── 保存当前日期 ────────────────────────────────────────────
+  window.FolderStorage.saveSelectedDate = async function () {
+    if (!isReady) { alert('请先选择存储文件夹'); return false; }
+    const di = document.getElementById('date-input');
+    const date = di ? di.value : null;
+    if (!date) { alert('请选择日期'); return false; }
+    try {
+      // 先强制保存到 localStorage
+      try { if (window.TPI && window.TPI.saveToLocalStorage) window.TPI.saveToLocalStorage(); } catch (_) {}
+      const snap = collectCurrentDaySnapshot(date);
+      if (!snap) { alert('❌ 无可保存的数据'); return false; }
+      snap._savedAt     = new Date().toISOString();
+      snap._tpi_version = '1.63';
+      snap._date        = date;
+      await writeJSON(date + '.json', snap);
+      await refreshStatusBar();
+      if (typeof window.tpiToast === 'function') window.tpiToast('✅ 已保存：' + date + '.json', 'success');
+      else alert('✅ 已保存：' + date + '.json');
+      return true;
+    } catch (e) {
+      console.error('[LS] saveSelectedDate:', e);
+      alert('❌ 保存失败：' + e.message);
+      return false;
+    }
+  };
+
+  // ─── 加载所选日期 ────────────────────────────────────────────
+  window.FolderStorage.loadSelectedDate = async function () {
+    if (!isReady) { alert('请先选择存储文件夹'); return false; }
+    const di   = document.getElementById('date-input');
+    const date = di ? di.value : null;
+    if (!date) { alert('请选择日期'); return false; }
+    try {
+      const data = await readJSON(date + '.json');
+      if (!data) { alert('⚠️ 文件夹中未找到该日期数据：' + date + '.json'); return false; }
+      if (typeof window.restoreUIFromData === 'function') window.restoreUIFromData(data);
+      try { if (typeof window.__tpi_triggerRecalc === 'function') window.__tpi_triggerRecalc(); } catch (_) {}
+      if (typeof window.tpiToast === 'function') window.tpiToast('✅ 已加载：' + date + '.json', 'success');
+      else alert('✅ 已加载：' + date + '.json');
+      return true;
+    } catch (e) {
+      console.error('[LS] loadSelectedDate:', e);
+      alert('❌ 加载失败：' + e.message);
+      return false;
+    }
+  };
+
+  // ─── 手动保存全部数据 ────────────────────────────────────────
+  window.FolderStorage.performManualSave = async function () {
+    await saveAllToFolder(false);
+    await refreshStatusBar();
+  };
+
+  // ─── 迁移旧数据 ─────────────────────────────────────────────
+  window.FolderStorage.migrateToFolder = async function () {
+    if (!folderHandle) { alert('请先选择文件夹'); return; }
+    if (!confirm('将把 localStorage 中所有历史数据迁移到文件夹，确定继续？')) return;
+    await saveAllToFolder(false);
+  };
+
+  // ─── 从文件夹恢复全部 ────────────────────────────────────────
+  window.FolderStorage.loadAllFromFolder = loadAllFromFolder;
+
+  // ─── 初始化 ─────────────────────────────────────────────────
   function initFolderMode() {
+    // 不支持提示
     const warn = document.getElementById('folder-storage-warning');
     if (warn) warn.style.display = supportsFileSystem ? 'none' : 'block';
+    if (!supportsFileSystem) return;
 
-    if (!supportsFileSystem) {
-      try {
-        const st = document.getElementById('folder-status');
-        if (st) st.textContent = '不支持';
-      } catch (e) { }
-      return;
+    // 绑定按钮
+    const btnSelect    = document.getElementById('select-folder-btn');
+    const btnMigrate   = document.getElementById('migrate-to-folder-btn');
+    const btnLoadDate  = document.getElementById('load-selected-date-btn');
+    const btnSaveDate  = document.getElementById('save-selected-date-btn');
+    const btnSaveAll   = document.getElementById('manual-save-all-btn');
+    const btnLoadAll   = document.getElementById('ls-load-all-btn');
+
+    if (btnSelect)   btnSelect.addEventListener('click',   window.FolderStorage.selectFolder);
+    if (btnMigrate)  btnMigrate.addEventListener('click',  window.FolderStorage.migrateToFolder);
+    if (btnLoadDate) btnLoadDate.addEventListener('click', window.FolderStorage.loadSelectedDate);
+    if (btnSaveDate) btnSaveDate.addEventListener('click', window.FolderStorage.saveSelectedDate);
+    if (btnSaveAll)  btnSaveAll.addEventListener('click',  window.FolderStorage.performManualSave);
+    if (btnLoadAll)  btnLoadAll.addEventListener('click',  window.FolderStorage.loadAllFromFolder);
+
+    // 自动保存开关
+    const autoChk  = document.getElementById('ls-auto-save-enabled');
+    const autoTime = document.getElementById('ls-auto-save-time');
+    if (autoChk) {
+      autoChk.addEventListener('change', function () {
+        saveAutoSaveSettings();
+        updateNextAutoSaveDisplay();
+        if (autoChk.checked) {
+          if (!isReady) {
+            setTimeout(() => alert('⚠️ 请先选择文件夹，才能使用自动保存。'), 100);
+            autoChk.checked = false;
+            return;
+          }
+          scheduleAutoSave();
+        } else {
+          if (autoSaveTimer) { clearInterval(autoSaveTimer); autoSaveTimer = null; }
+        }
+      });
+    }
+    if (autoTime) {
+      autoTime.addEventListener('change', function () {
+        saveAutoSaveSettings();
+        updateNextAutoSaveDisplay();
+      });
     }
 
-    const b1 = document.getElementById('select-folder-btn');
-    const b2 = document.getElementById('migrate-to-folder-btn');
-    const b3 = document.getElementById('load-selected-date-btn');
-    const b4 = document.getElementById('save-selected-date-btn');
-    if (b1) b1.addEventListener('click', window.FolderStorage.selectFolder);
-    if (b2) b2.addEventListener('click', window.FolderStorage.migrateToFolder);
-    if (b3) b3.addEventListener('click', window.FolderStorage.loadSelectedDate);
-    if (b4) b4.addEventListener('click', window.FolderStorage.saveSelectedDate);
+    // 加载已保存设置
+    loadAutoSaveSettings();
+    updateNextAutoSaveDisplay();
 
+    // 日期切换时自动从文件夹加载
     try {
       const di = document.getElementById('date-input');
       if (di) {
         di.addEventListener('change', async function () {
-          if (!isStorageReady) return;
+          if (!isReady) return;
           const date = di.value;
-          const day = await Storage.loadDayData(date);
-          if (day) {
-            await ensureDateLoaded(date, { restore: true });
+          const data = await readJSON(date + '.json');
+          if (data && typeof window.restoreUIFromData === 'function') {
+            window.restoreUIFromData(data);
+            try { if (typeof window.__tpi_triggerRecalc === 'function') window.__tpi_triggerRecalc(); } catch (_) {}
           }
         });
       }
-    } catch (e) { }
+    } catch (e) {}
+
+    // 启动自动保存（如果之前设置了）
+    const autoChkEl = document.getElementById('ls-auto-save-enabled');
+    if (autoChkEl && autoChkEl.checked) scheduleAutoSave();
   }
 
   if (document.readyState === 'loading') {
@@ -34661,7 +35817,7 @@ mark.tpi-search-highlight.current { background:#f97316; color:white; border-radi
       var storageCard = document.getElementById('folder-storage-card');
       if (!storageCard) return;
 
-      var btnHtml = '<div style="margin-top:12px;">' +
+      var btnHtml = '<div style="margin-top:12px;text-align:center;">' +
         '<button type="button" id="tpi-records-toggle-btn" ' +
         'style="padding:5px 14px;font-size:12px;border: 1px solid #0d9488;color:#0d9488;border-radius:8px;background:white;cursor:pointer;" ' +
         'onclick="window.__tpiLoadRecordsList()">' +
@@ -35400,7 +36556,7 @@ mark.tpi-search-highlight.current { background:#f97316; color:white; border-radi
     try { initChartPlaceholders(); } catch(e) {}
 
     try { initNavVisibility(); } catch(e) {}
-    try { initNavSearch(); } catch(e) {}
+    // Search nav removed in V1.63
     try { initModuleCompletion(); } catch(e) {}
     try { initTabNavigationFix(); } catch(e) {}
     try { initScorePillClick(); } catch(e) {}
@@ -36265,7 +37421,7 @@ function tpiInitHistoryNote() {
   submodHeader.setAttribute('aria-controls', 'submod-dr-history-note-body');
   submodHeader.setAttribute('title', '展开/折叠 事后批注');
   submodHeader.style.cssText = 'background:linear-gradient(135deg,#fefce8,#fffde7);border-bottom-color: #6ee7b7;';
-  submodHeader.innerHTML = '<div style="display:flex;align-items:center;gap:8px;"><span style="font-size:18px;">📌</span><span style="font-size:15px;font-weight:700;color:#713f12;">事后批注</span><span style="font-size:11px;font-weight:500;color:#64748b;background:#fef9c3;padding:2px 8px;border-radius:10px;letter-spacing:0.03em;">Post-hoc Annotation</span></div><span class="tpi-submodule-arrow" aria-hidden="true">▼</span>';
+  submodHeader.innerHTML = '<div style="display:flex;align-items:center;gap:8px;justify-content:center;flex:1;text-align:center;"><span style="font-size:18px;">📌</span><span style="font-size:15px;font-weight:700;color:#713f12;">事后批注 Post-hoc Annotation (PAN)</span></div><span class="tpi-submodule-arrow" aria-hidden="true">▼</span>';
 
   var panel = document.createElement('div');
   panel.className = 'tpi-submodule-body';
@@ -36348,7 +37504,12 @@ function tpiInitModuleBreakdown() {
     + '<button type="button" onclick="window.__tpiModuleBreakdown(90)" class="btn btn-secondary" style="padding:4px 12px;font-size:13px;">近3月</button>'
     + '</div></div>'
     + '<div id="tpi-module-breakdown-table" style="overflow-x:auto;"></div>';
-  analyticsContent.appendChild(panel);
+  var advancedBody = document.getElementById('submod-da-advanced-body');
+  if (advancedBody) {
+    advancedBody.appendChild(panel);
+  } else {
+    analyticsContent.appendChild(panel);
+  }
 
   window.__tpiModuleBreakdown = function(days) {
     var modules = [
@@ -37726,9 +38887,9 @@ setTimeout(function() {
 
           var msg = '';
           if (!hasData) {
-            msg = '📋 今日尚未记录数据，建议从「每日签到」开始';
+            msg = ''; // V1.66: notification removed
           } else if (!isPartial) {
-            msg = '📝 今日数据已填写，记得保存';
+            msg = ''; // V1.66: notification removed
           }
 
           if (!msg) return; // Don't show if data seems complete
@@ -41923,7 +43084,7 @@ h3.card-title, h4.card-title,
   function _v157_collectAll(){
     var result={
       _meta:{
-        version: window.TPI_VERSION||'全维效能管理系统（TPI，V1.59）',
+        version: window.TPI_VERSION||'全维效能管理系统（TPI，V1.69）',
         appVersion: window.TPI_APP_VERSION||'1.57',
         backupVersion:'V1.57',
         backupFormat:'full_v157_ultimate',
@@ -42143,11 +43304,11 @@ h3.card-title, h4.card-title,
         var totalMsg='✅ 导入完成！格式：'+formatName;
         if(restored>0) totalMsg+='，'+restored+'天日记录';
         if(rawRestored>0) totalMsg+='，'+rawRestored+'项设置';
-        totalMsg+='。即将刷新页面…';
+        totalMsg+='。正在刷新数据…';
         _toast(totalMsg);
 
-        /* 延迟刷新：所有 dual_set 都是同步写 localStorage，刷新后必定存在 */
-        setTimeout(function(){ try{ location.reload(); }catch(_){} }, 800);
+        /* V1.60修复：用 softReload 替代 location.reload()，避免 IDB 异步写入未完成导致数据丢失 */
+        window.__tpi_softReload(500);
 
       }catch(err){
         console.error('[V1.57 importDataComplete]',err);
@@ -42163,7 +43324,7 @@ h3.card-title, h4.card-title,
   window.__tpi_importDataComplete_v150 = window.importDataComplete;
 
   /* ================================================================
-     TPI V1.59 — 终极全量备份核心（彻底无遗漏版）
+     TPI V1.60 — 终极全量备份核心（彻底无遗漏版）
      策略：
      1. 多路预保存：触发所有已知的表单保存函数
      2. DOM直读：直接从当前页面所有表单元素读取值
@@ -42296,9 +43457,9 @@ h3.card-title, h4.card-title,
 
     var result = {
       _meta: {
-        version: window.TPI_VERSION || '全维效能管理系统（TPI，V1.59）',
-        appVersion: window.TPI_APP_VERSION || '1.59',
-        backupVersion: 'V1.59',
+        version: window.TPI_VERSION || '全维效能管理系统（TPI，V1.69）',
+        appVersion: window.TPI_APP_VERSION || '1.60',
+        backupVersion: 'V1.60',
         backupFormat: 'full_v159_ultimate',
         exportedAt: new Date().toISOString(),
         currentDate: curDate,
@@ -42491,10 +43652,10 @@ h3.card-title, h4.card-title,
       var miscCount = Object.keys(data.miscRecords).length;
       var rawCount = Object.keys(data.rawKV).length;
       var content = JSON.stringify(data, null, 2);
-      var filename = 'TPI_全量备份_V1.59_' + _dateStr() + '.json';
+      var filename = 'TPI_全量备份_V1.69_' + _dateStr() + '.json';
       _dlBlob(content, filename, 'application/json;charset=utf-8');
-      _toast('✅ 全量备份成功（V1.59）！共 ' + dayCount + ' 天日记录，' + miscCount + ' 天杂事，' + rawCount + ' 项完整键值。文件：' + filename);
-      console.log('[TPI V1.59] 备份完成：', dayCount+'天记录，', rawCount+'项键值');
+      _toast('✅ 全量备份成功（V1.69）！共 ' + dayCount + ' 天日记录，' + miscCount + ' 天杂事，' + rawCount + ' 项完整键值。文件：' + filename);
+      console.log('[TPI V1.60] 备份完成：', dayCount+'天记录，', rawCount+'项键值');
     } catch(e) {
       _err('❌ 备份失败：' + (e && e.message ? e.message : String(e)));
       console.error('[V1.59 backupAllData]', e);
@@ -42520,8 +43681,8 @@ h3.card-title, h4.card-title,
             var dc=Object.keys(obj.dailyRecords).length;
             if(!confirm('检测到全量备份包（'+dc+'天），将覆盖现有数据，确定继续？')) return;
             _v157_applyData(obj);
-            _toast('✅ 全量备份已恢复（'+dc+'天），即将刷新');
-            setTimeout(function(){ try{ location.reload(); }catch(_){} },800); return;
+            _toast('✅ 全量备份已恢复（'+dc+'天），数据加载中…');
+            window.__tpi_softReload(500); return;
           }
           /* 格式B：{ localStorage } 旧版包 */
           if(obj.localStorage&&typeof obj.localStorage==='object'){
@@ -42529,8 +43690,8 @@ h3.card-title, h4.card-title,
             var dc2=Object.keys(bag).filter(function(k){ return /^tpi_data_\d{4}-\d{2}-\d{2}$/.test(k); }).length;
             if(!confirm('检测到旧版全量备份包（'+dc2+'天），将覆盖现有数据，确定继续？')) return;
             Object.keys(bag).forEach(function(k){ if(/token|secret|password|pat/i.test(k)) return; try{ _dual_set(k,bag[k]); }catch(_){} });
-            _toast('✅ 备份恢复成功，即将刷新');
-            setTimeout(function(){ try{ location.reload(); }catch(_){} },800); return;
+            _toast('✅ 备份恢复成功，数据加载中…');
+            window.__tpi_softReload(500); return;
           }
           /* 格式C：tpi_direct_v7_full */
           if(obj.schema&&/tpi_direct_v\d+_full/i.test(String(obj.schema))){
@@ -42541,23 +43702,23 @@ h3.card-title, h4.card-title,
             (obj.radios||[]).forEach(function(f){ if(f.checked&&f.name) dd[f.name]=f.value; });
             if(obj.miscRecords&&obj.miscRecords.length) _dual_set('tpi_misc_records_'+td, JSON.stringify(obj.miscRecords));
             _dual_set('tpi_data_'+td, JSON.stringify(dd));
-            _toast('✅ V1.46数据已恢复（'+td+'），即将刷新');
-            setTimeout(function(){ try{ location.reload(); }catch(_){} },800); return;
+            _toast('✅ V1.46数据已恢复（'+td+'），数据加载中…');
+            window.__tpi_softReload(500); return;
           }
           /* 格式D：Array */
           if(Array.isArray(obj)){
             if(!confirm('恢复 '+obj.length+' 条记录，将覆盖现有数据，确定？')) return;
             var rc=0; obj.forEach(function(item){ if(item&&item.date){ _dual_set('tpi_data_'+item.date, JSON.stringify(item)); rc++; } });
-            _toast('✅ 恢复 '+rc+' 条记录，即将刷新');
-            setTimeout(function(){ try{ location.reload(); }catch(_){} },800); return;
+            _toast('✅ 恢复 '+rc+' 条记录，数据加载中…');
+            window.__tpi_softReload(500); return;
           }
           /* 格式E：日期键 */
           var dks=Object.keys(obj).filter(function(k){ return /^\d{4}-\d{2}-\d{2}$/.test(k); });
           if(dks.length>=1){
             if(!confirm('检测到旧版全量导出（'+dks.length+'天），确定恢复？')) return;
             dks.forEach(function(d){ var v=obj[d]; if(v&&typeof v==='object') _dual_set('tpi_data_'+d, JSON.stringify(v)); });
-            _toast('✅ 旧版数据已恢复（'+dks.length+'天），即将刷新');
-            setTimeout(function(){ try{ location.reload(); }catch(_){} },800); return;
+            _toast('✅ 旧版数据已恢复（'+dks.length+'天），正在刷新数据…');
+            window.__tpi_softReload(500); return;
           }
           _err('❌ 无法识别的备份格式，请使用本系统导出的文件');
         }catch(err){ console.error('[V1.57 restore]',err); _err('❌ 恢复失败：'+(err.message||'未知错误')); }
@@ -42572,7 +43733,7 @@ h3.card-title, h4.card-title,
   window.restoreBackup = _v157_restore;
   window.TPI._backupAllDataAsync = async function(){ window.TPI.backupAllData(); };
 
-  console.log('[TPI V1.59] 终极备份/恢复补丁已安装 ✅ — DOM直读+全量存储扫描+多路预保存');
+  console.log('[TPI V1.60] 终极备份/恢复补丁已安装 ✅ — DOM直读+全量存储扫描+多路预保存');
 })();
 </script>
 
