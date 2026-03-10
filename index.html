@@ -41761,14 +41761,26 @@ h3.card-title, h4.card-title,
 <script>
 /* ============================================================
    TPI V1.57 终极备份/恢复增强补丁
-   确保100%导出所有数据 + 100%兼容所有旧版备份格式
+   核心修复：导入JSON使用 localStorage.setItem 直写，
+   绕过 IDB 异步写入竞态，确保刷新后数据100%存在
    ============================================================ */
 (function(){
   'use strict';
 
-  // ---- 工具函数 ----
-  function _ls_set(k,v){ try{ if(window.__tpi_ls_set) window.__tpi_ls_set(k,v); else localStorage.setItem(k,v); }catch(_){} }
-  function _ls_get(k){ try{ if(window.__tpi_ls_get) return window.__tpi_ls_get(k); return localStorage.getItem(k); }catch(_){ return null; } }
+  /* ---- 核心：双写函数，同时写 localStorage + IDB/mem ---- */
+  function _dual_set(k, v){
+    /* 1. 直接写 localStorage（同步，刷新后必定存在）*/
+    try{ localStorage.setItem(k, v); }catch(_){}
+    /* 2. 同步更新内存缓存 */
+    try{
+      if(window.__tpi_mem_cache) window.__tpi_mem_cache[k] = v;
+    }catch(_){}
+    /* 3. 同步写 IDB（保持双存储一致） */
+    try{
+      if(typeof window.__tpi_ls_set === 'function') window.__tpi_ls_set(k, v);
+    }catch(_){}
+  }
+
   function _toast(msg){ try{ if(window.tpiToast) window.tpiToast(msg,'success',5000); else alert(msg); }catch(_){} }
   function _err(msg){ try{ if(window.tpiToast) window.tpiToast(msg,'error',6000); else alert(msg); }catch(_){} }
   function _dlBlob(content,name,mime){
@@ -41783,7 +41795,7 @@ h3.card-title, h4.card-title,
   }
   function _dateStr(){ return new Date().toISOString().slice(0,10); }
 
-  // ---- 终极全量数据收集 ----
+  /* ---- 全量数据收集（同时读 localStorage + IDB mem） ---- */
   function _v157_collectAll(){
     var result={
       _meta:{
@@ -41792,69 +41804,80 @@ h3.card-title, h4.card-title,
         backupVersion:'V1.57',
         backupFormat:'full_v157_ultimate',
         exportedAt: new Date().toISOString(),
-        storageType:'localStorage'
+        storageType:'localStorage+IDB'
       },
       dailyRecords:{}, miscRecords:{}, checkin:null,
       settings:{}, rawKV:{}
     };
 
-    // Step 1: 先尝试自动保存当前表单
+    /* 预保存当前表单 */
     try{
       if(typeof window.__tpi_autoSaveCurrentDay==='function') window.__tpi_autoSaveCurrentDay();
       else if(window.TPI&&typeof window.TPI.saveData==='function') window.TPI.saveData();
       else if(typeof window.saveFormData==='function') window.saveFormData();
     }catch(_){}
 
-    // Step 2: 从 localStorage 完整扫描所有键
+    /* Step A: 完整扫描 localStorage */
     try{
-      var ls=window.localStorage;
-      if(ls){
-        for(var i=0;i<ls.length;i++){
-          var k=ls.key(i);
-          if(!k) continue;
-          if(/token|secret|password|pat/i.test(k)) continue;
-          var v=ls.getItem(k);
-          if(!v) continue;
-          result.rawKV[k]=v;
-          if(k.startsWith('tpi_data_')){
-            var d=k.replace('tpi_data_','');
-            try{ result.dailyRecords[d]=JSON.parse(v); }catch(e){ result.dailyRecords[d]=v; }
-          } else if(k.startsWith('tpi_misc_records_')){
-            var d2=k.replace('tpi_misc_records_','');
-            try{ result.miscRecords[d2]=JSON.parse(v); }catch(e){ result.miscRecords[d2]=v; }
-          } else if(k==='tpi_checkin_data'){
-            try{ result.checkin=JSON.parse(v); }catch(e){ result.checkin=v; }
-          } else if(k==='selectedMode'||k==='vacationPeriods'||k.startsWith('tpi_')||k==='dark-mode'){
-            result.settings[k]=v;
-          }
-        }
+      var ls=localStorage;
+      for(var i=0;i<ls.length;i++){
+        var k=ls.key(i);
+        if(!k||/token|secret|password|pat/i.test(k)) continue;
+        var v=ls.getItem(k); if(!v) continue;
+        result.rawKV[k]=v;
+        if(k.startsWith('tpi_data_')){
+          var d=k.replace('tpi_data_','');
+          try{ result.dailyRecords[d]=JSON.parse(v); }catch(e){ result.dailyRecords[d]=v; }
+        } else if(k.startsWith('tpi_misc_records_')){
+          var d2=k.replace('tpi_misc_records_','');
+          try{ result.miscRecords[d2]=JSON.parse(v); }catch(e){ result.miscRecords[d2]=v; }
+        } else if(k==='tpi_checkin_data'){
+          try{ result.checkin=JSON.parse(v); }catch(e){ result.checkin=v; }
+        } else { result.settings[k]=v; }
       }
-    }catch(e){ console.warn('[V1.57 collectAll]',e); }
+    }catch(e){ console.warn('[V1.57 collectAll LS]',e); }
 
-    // Step 3: 从 __tpi_ls_obj 补充（内存缓存）
+    /* Step B: 补充 IDB/mem 缓存（覆盖 localStorage 中可能更旧的值）*/
+    try{
+      var mem=window.__tpi_mem_cache||{};
+      Object.keys(mem).forEach(function(k){
+        if(!k||/token|secret|password|pat/i.test(k)) return;
+        var v=mem[k]; if(!v) return;
+        if(!result.rawKV[k]) result.rawKV[k]=v;
+        if(k.startsWith('tpi_data_')){
+          var d=k.replace('tpi_data_','');
+          if(!result.dailyRecords[d]){ try{ result.dailyRecords[d]=JSON.parse(v); }catch(e){ result.dailyRecords[d]=v; } }
+        } else if(k.startsWith('tpi_misc_records_')){
+          var d2=k.replace('tpi_misc_records_','');
+          if(!result.miscRecords[d2]){ try{ result.miscRecords[d2]=JSON.parse(v); }catch(e){ result.miscRecords[d2]=v; } }
+        } else if(k==='tpi_checkin_data'&&!result.checkin){
+          try{ result.checkin=JSON.parse(v); }catch(e){ result.checkin=v; }
+        }
+      });
+    }catch(e){}
+
+    /* Step C: __tpi_ls_obj 补充 */
     try{
       if(typeof window.__tpi_ls_obj==='function'){
         var kvObj=window.__tpi_ls_obj();
-        if(kvObj&&typeof kvObj==='object'){
-          Object.keys(kvObj).forEach(function(k){
-            if(/token|secret|password|pat/i.test(k)) return;
-            var v=kvObj[k]; if(!v) return;
-            if(!result.rawKV[k]) result.rawKV[k]=v;
-            if(k.startsWith('tpi_data_')){
-              var d=k.replace('tpi_data_','');
-              if(!result.dailyRecords[d]){ try{ result.dailyRecords[d]=JSON.parse(v); }catch(e){ result.dailyRecords[d]=v; } }
-            }
-          });
-        }
+        if(kvObj) Object.keys(kvObj).forEach(function(k){
+          if(!k||/token|secret|password|pat/i.test(k)) return;
+          var v=kvObj[k]; if(!v||result.rawKV[k]) return;
+          result.rawKV[k]=v;
+          if(k.startsWith('tpi_data_')){
+            var d=k.replace('tpi_data_','');
+            if(!result.dailyRecords[d]){ try{ result.dailyRecords[d]=JSON.parse(v); }catch(e){ result.dailyRecords[d]=v; } }
+          }
+        });
       }
     }catch(e){}
 
-    // Step 4: 从 appdata_ref 补充（内存数据）
+    /* Step D: appdata_ref 补充 */
     try{
       if(window.__tpi_appdata_ref&&typeof window.__tpi_appdata_ref==='function'){
         var ad=window.__tpi_appdata_ref();
-        if(ad&&ad.days){ Object.keys(ad.days).forEach(function(d){ if(!result.dailyRecords[d]) result.dailyRecords[d]=ad.days[d]; }); }
-        if(ad&&ad.misc){ Object.keys(ad.misc).forEach(function(d){ if(!result.miscRecords[d]) result.miscRecords[d]=ad.misc[d]; }); }
+        if(ad&&ad.days) Object.keys(ad.days).forEach(function(d){ if(!result.dailyRecords[d]) result.dailyRecords[d]=ad.days[d]; });
+        if(ad&&ad.misc) Object.keys(ad.misc).forEach(function(d){ if(!result.miscRecords[d]) result.miscRecords[d]=ad.misc[d]; });
         if(ad&&ad.checkin&&!result.checkin) result.checkin=ad.checkin;
       }
     }catch(e){}
@@ -41864,7 +41887,180 @@ h3.card-title, h4.card-title,
     return result;
   }
 
-  // ---- 终极恢复函数（兼容所有格式）----
+  /* ---- 核心：通用全量恢复（_dual_set 双写） ---- */
+  function _v157_applyData(obj){
+    var restored=0, rawRestored=0;
+
+    /* 优先恢复 rawKV（最完整，包含所有设置键）*/
+    try{
+      var raw=obj.rawKV||{};
+      Object.keys(raw).forEach(function(k){
+        if(/token|secret|password|pat/i.test(k)) return;
+        var rv=raw[k];
+        if(rv!==null&&rv!==undefined) _dual_set(k, typeof rv==='string'?rv:JSON.stringify(rv));
+        rawRestored++;
+      });
+    }catch(e){ console.warn('[V1.57 applyData rawKV]',e); }
+
+    /* 再用 dailyRecords 覆盖（确保结构正确）*/
+    try{
+      var dr=obj.dailyRecords||{};
+      Object.keys(dr).forEach(function(d){
+        if(!/^\d{4}-\d{2}-\d{2}$/.test(d)) return;
+        var v=dr[d];
+        if(v&&typeof v==='object'){ _dual_set('tpi_data_'+d, JSON.stringify(v)); restored++; }
+      });
+    }catch(e){}
+
+    /* miscRecords */
+    try{
+      var mr=obj.miscRecords||{};
+      Object.keys(mr).forEach(function(d){
+        if(!/^\d{4}-\d{2}-\d{2}$/.test(d)) return;
+        try{ _dual_set('tpi_misc_records_'+d, JSON.stringify(mr[d])); }catch(e){}
+      });
+    }catch(e){}
+
+    /* checkin */
+    try{ if(obj.checkin) _dual_set('tpi_checkin_data', JSON.stringify(obj.checkin)); }catch(e){}
+
+    /* settings */
+    try{
+      var st=obj.settings||{};
+      Object.keys(st).forEach(function(k){
+        if(/token|secret|password|pat/i.test(k)) return;
+        try{ _dual_set(k, typeof st[k]==='string'?st[k]:JSON.stringify(st[k])); }catch(e){}
+      });
+    }catch(e){}
+
+    return {restored:restored, rawRestored:rawRestored};
+  }
+
+  /* ---- 导入JSON（完全重写，彻底修复空白问题）---- */
+  window.importDataComplete = function(){
+    var fileInput = document.getElementById('import-file') || document.getElementById('import-file-input');
+    if(!fileInput||!fileInput.files||!fileInput.files.length){
+      _err('⚠️ 请先选择要导入的 JSON 文件'); return;
+    }
+    var file=fileInput.files[0];
+    if(!file.name.toLowerCase().endsWith('.json')){ _err('⚠️ 仅支持 JSON 格式'); return; }
+
+    var reader=new FileReader();
+    reader.onload=function(e){
+      try{
+        var obj=JSON.parse(e.target.result);
+        if(!obj||typeof obj!=='object'){ _err('❌ 无效的JSON格式'); return; }
+
+        var today=(document.getElementById('date-input')||{}).value||new Date().toISOString().slice(0,10);
+        var restored=0, rawRestored=0;
+        var formatName='';
+
+        /* === 格式A：V1.57/V1.56 全量备份 { _meta, dailyRecords, rawKV } === */
+        if(obj._meta&&obj.dailyRecords&&typeof obj.dailyRecords==='object'){
+          var dayCount=Object.keys(obj.dailyRecords).length;
+          formatName='全量备份包（'+dayCount+'天）';
+          if(!confirm('📦 检测到【'+formatName+'】\n\n文件：'+file.name+'\n版本：'+(obj._meta.version||'未知')+'\n\n✅ 将完整恢复所有数据（含设置、杂事、签到）\n⚠️ 现有数据将被覆盖\n\n【确定】开始导入  【取消】放弃')) return;
+          var r=_v157_applyData(obj);
+          restored=r.restored; rawRestored=r.rawRestored;
+        }
+        /* === 格式B：旧版全量包 { localStorage: {...} } === */
+        else if(obj.localStorage&&typeof obj.localStorage==='object'){
+          var bag=obj.localStorage;
+          var dayCount2=Object.keys(bag).filter(function(k){ return /^tpi_data_\d{4}-\d{2}-\d{2}$/.test(k); }).length;
+          formatName='旧版全量包（'+dayCount2+'天）';
+          if(!confirm('📦 检测到【'+formatName+'】\n\n文件：'+file.name+'\n\n✅ 将恢复所有历史数据\n⚠️ 现有数据将被覆盖\n\n【确定】开始导入  【取消】放弃')) return;
+          Object.keys(bag).forEach(function(k){
+            if(/token|secret|password|pat/i.test(k)) return;
+            try{ _dual_set(k, bag[k]); rawRestored++; }catch(_){}
+          });
+        }
+        /* === 格式C：tpi_direct_v7_full（V1.46单日导出）=== */
+        else if(obj.schema&&/tpi_direct_v\d+_full/i.test(String(obj.schema))){
+          var targetDate=obj.date||today;
+          formatName='V1.46单日导出（'+targetDate+'）';
+          if(!confirm('📋 检测到【'+formatName+'】\n\n文件：'+file.name+'\n\n✅ 将恢复该日期的完整表单数据\n⚠️ 该日期现有数据将被覆盖\n\n【确定】开始导入  【取消】放弃')) return;
+          var dayData={'date-input':targetDate,date:targetDate,timestamp:new Date().toISOString(),_importedFrom:'tpi_direct_v7_full'};
+          var allF=[].concat(obj.textareas||[],obj.selects||[],obj.numbers||[],obj.times||[],obj.texts||[],obj.richTexts||[]);
+          allF.forEach(function(f){ if(f.id) dayData[f.id]=f.value!==undefined?f.value:''; else if(f.label) dayData['__al__'+f.label]=f.value!==undefined?f.value:''; });
+          (obj.checkboxes||[]).forEach(function(f){ if(f.id) dayData[f.id]=!!f.checked; else if(f.label&&f.label!=='input') dayData['__al_cb__'+f.label]=!!f.checked; });
+          (obj.radios||[]).forEach(function(f){ if(f.checked&&f.name) dayData[f.name]=f.value; });
+          if(obj.miscRecords&&Array.isArray(obj.miscRecords)&&obj.miscRecords.length>0){
+            dayData.miscRecordsV1=obj.miscRecords;
+            _dual_set('tpi_misc_records_'+targetDate, JSON.stringify(obj.miscRecords));
+          }
+          _dual_set('tpi_data_'+targetDate, JSON.stringify(dayData));
+          _dual_set('tpi_direct_raw_'+targetDate, JSON.stringify(obj));
+          restored=1;
+        }
+        /* === 格式D：旧版Array格式 === */
+        else if(Array.isArray(obj)){
+          formatName='旧版Array格式（'+obj.length+'条）';
+          if(!confirm('📋 检测到【'+formatName+'】\n\n文件：'+file.name+'\n\n✅ 将恢复所有记录\n⚠️ 同日期现有数据将被覆盖\n\n【确定】开始导入  【取消】放弃')) return;
+          obj.forEach(function(item){ if(item&&item.date){ _dual_set('tpi_data_'+item.date, JSON.stringify(item)); restored++; } });
+        }
+        /* === 格式E：以日期为key的旧版全量导出 === */
+        else if(Object.keys(obj).filter(function(k){ return /^\d{4}-\d{2}-\d{2}$/.test(k); }).length>=1){
+          var dateKeys=Object.keys(obj).filter(function(k){ return /^\d{4}-\d{2}-\d{2}$/.test(k); });
+          formatName='旧版日期键导出（'+dateKeys.length+'天）';
+          if(!confirm('📋 检测到【'+formatName+'】\n\n文件：'+file.name+'\n\n✅ 将恢复所有历史数据\n⚠️ 同日期现有数据将被覆盖\n\n【确定】开始导入  【取消】放弃')) return;
+          dateKeys.forEach(function(d){ var v=obj[d]; if(v&&typeof v==='object'){ _dual_set('tpi_data_'+d, JSON.stringify(v)); restored++; } });
+        }
+        /* === 格式F：单日数据（兜底）=== */
+        else{
+          formatName='单日数据（'+today+'）';
+          if(!confirm('📋 检测到【'+formatName+'】\n\n文件：'+file.name+'\n\n✅ 将恢复当前日期数据\n⚠️ 该日期现有数据将被覆盖\n\n【确定】开始导入  【取消】放弃')) return;
+          if(!obj.date) obj.date=today;
+          _dual_set('tpi_data_'+today, JSON.stringify(obj));
+          restored=1;
+        }
+
+        if(fileInput) fileInput.value='';
+
+        var totalMsg='✅ 导入完成！格式：'+formatName;
+        if(restored>0) totalMsg+='，'+restored+'天日记录';
+        if(rawRestored>0) totalMsg+='，'+rawRestored+'项设置';
+        totalMsg+='。即将刷新页面…';
+        _toast(totalMsg);
+
+        /* 延迟刷新：所有 dual_set 都是同步写 localStorage，刷新后必定存在 */
+        setTimeout(function(){ try{ location.reload(); }catch(_){} }, 800);
+
+      }catch(err){
+        console.error('[V1.57 importDataComplete]',err);
+        _err('❌ 导入失败：'+(err.message||'未知错误'));
+      }
+    };
+    reader.onerror=function(){ _err('❌ 文件读取失败，请重试'); };
+    reader.readAsText(file);
+  };
+
+  /* 保存副本防止被覆盖 */
+  window.__tpi_importDataComplete_v157 = window.importDataComplete;
+  window.__tpi_importDataComplete_v150 = window.importDataComplete;
+
+  /* ---- 备份函数（终极版）---- */
+  window.TPI = window.TPI || {};
+
+  window.TPI.backupAllData = function(){
+    if(window.__tpi_backup_in_progress){ _toast('⏳ 备份进行中，请稍候…'); return; }
+    window.__tpi_backup_in_progress=true;
+    try{
+      var data=_v157_collectAll();
+      var dayCount=Object.keys(data.dailyRecords).length;
+      var rawCount=Object.keys(data.rawKV).length;
+      var content=JSON.stringify(data,null,2);
+      var filename='TPI_全量备份_V1.57_'+_dateStr()+'.json';
+      _dlBlob(content,filename,'application/json;charset=utf-8');
+      _toast('✅ 全量备份成功！共 '+dayCount+' 天记录，'+rawCount+' 项完整键值。文件：'+filename);
+    }catch(e){
+      _err('❌ 备份失败：'+(e&&e.message?e.message:String(e)));
+      console.error('[V1.57 backupAllData]',e);
+    }finally{
+      setTimeout(function(){ window.__tpi_backup_in_progress=false; },800);
+    }
+  };
+
+  /* ---- 恢复备份（选文件恢复）---- */
   function _v157_restore(){
     var input=document.createElement('input');
     input.type='file'; input.accept='.json';
@@ -41875,142 +42071,63 @@ h3.card-title, h4.card-title,
         try{
           var obj=JSON.parse(evt.target.result);
           if(!obj||typeof obj!=='object'){ _err('❌ 无效的JSON格式'); return; }
-          var restored=0, rawRestored=0;
 
-          // 格式A：Array（最旧版本）
-          if(Array.isArray(obj)){
-            if(!confirm('准备恢复 '+obj.length+' 条记录，将覆盖现有数据，确定继续？')) return;
-            obj.forEach(function(item){ if(item&&item.date){ _ls_set('tpi_data_'+item.date, JSON.stringify(item)); restored++; } });
-            _toast('✅ 成功恢复 '+restored+' 条记录，即将刷新');
-            setTimeout(function(){ try{ location.reload(); }catch(_){} },800);
-            return;
+          /* 格式A：{ _meta, dailyRecords } V1.57全量备份 */
+          if(obj._meta&&obj.dailyRecords&&typeof obj.dailyRecords==='object'){
+            var dc=Object.keys(obj.dailyRecords).length;
+            if(!confirm('检测到全量备份包（'+dc+'天），将覆盖现有数据，确定继续？')) return;
+            _v157_applyData(obj);
+            _toast('✅ 全量备份已恢复（'+dc+'天），即将刷新');
+            setTimeout(function(){ try{ location.reload(); }catch(_){} },800); return;
           }
-
-          // 格式B：{ localStorage: {...} }（旧版全量包）
+          /* 格式B：{ localStorage } 旧版包 */
           if(obj.localStorage&&typeof obj.localStorage==='object'){
             var bag=obj.localStorage;
-            var dayCount=Object.keys(bag).filter(function(k){ return /^tpi_data_\d{4}-\d{2}-\d{2}$/.test(k); }).length;
-            if(!confirm('检测到全量备份包（'+dayCount+'天数据），恢复后将刷新页面，确定继续？')) return;
-            Object.keys(bag).forEach(function(k){
-              if(/token|secret|password|pat/i.test(k)) return;
-              try{ _ls_set(k, bag[k]); rawRestored++; }catch(_){}
-            });
-            _toast('✅ 全量备份恢复成功（'+rawRestored+'项），即将刷新');
-            setTimeout(function(){ try{ location.reload(); }catch(_){} },800);
-            return;
+            var dc2=Object.keys(bag).filter(function(k){ return /^tpi_data_\d{4}-\d{2}-\d{2}$/.test(k); }).length;
+            if(!confirm('检测到旧版全量备份包（'+dc2+'天），将覆盖现有数据，确定继续？')) return;
+            Object.keys(bag).forEach(function(k){ if(/token|secret|password|pat/i.test(k)) return; try{ _dual_set(k,bag[k]); }catch(_){} });
+            _toast('✅ 备份恢复成功，即将刷新');
+            setTimeout(function(){ try{ location.reload(); }catch(_){} },800); return;
           }
-
-          // 格式C：tpi_direct_v7_full（V1.46单日导出）
+          /* 格式C：tpi_direct_v7_full */
           if(obj.schema&&/tpi_direct_v\d+_full/i.test(String(obj.schema))){
-            var targetDate=obj.date||(typeof __tpi_getSelectedDate==='function'?__tpi_getSelectedDate():new Date().toISOString().slice(0,10));
-            var dayData={ 'date-input':targetDate, date:targetDate, timestamp:new Date().toISOString(), _importedFrom:'tpi_direct_v7_full' };
-            var allFields=[].concat(obj.textareas||[],obj.selects||[],obj.numbers||[],obj.times||[],obj.texts||[],obj.richTexts||[]);
-            allFields.forEach(function(f){ if(f.id) dayData[f.id]=f.value!==undefined?f.value:''; else if(f.label) dayData['__al__'+f.label]=f.value!==undefined?f.value:''; });
-            (obj.checkboxes||[]).forEach(function(f){ if(f.id) dayData[f.id]=!!f.checked; else if(f.label&&f.label!=='input') dayData['__al_cb__'+f.label]=!!f.checked; });
-            (obj.radios||[]).forEach(function(f){ if(f.checked&&f.name) dayData[f.name]=f.value; });
-            if(obj.miscRecords&&Array.isArray(obj.miscRecords)&&obj.miscRecords.length>0){ dayData.miscRecordsV1=obj.miscRecords; _ls_set('tpi_misc_records_'+targetDate, JSON.stringify(obj.miscRecords)); }
-            _ls_set('tpi_data_'+targetDate, JSON.stringify(dayData));
-            _toast('✅ V1.46单日数据已恢复（'+targetDate+'），即将刷新');
-            setTimeout(function(){ try{ location.reload(); }catch(_){} },800);
-            return;
+            var td=obj.date||(new Date().toISOString().slice(0,10));
+            var dd={'date-input':td,date:td,timestamp:new Date().toISOString()};
+            [].concat(obj.textareas||[],obj.selects||[],obj.numbers||[],obj.times||[],obj.texts||[],obj.richTexts||[]).forEach(function(f){ if(f.id) dd[f.id]=f.value!==undefined?f.value:''; });
+            (obj.checkboxes||[]).forEach(function(f){ if(f.id) dd[f.id]=!!f.checked; });
+            (obj.radios||[]).forEach(function(f){ if(f.checked&&f.name) dd[f.name]=f.value; });
+            if(obj.miscRecords&&obj.miscRecords.length) _dual_set('tpi_misc_records_'+td, JSON.stringify(obj.miscRecords));
+            _dual_set('tpi_data_'+td, JSON.stringify(dd));
+            _toast('✅ V1.46数据已恢复（'+td+'），即将刷新');
+            setTimeout(function(){ try{ location.reload(); }catch(_){} },800); return;
           }
-
-          // 格式D：V1.57全量备份 { _meta, dailyRecords, rawKV, ... }（最完整）
-          if(obj._meta&&obj.dailyRecords&&typeof obj.dailyRecords==='object'){
-            var dr=obj.dailyRecords;
-            if(!confirm('检测到全量备份包（'+Object.keys(dr).length+'天），恢复将覆盖现有数据，确定继续？')) return;
-            // 恢复 rawKV（最完整，包含所有设置）
-            try{
-              var raw=obj.rawKV||{};
-              Object.keys(raw).forEach(function(k){
-                if(/token|secret|password|pat/i.test(k)) return;
-                try{ _ls_set(k, typeof raw[k]==='string'?raw[k]:JSON.stringify(raw[k])); rawRestored++; }catch(_){}
-              });
-            }catch(e){ console.warn('[V1.57 restore rawKV]',e); }
-            // 恢复 dailyRecords（覆盖rawKV中的tpi_data_，确保最新）
-            Object.keys(dr).forEach(function(d){
-              if(!/^\d{4}-\d{2}-\d{2}$/.test(d)) return;
-              try{
-                var v=dr[d];
-                if(v&&typeof v==='object'){ _ls_set('tpi_data_'+d, JSON.stringify(v)); restored++; }
-              }catch(e){}
-            });
-            // 恢复 miscRecords
-            try{
-              var mr=obj.miscRecords||{};
-              Object.keys(mr).forEach(function(d){
-                if(!/^\d{4}-\d{2}-\d{2}$/.test(d)) return;
-                try{ _ls_set('tpi_misc_records_'+d, JSON.stringify(mr[d])); }catch(e){}
-              });
-            }catch(e){}
-            // 恢复 checkin
-            try{ if(obj.checkin) _ls_set('tpi_checkin_data', JSON.stringify(obj.checkin)); }catch(e){}
-            // 恢复 settings
-            try{
-              var st=obj.settings||{};
-              Object.keys(st).forEach(function(k){
-                if(/token|secret|password|pat/i.test(k)) return;
-                try{ _ls_set(k, typeof st[k]==='string'?st[k]:JSON.stringify(st[k])); }catch(e){}
-              });
-            }catch(e){}
-            _toast('✅ 全量备份已恢复（'+restored+'天数据 + '+rawRestored+'项设置），即将刷新');
-            setTimeout(function(){ try{ location.reload(); }catch(_){} },800);
-            return;
+          /* 格式D：Array */
+          if(Array.isArray(obj)){
+            if(!confirm('恢复 '+obj.length+' 条记录，将覆盖现有数据，确定？')) return;
+            var rc=0; obj.forEach(function(item){ if(item&&item.date){ _dual_set('tpi_data_'+item.date, JSON.stringify(item)); rc++; } });
+            _toast('✅ 恢复 '+rc+' 条记录，即将刷新');
+            setTimeout(function(){ try{ location.reload(); }catch(_){} },800); return;
           }
-
-          // 格式E：以日期为key的旧版全量导出 { "2026-01-01": {...} }
-          var dateKeys=Object.keys(obj).filter(function(k){ return /^\d{4}-\d{2}-\d{2}$/.test(k); });
-          if(dateKeys.length>=1){
-            if(!confirm('检测到旧版全量导出（'+dateKeys.length+'天），恢复后将刷新，确定继续？')) return;
-            dateKeys.forEach(function(d){
-              try{ var v=obj[d]; if(v&&typeof v==='object'){ _ls_set('tpi_data_'+d, JSON.stringify(v)); restored++; } }catch(e){}
-            });
-            _toast('✅ 旧版数据已恢复（'+restored+'天），即将刷新');
-            setTimeout(function(){ try{ location.reload(); }catch(_){} },800);
-            return;
+          /* 格式E：日期键 */
+          var dks=Object.keys(obj).filter(function(k){ return /^\d{4}-\d{2}-\d{2}$/.test(k); });
+          if(dks.length>=1){
+            if(!confirm('检测到旧版全量导出（'+dks.length+'天），确定恢复？')) return;
+            dks.forEach(function(d){ var v=obj[d]; if(v&&typeof v==='object') _dual_set('tpi_data_'+d, JSON.stringify(v)); });
+            _toast('✅ 旧版数据已恢复（'+dks.length+'天），即将刷新');
+            setTimeout(function(){ try{ location.reload(); }catch(_){} },800); return;
           }
-
           _err('❌ 无法识别的备份格式，请使用本系统导出的文件');
-        }catch(err){
-          console.error('[V1.57 restore] error:',err);
-          _err('❌ 恢复失败：'+(err.message||'未知错误'));
-        }
+        }catch(err){ console.error('[V1.57 restore]',err); _err('❌ 恢复失败：'+(err.message||'未知错误')); }
       };
       r.readAsText(file);
     };
     input.click();
   }
 
-  // ---- 覆盖所有backup/restore相关函数 ----
-  window.TPI = window.TPI || {};
-
-  window.TPI.backupAllData = function(){
-    if(window.__tpi_backup_in_progress){ _toast('⏳ 备份进行中，请稍候…'); return; }
-    window.__tpi_backup_in_progress = true;
-    try{
-      var data = _v157_collectAll();
-      var dayCount = Object.keys(data.dailyRecords).length;
-      var rawCount = Object.keys(data.rawKV).length;
-      var content = JSON.stringify(data, null, 2);
-      var filename = 'TPI_全量备份_V1.57_'+_dateStr()+'.json';
-      _dlBlob(content, filename, 'application/json;charset=utf-8');
-      _toast('✅ 全量备份成功！共 '+dayCount+' 天记录，'+rawCount+' 项完整键值。文件：'+filename);
-    }catch(e){
-      _err('❌ 备份失败：'+(e&&e.message?e.message:String(e)));
-      console.error('[V1.57 backupAllData]',e);
-    }finally{
-      setTimeout(function(){ window.__tpi_backup_in_progress=false; },800);
-    }
-  };
-
   window.TPI.restoreBackup = _v157_restore;
   window.__tpi_restoreBackupEnhanced = _v157_restore;
   window.restoreBackup = _v157_restore;
-
-  // 同步更新 async 版本
-  window.TPI._backupAllDataAsync = async function(){
-    window.TPI.backupAllData();
-  };
+  window.TPI._backupAllDataAsync = async function(){ window.TPI.backupAllData(); };
 
   console.log('[TPI V1.57] 终极备份/恢复补丁已安装 ✅');
 })();
