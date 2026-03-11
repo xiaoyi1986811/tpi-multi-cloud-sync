@@ -119,13 +119,13 @@
   };
 })();
 </script>
-<meta content="全维效能管理系统（TPI，V1.82）" property="og:title"/>
+<meta content="全维效能管理系统（TPI，V1.83）" property="og:title"/>
 <meta content="全维效能管理系统（TPI）| 全面追踪 · 科学管理 · 高效提升" property="og:description"/>
 <meta content="website" property="og:type"/>
 <meta content="https://mytpi.netlify.app/" property="og:url"/>
 <meta content="zh_CN" property="og:locale"/>
 <meta name="twitter:card" content="summary"/>
-<meta name="twitter:title" content="全维效能管理系统（TPI，V1.82）"/>
+<meta name="twitter:title" content="全维效能管理系统（TPI，V1.83）"/>
 <meta name="twitter:description" content="全维效能管理系统（TPI）"/>
 <meta content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=5.0, user-scalable=yes, viewport-fit=cover" name="viewport"/>
 <meta content="全维效能管理系统（TPI）- 跨设备同步 | 支持电脑/手机/平板访问" name="description"/>
@@ -1332,11 +1332,88 @@ window.__tpi_clearAllForm = function() {
     }catch(e){}
   }
 
+  // ─── V1.83 防死包核心：递归解包JSON字符串 ───────────────────
+  function safeParse(data) {
+    if (typeof data !== 'string') {
+      if (data !== null && typeof data === 'object') {
+        // 递归处理对象/数组中的每个值
+        if (Array.isArray(data)) {
+          return data.map(function(item){ return safeParse(item); });
+        }
+        const out = {};
+        Object.keys(data).forEach(function(k){
+          out[k] = safeParse(data[k]);
+        });
+        return out;
+      }
+      return data;
+    }
+    // 字符串：尝试JSON.parse解包
+    const trimmed = data.trim();
+    if ((trimmed.startsWith('{') && trimmed.endsWith('}')) ||
+        (trimmed.startsWith('[') && trimmed.endsWith(']'))) {
+      try {
+        const parsed = JSON.parse(data);
+        if (parsed !== null && typeof parsed === 'object') {
+          return safeParse(parsed); // 递归防多层套娃
+        }
+        return parsed;
+      } catch(e) {
+        return data;
+      }
+    }
+    return data;
+  }
+
+  // ─── V1.83 全页面DOM状态实时抓取 ────────────────────────────
+  function _captureFullDOMState() {
+    const domState = {};
+    try {
+      // 抓取所有 input
+      document.querySelectorAll('input').forEach(function(el){
+        if (!el.id && !el.name) return;
+        const key = el.id || el.name;
+        if (/token|secret|password|pat/i.test(key)) return;
+        if (el.type === 'checkbox' || el.type === 'radio') {
+          domState[key] = { type: el.type, checked: el.checked, value: el.value };
+        } else {
+          domState[key] = { type: el.type || 'text', value: el.value };
+        }
+      });
+      // 抓取所有 textarea
+      document.querySelectorAll('textarea').forEach(function(el){
+        if (!el.id && !el.name) return;
+        const key = el.id || el.name;
+        if (/token|secret|password|pat/i.test(key)) return;
+        domState[key] = { type: 'textarea', value: el.value };
+      });
+      // 抓取所有 select
+      document.querySelectorAll('select').forEach(function(el){
+        if (!el.id && !el.name) return;
+        const key = el.id || el.name;
+        domState[key] = { type: 'select', value: el.value, selectedIndex: el.selectedIndex };
+      });
+    } catch(e) { console.warn('[V1.83 DOM抓取]', e); }
+    return domState;
+  }
+
+  // ─── V1.83 强制将DOM状态同步到存储 ──────────────────────────
+  function _flushDOMToStorage() {
+    try {
+      if (typeof window.__tpi_triggerRecalc === 'function') window.__tpi_triggerRecalc();
+    } catch(_) {}
+    try {
+      if (window.ScoreDashboard && typeof window.ScoreDashboard.update === 'function') window.ScoreDashboard.update();
+    } catch(_) {}
+    try { if (window.TPI && typeof window.TPI.saveData === 'function') window.TPI.saveData(); } catch(_) {}
+    try { if (typeof window.saveFormData === 'function') window.saveFormData(); } catch(_) {}
+    try { if (typeof window.__tpi_autoSaveCurrentDay === 'function') window.__tpi_autoSaveCurrentDay(); } catch(_) {}
+  }
+
   function _prepareSnapshot(){
     _removeBackupBannerIfAny();
-
-    try{ if (typeof window.__tpi_triggerRecalc === 'function') window.__tpi_triggerRecalc(); }catch(e){}
-    try{ if (window.ScoreDashboard && typeof window.ScoreDashboard.update === 'function') window.ScoreDashboard.update(); }catch(e){}
+    // V1.83: 先强制同步DOM状态到存储
+    _flushDOMToStorage();
 
     let snapObj = null;
     try{ if (typeof window.collectDailyData === 'function') snapObj = window.collectDailyData(); }catch(e){}
@@ -1350,7 +1427,16 @@ window.__tpi_clearAllForm = function() {
       return _localDate();
     })();
 
-    const dayData = (dateKey && snapObj[dateKey] && typeof snapObj[dateKey]==='object') ? snapObj[dateKey] : {};
+    // V1.83: safeParse 防止 dayData 内嵌 JSON 字符串
+    let dayData = (dateKey && snapObj[dateKey] && typeof snapObj[dateKey]==='object') ? snapObj[dateKey] : {};
+    dayData = safeParse(dayData);
+
+    // V1.83: 将实时DOM快照合并进去，确保未保存的点击/输入也被纳入
+    try {
+      const domState = _captureFullDOMState();
+      if (!dayData._domSnapshot) dayData._domSnapshot = {};
+      Object.assign(dayData._domSnapshot, domState);
+    } catch(_) {}
 
     try{
       if (dayData && typeof dayData === 'object') {
@@ -1369,11 +1455,19 @@ window.__tpi_clearAllForm = function() {
 
   function _buildExportObject(){
     const {dateKey, dayData} = _prepareSnapshot();
+    // V1.83: safeParse再过一遍，确保data中无任何嵌套JSON字符串
+    const cleanData = safeParse(dayData);
     return {
       schema: "tpi_export_v2",
       exportedAt: _nowISO(),
       date: dateKey,
-      data: dayData
+      _meta: {
+        version: (window.TPI_VERSION || 'V1.83'),
+        exportVersion: 'V1.83',
+        exportedAt: _nowISO(),
+        date: dateKey
+      },
+      data: cleanData
     };
   }
 
@@ -1596,7 +1690,7 @@ window.__tpi_clearAllForm = function() {
   }
   window.exportCurrentSnapshot = function(format){
     try{
-      // V1.82: 导出前强制触发重算 + 保存当前表单状态，确保所有输入、勾选、点击内容均被纳入
+      // V1.83: 导出前强制触发重算 + 保存当前表单状态，确保所有输入、勾选、点击内容均被纳入
       try{ if(typeof window.__tpi_triggerRecalc==='function') window.__tpi_triggerRecalc(); }catch(_){}
       try{ if(window.ScoreDashboard&&typeof window.ScoreDashboard.update==='function') window.ScoreDashboard.update(); }catch(_){}
       try{ if(window.TPI&&typeof window.TPI.saveData==='function') window.TPI.saveData(); }catch(_){}
@@ -1611,28 +1705,17 @@ window.__tpi_clearAllForm = function() {
         const blob = new Blob([md], {type: 'text/markdown;charset=utf-8'});
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
-        // V1.82: 文件名以日期命名
+        // V1.83: 文件名以日期命名
         a.href = url; a.download = `TPI_${safeDate}.md`;
         document.body.appendChild(a); a.click(); document.body.removeChild(a);
         setTimeout(function(){ URL.revokeObjectURL(url); }, 10000);
       } else {
-        const chunks = [];
-        try {
-          const keys = Object.keys(exp);
-          chunks.push('{');
-          keys.forEach(function(k, i) {
-            const val = JSON.stringify(exp[k], null, 2);
-            chunks.push((i === 0 ? '' : ',') + JSON.stringify(k) + ':' + val);
-          });
-          chunks.push('}');
-        } catch(chunkErr) {
-          chunks.length = 0;
-          chunks.push(JSON.stringify(exp, null, 2));
-        }
-        const blob = new Blob(chunks, {type: 'application/json;charset=utf-8'});
+        // V1.83: 直接使用 JSON.stringify，exp.data 已经过 safeParse 处理，无死包风险
+        const content = JSON.stringify(exp, null, 2);
+        const blob = new Blob([content], {type: 'application/json;charset=utf-8'});
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
-        // V1.82: 文件名以日期命名（YYYY-MM-DD.json）
+        // V1.83: 文件名以日期命名（YYYY-MM-DD.json）
         a.href = url; a.download = `TPI_${safeDate}.json`;
         document.body.appendChild(a); a.click(); document.body.removeChild(a);
         setTimeout(function(){ URL.revokeObjectURL(url); }, 10000);
@@ -1645,6 +1728,9 @@ window.__tpi_clearAllForm = function() {
       _toast('❌ 导出失败：请查看控制台错误信息', 'error');
     }
   };
+
+  // V1.83: 暴露 safeParse 到全局，供其他模块使用
+  window.__tpi_safeParse = safeParse;
 
   window.exportTpiDataComplete = function(){ window.exportCurrentSnapshot('json'); };
   window.exportDataComplete = function(fmt){ window.exportCurrentSnapshot(fmt === 'markdown' ? 'markdown' : 'json'); };
@@ -2361,7 +2447,7 @@ window.getTpiDayDataAsync = async function(dateStr) {
   } catch (e) {}
 })();
 </script>
-<title>全维效能管理系统（TPI，V1.82）</title>
+<title>全维效能管理系统（TPI，V1.83）</title>
 <script>
    'use strict';
         const getCurrentDate = () => {
@@ -2372,7 +2458,7 @@ window.getTpiDayDataAsync = async function(dateStr) {
             return `${year}-${month}-${day}`;
         };
 
-        window.TPI_VERSION = '全维效能管理系统（TPI，V1.82）';
+        window.TPI_VERSION = '全维效能管理系统（TPI，V1.83）';
         window.TPI_APP_VERSION = '1.70';
 
         // V1.50: 检查是否有待恢复的数据（import后不刷新，直接恢复）
@@ -2467,7 +2553,7 @@ window.TPI.DOM = window.TPI.DOM || {
                             : '三十';
             const lunarStr = `农历${lunarMonth}${lunarDay}${lunar.isLeap ? '(闰)' : ''}`;
 
-            document.title = `全维效能管理系统（TPI，V1.82）（${window.TPI_BUILD_DATE} ${weekday} ${lunarStr}）`;
+            document.title = `全维效能管理系统（TPI，V1.83）（${window.TPI_BUILD_DATE} ${weekday} ${lunarStr}）`;
 
             const dateDisplay = document.getElementById('current-date-display');
             if (dateDisplay) {
@@ -7299,7 +7385,7 @@ document.addEventListener('click', function(e) {
 <div class="header-content">
 <div class="header-title">
 <h1 style="font-size:clamp(1.5rem, 3vw, 2.5rem);font-weight:800;background:linear-gradient(135deg,#0f766e 0%,#0d9488 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;letter-spacing:-0.02em;">
-        全维效能管理系统（TPI，V1.82）
+        全维效能管理系统（TPI，V1.83）
        </h1>
 
 <div style="display:inline-flex;align-items:center;gap:6px;flex-shrink:0;">
@@ -22272,7 +22358,7 @@ window.addEventListener('resize', function() {
                         <div style="display:flex;justify-content:space-between;align-items:center;padding:16px 24px;background:#f8fafc;border-bottom: 1px solid #d1fae5;flex-shrink:0;">
                             <h3 style="margin:0;font-size:18px;color:#1e293b;">👁️ 报告预览</h3>
                             <div style="display:flex;gap:10px;">
-                                <button type="button" onclick="(function(){var p=document.getElementById('tpi-preview-body');if(p){var w=window.open('','_blank');if(w){w.document.write('<html><head><meta charset=UTF-8><title>全维效能管理系统（TPI，V1.82）</title><style>body{font-family:Arial,sans-serif;max-width:900px;margin:40px auto;padding:20px;}h2{color:#0d9488;}table{width:100%;border-collapse:collapse;margin:20px 0;}th,td{padding:10px;border: 1px solid #bbf7d0;}th{background:#f3f4f6;}.btn{padding:10px 20px;margin:10px 5px;cursor:pointer;border: 1px solid #86efac;border-radius:6px;background:#fff;}</style><\/head><body>'+p.innerHTML+'<div style=text-align:center;margin-top:30px><button type="button" class=btn onclick=window.print()>🖨️ 打印</button><button type="button" class=btn onclick=window.close()>关闭</button></div><\/body></html>');w.document.close();}}})()" style="padding:6px 14px;border: 1px solid #6ee7b7;border-radius:6px;background:#fff;cursor:pointer;font-size:13px;color:#334155;transition:all 0.15s;" onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background='#fff'">🌐 新窗口打开</button>
+                                <button type="button" onclick="(function(){var p=document.getElementById('tpi-preview-body');if(p){var w=window.open('','_blank');if(w){w.document.write('<html><head><meta charset=UTF-8><title>全维效能管理系统（TPI，V1.83）</title><style>body{font-family:Arial,sans-serif;max-width:900px;margin:40px auto;padding:20px;}h2{color:#0d9488;}table{width:100%;border-collapse:collapse;margin:20px 0;}th,td{padding:10px;border: 1px solid #bbf7d0;}th{background:#f3f4f6;}.btn{padding:10px 20px;margin:10px 5px;cursor:pointer;border: 1px solid #86efac;border-radius:6px;background:#fff;}</style><\/head><body>'+p.innerHTML+'<div style=text-align:center;margin-top:30px><button type="button" class=btn onclick=window.print()>🖨️ 打印</button><button type="button" class=btn onclick=window.close()>关闭</button></div><\/body></html>');w.document.close();}}})()" style="padding:6px 14px;border: 1px solid #6ee7b7;border-radius:6px;background:#fff;cursor:pointer;font-size:13px;color:#334155;transition:all 0.15s;" onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background='#fff'">🌐 新窗口打开</button>
                                 <button class="tpi-preview-close-btn" type="button" onclick="document.getElementById('tpi-preview-modal').remove()" style="padding:6px 14px;border: 1px solid #86efac;border-radius:6px;background:#f9fafb;color:#374151;cursor:pointer;font-size:13px;font-weight:600;transition:background 0.15s;">✕ 关闭</button>
                             </div>
                         </div>
@@ -23078,7 +23164,7 @@ window.addEventListener('resize', function() {
                 filename = 'TPI_数据导出_' + new Date().toISOString().split('T')[0] + '.txt';
                 mimeType = 'text/plain';
             } else if (format === 'html') {
-                let html = `<html><head><meta charset="UTF-8"><title>全维效能管理系统（TPI，V1.82）</title><\/head><body>
+                let html = `<html><head><meta charset="UTF-8"><title>全维效能管理系统（TPI，V1.83）</title><\/head><body>
 
         <div id="score-dashboard" style="background: linear-gradient(135deg, #e0e7ff 0%, #ddd6fe 100%); padding: 8px 16px; border-radius: 0; margin: 0; color: #1e293b; box-shadow: 0 2px 6px rgba(0,0,0,0.1);">
             <div style="max-width: 1400px; margin: 0 auto; display: flex; align-items: center; justify-content: center; gap: 10px; flex-wrap: nowrap;">
@@ -24093,7 +24179,7 @@ window.archiveOldDataComplete = function() {
                         alert('✅ JSON导出成功！');
                     }
                     else if (format === 'html') {
-                        let html = '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>全维效能管理系统（TPI，V1.82）</title>';
+                        let html = '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>全维效能管理系统（TPI，V1.83）</title>';
                         html += `<style>
 
     .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 10001; align-items: center; justify-content: center; }
@@ -26403,7 +26489,7 @@ window.addEventListener('unhandledrejection', function(event) {
   }
 
   function backupAllDataNow(){
-    const out = { _meta: { version: (window.TPI_VERSION||'全维效能管理系统（TPI，V1.82）'), appVersion: (window.TPI_APP_VERSION||'1.70'), exportedAt: new Date().toISOString() }, localStorage: {} };
+    const out = { _meta: { version: (window.TPI_VERSION||'全维效能管理系统（TPI，V1.83）'), appVersion: (window.TPI_APP_VERSION||'1.70'), exportedAt: new Date().toISOString() }, localStorage: {} };
     for(let i=0;i<__tpi_ls_length();i++){
       const k = __tpi_ls_key(i);
       if(!k) continue;
@@ -26710,7 +26796,7 @@ try{
       }
       window.__tpi_backup_lock = true;
 
-      const out = { _meta: { version: (window.TPI_VERSION||'全维效能管理系统（TPI，V1.82）'), appVersion: (window.TPI_APP_VERSION||'1.70'), exportedAt: new Date().toISOString() }, localStorage: {} };
+      const out = { _meta: { version: (window.TPI_VERSION||'全维效能管理系统（TPI，V1.83）'), appVersion: (window.TPI_APP_VERSION||'1.70'), exportedAt: new Date().toISOString() }, localStorage: {} };
 
       for(let i=0;i<__tpi_ls_length();i++){
         const k = __tpi_ls_key(i);
@@ -27261,7 +27347,7 @@ try{
       }
       window.__tpi_backup_lock = true;
 
-      const out = { _meta: { version: (window.TPI_VERSION||'全维效能管理系统（TPI，V1.82）'), appVersion: (window.TPI_APP_VERSION||'1.70'), exportedAt: new Date().toISOString() }, localStorage: {} };
+      const out = { _meta: { version: (window.TPI_VERSION||'全维效能管理系统（TPI，V1.83）'), appVersion: (window.TPI_APP_VERSION||'1.70'), exportedAt: new Date().toISOString() }, localStorage: {} };
 
       for(let i=0;i<__tpi_ls_length();i++){
         const k = __tpi_ls_key(i);
@@ -33309,6 +33395,50 @@ function _collectAllData(){
   }catch(e){ console.warn('[TPI全量收集方案D]',e); }
 
   result._meta.totalDays=Object.keys(result.dailyRecords).length;
+
+  // V1.83 防死包：对 rawKV 中的所有值执行 safeParse 解包
+  // 防止 JSON.stringify(result) 时产生嵌套转义字符串
+  try {
+    Object.keys(result.rawKV).forEach(function(k) {
+      var v = result.rawKV[k];
+      if (typeof v === 'string') {
+        var trimmed = v.trim();
+        if ((trimmed.startsWith('{') && trimmed.endsWith('}')) ||
+            (trimmed.startsWith('[') && trimmed.endsWith(']'))) {
+          try {
+            var parsed = JSON.parse(v);
+            if (parsed !== null && typeof parsed === 'object') {
+              result.rawKV[k] = parsed;
+            }
+          } catch(e) {}
+        }
+      }
+    });
+  } catch(e) { console.warn('[V1.83 rawKV safeParse]', e); }
+
+  // V1.83 防死包：对 dailyRecords 递归清洗（防止内部字段仍为JSON字符串）
+  try {
+    Object.keys(result.dailyRecords).forEach(function(dt) {
+      if (result.dailyRecords[dt] && typeof result.dailyRecords[dt] === 'object') {
+        Object.keys(result.dailyRecords[dt]).forEach(function(fk) {
+          var fv = result.dailyRecords[dt][fk];
+          if (typeof fv === 'string') {
+            var trimmed2 = fv.trim();
+            if ((trimmed2.startsWith('{') && trimmed2.endsWith('}')) ||
+                (trimmed2.startsWith('[') && trimmed2.endsWith(']'))) {
+              try {
+                var fp = JSON.parse(fv);
+                if (fp !== null && typeof fp === 'object') {
+                  result.dailyRecords[dt][fk] = fp;
+                }
+              } catch(e) {}
+            }
+          }
+        });
+      }
+    });
+  } catch(e) { console.warn('[V1.83 dailyRecords safeParse]', e); }
+
   return result;
 }
 
@@ -33319,14 +33449,14 @@ window.TPI.backupAllData=function(){
   window.__tpi_backup_in_progress=true;
 
   try{
-    // V1.82: 备份前强制触发重算和保存所有当前输入、勾选、点击状态，确保最新数据被完整纳入
+    // V1.83: 备份前强制触发重算和保存所有当前输入、勾选、点击状态，确保最新数据被完整纳入
     try{ if(typeof window.__tpi_triggerRecalc==='function') window.__tpi_triggerRecalc(); }catch(_){}
     try{ if(window.ScoreDashboard&&typeof window.ScoreDashboard.update==='function') window.ScoreDashboard.update(); }catch(_){}
     try{
       if(typeof window.__tpi_autoSaveCurrentDay === 'function') window.__tpi_autoSaveCurrentDay();
       else if(window.TPI && typeof window.TPI.saveData === 'function') window.TPI.saveData();
       else if(typeof window.saveFormData === 'function') window.saveFormData();
-    }catch(_saveErr){ console.warn('[V1.82备份] 预保存警告:',_saveErr); }
+    }catch(_saveErr){ console.warn('[V1.83备份] 预保存警告:',_saveErr); }
 
     var data=_collectAllData();
 
@@ -33346,9 +33476,22 @@ window.TPI.backupAllData=function(){
       }
     }catch(_lsErr){ console.warn('[V1.57备份] localStorage全扫警告:',_lsErr); }
 
-    // V1.57: 记录备份版本标识，便于恢复时识别
-    data._meta.backupVersion='V1.82';
-    data._meta.backupFormat='full_v179';
+    // V1.83: 对额外扫描到的 rawKV 也执行 safeParse
+    try {
+      Object.keys(data.rawKV).forEach(function(k) {
+        var v = data.rawKV[k];
+        if (typeof v === 'string') {
+          var t = v.trim();
+          if ((t.startsWith('{') && t.endsWith('}')) || (t.startsWith('[') && t.endsWith(']'))) {
+            try { var p = JSON.parse(v); if (p !== null && typeof p === 'object') data.rawKV[k] = p; } catch(e) {}
+          }
+        }
+      });
+    } catch(_spErr) { console.warn('[V1.83备份] rawKV safeParse警告:',_spErr); }
+
+    // V1.83: 记录备份版本标识，便于恢复时识别
+    data._meta.backupVersion='V1.83';
+    data._meta.backupFormat='full_v183_no_dead_pkg';
     data._meta.totalRawKV=Object.keys(data.rawKV).length;
 
     var dayCount=Object.keys(data.dailyRecords).length;
@@ -33947,7 +34090,8 @@ window.addEventListener('load',function(){ setTimeout(_init,1500); },{once:true}
 
   // ─── 采集所有历史数据（localStorage 全量）───────────────────
   function collectAllLocalStorageData() {
-    // 所有 tpi_data_YYYY-MM-DD 键
+    // V1.83: 所有 tpi_data_YYYY-MM-DD 键，并对每个值执行safeParse防死包
+    const _sp = (typeof window.__tpi_safeParse === 'function') ? window.__tpi_safeParse : function(d){ return d; };
     const result = {};
     try {
       const lsObj = (typeof window.__tpi_ls_obj === 'function') ? window.__tpi_ls_obj() : window.localStorage;
@@ -33955,7 +34099,7 @@ window.addEventListener('load',function(){ setTimeout(_init,1500); },{once:true}
       for (const key of Object.keys(lsObj)) {
         if (/^tpi_data_(\d{4}-\d{2}-\d{2})$/.test(key)) {
           const date = key.replace('tpi_data_', '');
-          try { result[date] = JSON.parse(lsObj[key] || '{}'); } catch (e) { result[date] = {}; }
+          try { result[date] = _sp(JSON.parse(lsObj[key] || '{}')); } catch (e) { result[date] = {}; }
         }
       }
     } catch (e) { console.warn('[LS] collectAllLocalStorageData:', e); }
@@ -33964,13 +34108,30 @@ window.addEventListener('load',function(){ setTimeout(_init,1500); },{once:true}
 
   // 采集当前页面状态（collectDailyData 全量快照）
   function collectCurrentDaySnapshot(date) {
+    // V1.83 防死包：对返回值执行递归解包
+    function _sp(data) {
+      if (typeof data !== 'string') {
+        if (data !== null && typeof data === 'object') {
+          if (Array.isArray(data)) return data.map(_sp);
+          const out = {};
+          Object.keys(data).forEach(function(k){ out[k] = _sp(data[k]); });
+          return out;
+        }
+        return data;
+      }
+      const t = data.trim();
+      if ((t.startsWith('{') && t.endsWith('}')) || (t.startsWith('[') && t.endsWith(']'))) {
+        try { const p = JSON.parse(data); if (p !== null && typeof p === 'object') return _sp(p); return p; } catch(e) {}
+      }
+      return data;
+    }
     try {
       if (typeof window.collectDailyData === 'function') {
         const obj = window.collectDailyData();
         if (obj && typeof obj === 'object') {
           // collectDailyData 返回 {date: data} 或直接是 data
-          if (obj[date]) return obj[date];
-          if (obj['date-input'] === date || !obj['date-input']) return obj;
+          if (obj[date]) return _sp(obj[date]);
+          if (obj['date-input'] === date || !obj['date-input']) return _sp(obj);
         }
       }
     } catch (e) { console.warn('[LS] collectCurrentDaySnapshot:', e); }
@@ -34063,7 +34224,7 @@ window.addEventListener('load',function(){ setTimeout(_init,1500); },{once:true}
     try {
       if (!silent) showProgress('正在收集数据...', 10);
 
-      // V1.82: 保存前强制触发重算和保存所有当前输入、勾选、点击状态
+      // V1.83: 保存前强制触发重算和保存所有当前输入、勾选、点击状态
       const curDate = (function() {
         try {
           const di = document.getElementById('date-input');
@@ -34102,11 +34263,12 @@ window.addEventListener('load',function(){ setTimeout(_init,1500); },{once:true}
       let saved = 0;
       for (let i = 0; i < dates.length; i++) {
         const date = dates[i];
-        const dayData = allDays[date];
+        const _sp2 = (typeof window.__tpi_safeParse === 'function') ? window.__tpi_safeParse : function(d){ return d; };
+        const dayData = _sp2(allDays[date]);
         dayData._savedAt      = new Date().toISOString();
-        dayData._tpi_version  = '1.79';
+        dayData._tpi_version  = '1.83';
         dayData._date         = date;
-        dayData._note         = 'V1.82完整导出：含所有输入、勾选、点击及页面生成内容';
+        dayData._note         = 'V1.83完整导出：含所有输入、勾选、点击及页面生成数据（防死包）';
         await writeJSON(date + '.json', dayData);
         saved++;
         if (!silent) {
@@ -34121,7 +34283,7 @@ window.addEventListener('load',function(){ setTimeout(_init,1500); },{once:true}
       // 4. 更新元数据
       await writeJSON('_tpi_meta.json', {
         _type:         'tpi_meta',
-        version:       '1.79',
+        version:       '1.83',
         lastSavedAt:   new Date().toISOString(),
         totalDays:     saved,
         savedDates:    dates
@@ -34336,7 +34498,7 @@ window.addEventListener('load',function(){ setTimeout(_init,1500); },{once:true}
     const date = di ? di.value : null;
     if (!date) { alert('请选择日期'); return false; }
     try {
-      // V1.82: 保存前强制触发重算和保存所有当前输入、勾选、点击状态
+      // V1.83: 保存前强制触发重算和保存所有当前输入、勾选、点击状态
       try{ if(typeof window.__tpi_triggerRecalc==='function') window.__tpi_triggerRecalc(); }catch(_){}
       try{ if(window.ScoreDashboard&&typeof window.ScoreDashboard.update==='function') window.ScoreDashboard.update(); }catch(_){}
       try { if (window.TPI && window.TPI.saveToLocalStorage) window.TPI.saveToLocalStorage(); } catch (_) {}
@@ -34346,9 +34508,9 @@ window.addEventListener('load',function(){ setTimeout(_init,1500); },{once:true}
       const snap = collectCurrentDaySnapshot(date);
       if (!snap) { alert('❌ 无可保存的数据'); return false; }
       snap._savedAt     = new Date().toISOString();
-      snap._tpi_version = '1.79';
+      snap._tpi_version = '1.83';
       snap._date        = date;
-      snap._note        = 'V1.82完整导出：含所有输入、勾选、点击及页面生成内容';
+      snap._note        = 'V1.83完整导出：含所有输入、勾选、点击及页面生成数据（防死包）';
       await writeJSON(date + '.json', snap);
       await refreshStatusBar();
       if (typeof window.tpiToast === 'function') window.tpiToast('✅ 已保存：' + date + '.json（含当前全部数据）', 'success');
@@ -41394,7 +41556,7 @@ h3.card-title, h4.card-title,
   function _v157_collectAll(){
     var result={
       _meta:{
-        version: window.TPI_VERSION||'全维效能管理系统（TPI，V1.82）',
+        version: window.TPI_VERSION||'全维效能管理系统（TPI，V1.83）',
         appVersion: window.TPI_APP_VERSION||'1.70',
         backupVersion:'V1.57',
         backupFormat:'full_v157_ultimate',
@@ -41767,7 +41929,7 @@ h3.card-title, h4.card-title,
 
     var result = {
       _meta: {
-        version: window.TPI_VERSION || '全维效能管理系统（TPI，V1.82）',
+        version: window.TPI_VERSION || '全维效能管理系统（TPI，V1.83）',
         appVersion: window.TPI_APP_VERSION || '1.70',
         backupVersion: 'V1.60',
         backupFormat: 'full_v159_ultimate',
