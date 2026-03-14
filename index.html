@@ -119,13 +119,13 @@
   };
 })();
 </script>
-<meta content="全维效能管理系统（TPI，V1.93）" property="og:title"/>
+<meta content="全维效能管理系统（TPI，V1.94）" property="og:title"/>
 <meta content="全维效能管理系统（TPI）| 全面追踪 · 科学管理 · 高效提升" property="og:description"/>
 <meta content="website" property="og:type"/>
 <meta content="https://mytpi.netlify.app/" property="og:url"/>
 <meta content="zh_CN" property="og:locale"/>
 <meta name="twitter:card" content="summary"/>
-<meta name="twitter:title" content="全维效能管理系统（TPI，V1.93）"/>
+<meta name="twitter:title" content="全维效能管理系统（TPI，V1.94）"/>
 <meta name="twitter:description" content="全维效能管理系统（TPI）"/>
 <meta content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=5.0, user-scalable=yes, viewport-fit=cover" name="viewport"/>
 <meta content="全维效能管理系统（TPI）- 跨设备同步 | 支持电脑/手机/平板访问" name="description"/>
@@ -1462,8 +1462,8 @@ window.__tpi_clearAllForm = function() {
       exportedAt: _nowISO(),
       date: dateKey,
       _meta: {
-        version: (window.TPI_VERSION || 'V1.93'),
-        exportVersion: 'V1.93',
+        version: (window.TPI_VERSION || 'V1.94'),
+        exportVersion: 'V1.94',
         exportedAt: _nowISO(),
         date: dateKey,
         exportType: 'full',
@@ -1492,8 +1492,8 @@ window.__tpi_clearAllForm = function() {
       exportedAt: _nowISO(),
       date: expFull.date,
       _meta: {
-        version: (window.TPI_VERSION || 'V1.93'),
-        exportVersion: 'V1.93',
+        version: (window.TPI_VERSION || 'V1.94'),
+        exportVersion: 'V1.94',
         exportType: 'simplified',
         exportedAt: _nowISO(),
         date: expFull.date,
@@ -2473,7 +2473,7 @@ window.getTpiDayDataAsync = async function(dateStr) {
   } catch (e) {}
 })();
 </script>
-<title>全维效能管理系统（TPI，V1.93）</title>
+<title>全维效能管理系统（TPI，V1.94）</title>
 <script>
    'use strict';
         const getCurrentDate = () => {
@@ -2484,7 +2484,7 @@ window.getTpiDayDataAsync = async function(dateStr) {
             return `${year}-${month}-${day}`;
         };
 
-        window.TPI_VERSION = '全维效能管理系统（TPI，V1.93）';
+        window.TPI_VERSION = '全维效能管理系统（TPI，V1.94）';
         window.TPI_APP_VERSION = '1.87';
 
         // V1.50: 检查是否有待恢复的数据（import后不刷新，直接恢复）
@@ -2579,7 +2579,7 @@ window.TPI.DOM = window.TPI.DOM || {
                             : '三十';
             const lunarStr = `农历${lunarMonth}${lunarDay}${lunar.isLeap ? '(闰)' : ''}`;
 
-            document.title = `全维效能管理系统（TPI，V1.93）（${window.TPI_BUILD_DATE} ${weekday} ${lunarStr}）`;
+            document.title = `全维效能管理系统（TPI，V1.94）（${window.TPI_BUILD_DATE} ${weekday} ${lunarStr}）`;
 
             const dateDisplay = document.getElementById('current-date-display');
             if (dateDisplay) {
@@ -7411,7 +7411,7 @@ document.addEventListener('click', function(e) {
 <div class="header-content">
 <div class="header-title">
 <h1 style="font-size:clamp(1.5rem, 3vw, 2.5rem);font-weight:800;background:linear-gradient(135deg,#0f766e 0%,#0d9488 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;letter-spacing:-0.02em;">
-        全维效能管理系统（TPI，V1.93）
+        全维效能管理系统（TPI，V1.94）
        </h1>
 
 <div style="display:inline-flex;align-items:center;gap:6px;flex-shrink:0;">
@@ -7728,7 +7728,7 @@ document.addEventListener('click', function(e) {
           </button>
         </div>
         <div style="padding:7px 12px;background:#f0fdfa;border-left:3px solid #0d9488;border-radius:6px;font-size:12px;color:#0f766e;line-height:1.6;">
-          <b style="display:block;text-align:center;">📌 当日同步说明（V1.93）：</b>上传/下载当前选中日期的<b>单日完整数据</b>（DOM实时快照 + localStorage + IndexedDB 三路合并），上传后自动同步全局设置文件。适合每日常规备份与快速恢复。<b>不包含</b>其他历史日期数据。
+          <b style="display:block;text-align:center;">📌 当日同步说明（V1.94）：</b>上传/下载当前选中日期的<b>单日完整数据</b>（DOM实时快照 + localStorage + IndexedDB 三路合并），上传后自动同步全局设置文件。适合每日常规备份与快速恢复。<b>不包含</b>其他历史日期数据。
         </div>
       </div>
 
@@ -7736,7 +7736,7 @@ document.addEventListener('click', function(e) {
       <div style="padding:14px;background:linear-gradient(135deg,#fffbeb,#fef3c7);border:1.5px dashed #f59e0b;border-radius:10px;margin-bottom:14px;">
         <div style="font-size:13px;font-weight:700;color:#92400e;margin-bottom:8px;text-align:center;">🔄 全量同步（所有历史数据 · 版本升级 / 跨设备迁移）</div>
         <div style="font-size:12px;color:#78350f;background:#fffbeb;border-left:3px solid #f59e0b;padding:8px 10px;border-radius:5px;line-height:1.7;margin-bottom:10px;">
-          <b>📦 全量同步说明（V1.93）：</b>将<b>所有历史日期</b>的完整数据一次性上传或下载，<b>100% 覆盖所有输入、勾选、打卡及系统生成内容</b>（DOM实时快照 + localStorage + IndexedDB 三路数据源合并，下载后同步写入 LS 与 IDB 双端），是版本升级迁移、跨设备完整恢复的唯一正确方式。<br>
+          <b>📦 全量同步说明（V1.94）：</b>将<b>所有历史日期</b>的完整数据一次性上传或下载，<b>100% 覆盖所有输入、勾选、打卡及系统生成内容</b>（DOM实时快照 + localStorage + IndexedDB 三路数据源合并，下载后同步写入 LS 与 IDB 双端），是版本升级迁移、跨设备完整恢复的唯一正确方式。<br>
           <b>与当日同步的区别：</b>当日同步仅处理单天数据；全量同步一次处理所有历史天数（可达数百天）。<br>
           <b>跨版本操作步骤：</b>
           <span style="color:#92400e;">① 旧版本页面 → 登录 → 点击「全量上传」</span>
@@ -21581,7 +21581,7 @@ window.addEventListener('DOMContentLoaded', function() {
     checkStorageUsage();
   }, 6000);
 
-  /
+
   detectMobileAndOptimize();
 
   initializeInputValidation();
@@ -22440,7 +22440,7 @@ window.addEventListener('resize', function() {
                         <div style="display:flex;justify-content:space-between;align-items:center;padding:16px 24px;background:#f8fafc;border-bottom: 1px solid #d1fae5;flex-shrink:0;">
                             <h3 style="margin:0;font-size:18px;color:#1e293b;">👁️ 报告预览</h3>
                             <div style="display:flex;gap:10px;">
-                                <button type="button" onclick="(function(){var p=document.getElementById('tpi-preview-body');if(p){var w=window.open('','_blank');if(w){w.document.write('<html><head><meta charset=UTF-8><title>全维效能管理系统（TPI，V1.93）</title><style>body{font-family:Arial,sans-serif;max-width:900px;margin:40px auto;padding:20px;}h2{color:#0d9488;}table{width:100%;border-collapse:collapse;margin:20px 0;}th,td{padding:10px;border: 1px solid #bbf7d0;}th{background:#f3f4f6;}.btn{padding:10px 20px;margin:10px 5px;cursor:pointer;border: 1px solid #86efac;border-radius:6px;background:#fff;}</style><\/head><body>'+p.innerHTML+'<div style=text-align:center;margin-top:30px><button type="button" class=btn onclick=window.print()>🖨️ 打印</button><button type="button" class=btn onclick=window.close()>关闭</button></div><\/body></html>');w.document.close();}}})()" style="padding:6px 14px;border: 1px solid #6ee7b7;border-radius:6px;background:#fff;cursor:pointer;font-size:13px;color:#334155;transition:all 0.15s;" onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background='#fff'">🌐 新窗口打开</button>
+                                <button type="button" onclick="(function(){var p=document.getElementById('tpi-preview-body');if(p){var w=window.open('','_blank');if(w){w.document.write('<html><head><meta charset=UTF-8><title>全维效能管理系统（TPI，V1.94）</title><style>body{font-family:Arial,sans-serif;max-width:900px;margin:40px auto;padding:20px;}h2{color:#0d9488;}table{width:100%;border-collapse:collapse;margin:20px 0;}th,td{padding:10px;border: 1px solid #bbf7d0;}th{background:#f3f4f6;}.btn{padding:10px 20px;margin:10px 5px;cursor:pointer;border: 1px solid #86efac;border-radius:6px;background:#fff;}</style><\/head><body>'+p.innerHTML+'<div style=text-align:center;margin-top:30px><button type="button" class=btn onclick=window.print()>🖨️ 打印</button><button type="button" class=btn onclick=window.close()>关闭</button></div><\/body></html>');w.document.close();}}})()" style="padding:6px 14px;border: 1px solid #6ee7b7;border-radius:6px;background:#fff;cursor:pointer;font-size:13px;color:#334155;transition:all 0.15s;" onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background='#fff'">🌐 新窗口打开</button>
                                 <button class="tpi-preview-close-btn" type="button" onclick="document.getElementById('tpi-preview-modal').remove()" style="padding:6px 14px;border: 1px solid #86efac;border-radius:6px;background:#f9fafb;color:#374151;cursor:pointer;font-size:13px;font-weight:600;transition:background 0.15s;">✕ 关闭</button>
                             </div>
                         </div>
@@ -23246,7 +23246,7 @@ window.addEventListener('resize', function() {
                 filename = 'TPI_数据导出_' + new Date().toISOString().split('T')[0] + '.txt';
                 mimeType = 'text/plain';
             } else if (format === 'html') {
-                let html = `<html><head><meta charset="UTF-8"><title>全维效能管理系统（TPI，V1.93）</title><\/head><body>
+                let html = `<html><head><meta charset="UTF-8"><title>全维效能管理系统（TPI，V1.94）</title><\/head><body>
 
         <div id="score-dashboard" style="background: linear-gradient(135deg, #e0e7ff 0%, #ddd6fe 100%); padding: 8px 16px; border-radius: 0; margin: 0; color: #1e293b; box-shadow: 0 2px 6px rgba(0,0,0,0.1);">
             <div style="max-width: 1400px; margin: 0 auto; display: flex; align-items: center; justify-content: center; gap: 10px; flex-wrap: nowrap;">
@@ -24261,7 +24261,7 @@ window.archiveOldDataComplete = function() {
                         alert('✅ JSON导出成功！');
                     }
                     else if (format === 'html') {
-                        let html = '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>全维效能管理系统（TPI，V1.93）</title>';
+                        let html = '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>全维效能管理系统（TPI，V1.94）</title>';
                         html += `<style>
 
     .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 10001; align-items: center; justify-content: center; }
@@ -26783,7 +26783,7 @@ window.addEventListener('unhandledrejection', function(event) {
   }
 
   function backupAllDataNow(){
-    const out = { _meta: { version: (window.TPI_VERSION||'全维效能管理系统（TPI，V1.93）'), appVersion: (window.TPI_APP_VERSION||'1.70'), exportedAt: new Date().toISOString() }, localStorage: {} };
+    const out = { _meta: { version: (window.TPI_VERSION||'全维效能管理系统（TPI，V1.94）'), appVersion: (window.TPI_APP_VERSION||'1.70'), exportedAt: new Date().toISOString() }, localStorage: {} };
     for(let i=0;i<__tpi_ls_length();i++){
       const k = __tpi_ls_key(i);
       if(!k) continue;
@@ -26800,7 +26800,7 @@ window.addEventListener('unhandledrejection', function(event) {
     const blob = new Blob([JSON.stringify(out, null, 2)], {type:'application/json'});
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
-    a.download = `TPI_V1.93_full_backup_${(new Date()).toISOString().slice(0,10)}.json`;
+    a.download = `TPI_V1.94_full_backup_${(new Date()).toISOString().slice(0,10)}.json`;
     a.click();
     tpiToast('✅ 已导出“备份所有数据”JSON（可用于全量恢复）');
   }
@@ -27090,7 +27090,7 @@ try{
       }
       window.__tpi_backup_lock = true;
 
-      const out = { _meta: { version: (window.TPI_VERSION||'全维效能管理系统（TPI，V1.93）'), appVersion: (window.TPI_APP_VERSION||'1.70'), exportedAt: new Date().toISOString() }, localStorage: {} };
+      const out = { _meta: { version: (window.TPI_VERSION||'全维效能管理系统（TPI，V1.94）'), appVersion: (window.TPI_APP_VERSION||'1.70'), exportedAt: new Date().toISOString() }, localStorage: {} };
 
       for(let i=0;i<__tpi_ls_length();i++){
         const k = __tpi_ls_key(i);
@@ -27641,7 +27641,7 @@ try{
       }
       window.__tpi_backup_lock = true;
 
-      const out = { _meta: { version: (window.TPI_VERSION||'全维效能管理系统（TPI，V1.93）'), appVersion: (window.TPI_APP_VERSION||'1.70'), exportedAt: new Date().toISOString() }, localStorage: {} };
+      const out = { _meta: { version: (window.TPI_VERSION||'全维效能管理系统（TPI，V1.94）'), appVersion: (window.TPI_APP_VERSION||'1.70'), exportedAt: new Date().toISOString() }, localStorage: {} };
 
       for(let i=0;i<__tpi_ls_length();i++){
         const k = __tpi_ls_key(i);
@@ -29164,6 +29164,31 @@ window.__tpi_syncDateToMain = function(){
     if (window.__TPI_SYNC_STRATEGY_PATCH_V1__) return;
     window.__TPI_SYNC_STRATEGY_PATCH_V1__ = true;
 
+    /* V1.93 启动时一次性清理：清除旧版快照中残留的 packed 字段（防止历史膨胀数据继续占用 LS）*/
+    try {
+      if (!window.__TPI_V193_SNAP_CLEANED__) {
+        window.__TPI_V193_SNAP_CLEANED__ = true;
+        const _ls = window.localStorage;
+        const _snapPrefixes = ['tpi_upload_snapshots_', 'tpi_download_snapshots_'];
+        for (let _i = 0; _i < _ls.length; _i++) {
+          const _k = _ls.key(_i);
+          if (!_k) continue;
+          if (!_snapPrefixes.some(p => _k.startsWith(p))) continue;
+          try {
+            const _raw = _ls.getItem(_k);
+            if (!_raw) continue;
+            const _snaps = JSON.parse(_raw);
+            if (!Array.isArray(_snaps)) continue;
+            let _changed = false;
+            _snaps.forEach(s => {
+              if (s && s.packed) { delete s.packed; _changed = true; }
+            });
+            if (_changed) _ls.setItem(_k, JSON.stringify(_snaps));
+          } catch(_) {}
+        }
+      }
+    } catch(_) {}
+
     const SYNC_SCHEMA = 'tpi_cloud_v3';
     const QUEUE_DB = 'tpi_sync_queue_db';
     const QUEUE_STORE = 'queue';
@@ -29365,7 +29390,7 @@ window.__tpi_syncDateToMain = function(){
     }
 
     /* =====================================================================
-       V1.93: __tpi_saveToLSBypassValidation
+       V1.94: __tpi_saveToLSBypassValidation
        直接将当前 DOM 所有字段收集并写入 localStorage，
        完全绕过 validateExemptionReasons() 拦截，确保上传前 LS 始终是最新状态。
        这解决了"豁免校验拦截 saveToLocalStorage 导致上传旧数据"的根本问题。
@@ -29459,9 +29484,9 @@ window.__tpi_syncDateToMain = function(){
           var dataStr = JSON.stringify(data);
           window.__tpi_ls_set(key, dataStr);
           if (window.__tpi_mem_cache) window.__tpi_mem_cache[key] = dataStr;
-          console.log('[V1.93 bypass] DOM状态已直写LS，字段数:', Object.keys(data).length);
+          console.log('[V1.94 bypass] DOM状态已直写LS，字段数:', Object.keys(data).length);
         } catch(e) {
-          console.warn('[V1.93 __tpi_saveToLSBypassValidation] 失败:', e);
+          console.warn('[V1.94 __tpi_saveToLSBypassValidation] 失败:', e);
         }
       };
     }
@@ -29591,7 +29616,7 @@ window.__tpi_syncDateToMain = function(){
 
       /* ⑥ V1.93: 确保 _formState / _viewState / _computedScores / _badgeStates / _domSnapshot 也被收录
          （这些字段含有系统生成内容，不应排除）
-         V1.93改进：始终从当前 DOM 重新收集，而非仅在 snap 中缺失时才收集 */
+         V1.94改进：始终从当前 DOM 重新收集，而非仅在 snap 中缺失时才收集 */
       try {
         if (typeof window.__tpi_collectFormState === 'function') {
           const freshFS = window.__tpi_collectFormState();
@@ -29629,7 +29654,7 @@ window.__tpi_syncDateToMain = function(){
 
       const meta = {
         schema: SYNC_SCHEMA,
-        schemaVersion: 'V1.93',
+        schemaVersion: 'V1.94',
         date: dateStr,
         deviceId: _deviceId(),
         lastModified: snap._lastModified || _nowISO(),
@@ -30169,9 +30194,9 @@ window.tpiSaveToday = async function () {
             const mBlob = new Blob([masterStr], {type:'application/json'});
             const mFile = new File([mBlob], masterId+'.json', {type:'application/json'});
             await __awStorage().createFile(bktMaster, masterId, mFile);
-            console.log('[V1.93 当日上传] master 全局文件已同步更新 ✅');
+            console.log('[V1.94 当日上传] master 全局文件已同步更新 ✅');
           } catch(masterErr) {
-            console.warn('[V1.93 当日上传] master 更新失败（不影响当日数据）:', masterErr);
+            console.warn('[V1.94 当日上传] master 更新失败（不影响当日数据）:', masterErr);
           }
         })();
       } catch(_) {}
@@ -30363,7 +30388,7 @@ window.tpiLoadToday = async function () {
           try {
             if (window.TPIIndexedDB && typeof window.TPIIndexedDB.saveData === 'function') {
               window.TPIIndexedDB.saveData(dateStr, { day: dayData }, { synced_appwrite: true, schema: 'tpi_cloud_v3', restoredAt: new Date().toISOString() })
-                .catch(function(idbErr){ console.warn('[V1.93 当日下载] IDB 写入失败（不影响 LS 恢复）:', idbErr); });
+                .catch(function(idbErr){ console.warn('[V1.94 当日下载] IDB 写入失败（不影响 LS 恢复）:', idbErr); });
             }
           } catch(e) {}
         } catch(e) {
@@ -30583,7 +30608,7 @@ const __download_end_time = Date.now();
     };
     try {
       setBusy(true);
-      if(prog) prog.textContent = '🔄 V1.93 正在准备全量上传（收集全部本地数据：DOM+LS+IDB 三路）…';
+      if(prog) prog.textContent = '🔄 V1.94 正在准备全量上传（收集全部本地数据：DOM+LS+IDB 三路）…';
 
       /* V1.93: 强制将当前 DOM 状态写入 localStorage ——
          bypass 先行（绕过豁免校验），再走正常路径，确保最新输入 100% 落入 LS。*/
@@ -30613,13 +30638,13 @@ const __download_end_time = Date.now();
       /* V1.93: 同时扫描 IndexedDB，确保 IDB 独有日期也被纳入 */
       try {
         if (window.TPIIndexedDB && typeof window.TPIIndexedDB.getAllDates === 'function') {
-          if(prog) prog.textContent = '🔄 V1.93 正在扫描 IndexedDB 历史日期…';
+          if(prog) prog.textContent = '🔄 V1.94 正在扫描 IndexedDB 历史日期…';
           const idbDates = await window.TPIIndexedDB.getAllDates();
           if (Array.isArray(idbDates)) {
             idbDates.forEach(d => { if(/^\d{4}-\d{2}-\d{2}$/.test(d)) allDatesSet.add(d); });
           }
         }
-      } catch(e) { console.warn('[V1.93 全量上传] IndexedDB 扫描失败（不影响 LS 数据）:', e); }
+      } catch(e) { console.warn('[V1.94 全量上传] IndexedDB 扫描失败（不影响 LS 数据）:', e); }
 
       const allDatesSorted = Array.from(allDatesSet).sort();
 
@@ -30645,7 +30670,7 @@ const __download_end_time = Date.now();
           const k = ls.key(i);
           if(!k || SENSITIVE.test(k)) continue;
           if(/^tpi_data_\d{4}-\d{2}-\d{2}$/.test(k)) continue;
-          if(BULK_BLOAT_RE.test(k)) continue; /* V1.93: 跳过临时/快照键 */
+          if(BULK_BLOAT_RE.test(k)) continue; /* V1.94: 跳过临时/快照键 */
           if(/^tpi_misc_records_/.test(k)) { masterSettings[k] = ls.getItem(k); continue; }
           if(k.startsWith('tpi_') || k==='selectedMode' || k==='vacationPeriods' || k==='lastModeChangeTime'){
             const v = ls.getItem(k);
@@ -30683,7 +30708,7 @@ const __download_end_time = Date.now();
           } catch(_) {}
           ok++;
         } catch(e) {
-          console.warn(`⚠️ [V1.93 全量上传] ${dateStr} 失败:`, e);
+          console.warn(`⚠️ [V1.94 全量上传] ${dateStr} 失败:`, e);
           fail++;
         }
       }
@@ -30709,17 +30734,17 @@ const __download_end_time = Date.now();
         await __awStorage().createFile(bkt, masterId, mFile);
         ok++;
       } catch(e) {
-        console.warn('⚠️ [V1.93 全量上传] master 设置文件上传失败:', e);
+        console.warn('⚠️ [V1.94 全量上传] master 设置文件上传失败:', e);
         fail++;
       }
 
-      const summary = `✅ V1.93 全量上传完成：${ok} 个文件成功（含 ${allDatesSorted.length} 天日记录 + 1 个全局设置文件）${fail>0?' / 失败 '+fail+' 个':''}`;
+      const summary = `✅ V1.94 全量上传完成：${ok} 个文件成功（含 ${allDatesSorted.length} 天日记录 + 1 个全局设置文件）${fail>0?' / 失败 '+fail+' 个':''}`;
       if(prog) prog.textContent = summary;
       try{ window.tpiToast && window.tpiToast(`✅ 全量上传完成：${allDatesSorted.length} 天数据 + 全局设置`, 'success'); }catch(_){}
       try { tpiShowMsg && tpiShowMsg('tpi-sync-msg', summary, false); } catch(_){}
       setTimeout(()=>{ if(prog) prog.style.display='none'; }, 6000);
     } catch(err) {
-      console.error('❌ [V1.93 全量上传] 失败:', err);
+      console.error('❌ [V1.94 全量上传] 失败:', err);
       if(prog) prog.textContent = '❌ 全量上传失败：' + (err?.message||err);
       try{ showModal?.({type:'error',title:'全量上传失败',message: err?.message||String(err),confirmText:'知道了'}); }catch(_){}
     } finally {
@@ -30739,7 +30764,7 @@ const __download_end_time = Date.now();
     };
     try {
       setBusy(true);
-      if(prog) prog.textContent = '🔄 V1.93 正在获取云端文件列表…';
+      if(prog) prog.textContent = '🔄 V1.94 正在获取云端文件列表…';
 
       const user = await __tpi_getAuth();
       const bkt  = window.APPWRITE_BUCKET_ID || window.BUCKET_ID || '69b43eab003bf6126508';
@@ -30813,7 +30838,7 @@ const __download_end_time = Date.now();
           }
           ok++;
         } catch(e) {
-          console.warn('⚠️ [V1.93 全量下载] master 文件恢复失败（将从日期文件 globals 字段中补充恢复）:', e);
+          console.warn('⚠️ [V1.94 全量下载] master 文件恢复失败（将从日期文件 globals 字段中补充恢复）:', e);
         }
       }
 
@@ -30841,7 +30866,7 @@ const __download_end_time = Date.now();
                 await window.TPIIndexedDB.saveData(dateStr, { packed: dataStr, day: dayData }, { synced_appwrite: true, schema: 'tpi_cloud_v3', restoredAt: new Date().toISOString() });
                 idbRestored++;
               }
-            } catch(idbErr){ console.warn('[V1.93 全量下载] IDB 写入失败 '+dateStr+'（不影响 LS 恢复）:', idbErr); }
+            } catch(idbErr){ console.warn('[V1.94 全量下载] IDB 写入失败 '+dateStr+'（不影响 LS 恢复）:', idbErr); }
           }
 
           /* V1.93: 还原全局设置（globals，含各日期的 misc 记录）→ localStorage */
@@ -30858,7 +30883,7 @@ const __download_end_time = Date.now();
           }
           ok++;
         } catch(e) {
-          console.warn(`⚠️ [V1.93 全量下载] ${dateStr} 失败:`, e);
+          console.warn(`⚠️ [V1.94 全量下载] ${dateStr} 失败:`, e);
           fail++;
         }
       }
@@ -30876,13 +30901,13 @@ const __download_end_time = Date.now();
       } catch(_){}
 
       const dayCount = ok - (masterFile ? 1 : 0);
-      const summary = `✅ V1.93 全量下载完成：${dayCount} 天日记录（LS+IDB 双写 ${idbRestored} 天）| ${miscRestored} 天杂事记录 | ${settingsRestored} 项设置键已恢复${fail>0?' | 失败 '+fail+' 个':''}。页面即将刷新…`;
+      const summary = `✅ V1.94 全量下载完成：${dayCount} 天日记录（LS+IDB 双写 ${idbRestored} 天）| ${miscRestored} 天杂事记录 | ${settingsRestored} 项设置键已恢复${fail>0?' | 失败 '+fail+' 个':''}。页面即将刷新…`;
       if(prog) prog.textContent = summary;
       try{ window.tpiToast && window.tpiToast(`✅ 全量下载完成：${dayCount} 天，刷新后生效`, 'success'); }catch(_){}
       try { tpiShowMsg && tpiShowMsg('tpi-sync-msg', summary, false); } catch(_){}
       setTimeout(()=>{ if(prog) prog.style.display='none'; if(ok>0) try{ location.reload(); }catch(_){} }, 4000);
     } catch(err) {
-      console.error('❌ [V1.93 全量下载] 失败:', err);
+      console.error('❌ [V1.94 全量下载] 失败:', err);
       if(prog) prog.textContent = '❌ 全量下载失败：' + (err?.message||err);
       try{ showModal?.({type:'error',title:'全量下载失败',message: err?.message||String(err),confirmText:'知道了'}); }catch(_){} 
     } finally {
@@ -42402,7 +42427,7 @@ h3.card-title, h4.card-title,
   function _v157_collectAll(){
     var result={
       _meta:{
-        version: window.TPI_VERSION||'全维效能管理系统（TPI，V1.93）',
+        version: window.TPI_VERSION||'全维效能管理系统（TPI，V1.94）',
         appVersion: window.TPI_APP_VERSION||'1.70',
         backupVersion:'V1.57',
         backupFormat:'full_v157_ultimate',
@@ -42775,7 +42800,7 @@ h3.card-title, h4.card-title,
 
     var result = {
       _meta: {
-        version: window.TPI_VERSION || '全维效能管理系统（TPI，V1.93）',
+        version: window.TPI_VERSION || '全维效能管理系统（TPI，V1.94）',
         appVersion: window.TPI_APP_VERSION || '1.70',
         backupVersion: 'V1.60',
         backupFormat: 'full_v159_ultimate',
@@ -42970,10 +42995,10 @@ h3.card-title, h4.card-title,
       var miscCount = Object.keys(data.miscRecords).length;
       var rawCount = Object.keys(data.rawKV).length;
       var content = JSON.stringify(data, null, 2);
-      var filename = 'TPI_全量备份_V1.93_' + _dateStr() + '.json';
+      var filename = 'TPI_全量备份_V1.94_' + _dateStr() + '.json';
       _dlBlob(content, filename, 'application/json;charset=utf-8');
-      _toast('✅ 全量备份成功（V1.93）！共 ' + dayCount + ' 天日记录，' + miscCount + ' 天杂事，' + rawCount + ' 项完整键值。文件：' + filename);
-      console.log('[TPI V1.93] 备份完成：', dayCount+'天记录，', rawCount+'项键值');
+      _toast('✅ 全量备份成功（V1.94）！共 ' + dayCount + ' 天日记录，' + miscCount + ' 天杂事，' + rawCount + ' 项完整键值。文件：' + filename);
+      console.log('[TPI V1.94] 备份完成：', dayCount+'天记录，', rawCount+'项键值');
     } catch(e) {
       _err('❌ 备份失败：' + (e && e.message ? e.message : String(e)));
       console.error('[V1.59 backupAllData]', e);
@@ -43052,7 +43077,7 @@ h3.card-title, h4.card-title,
   window.TPI._backupAllDataAsync = async function(){ window.TPI.backupAllData(); };
 
   /* V1.93: __tpi_forceSaveDOM — 强制将当前 DOM 所有表单元素状态写入 localStorage
-     V1.93改进：直接走 bypass 路径，彻底绕过豁免校验 */
+     V1.94改进：直接走 bypass 路径，彻底绕过豁免校验 */
   if (typeof window.__tpi_forceSaveDOM !== 'function') {
     window.__tpi_forceSaveDOM = function() {
       /* 优先走 bypass（绕过校验）*/
@@ -43095,7 +43120,7 @@ h3.card-title, h4.card-title,
   }
 
   /* V1.93: __tpi_collectAndSave(dateStr) — 收集指定日期的全量 DOM 状态并预存到 localStorage
-     V1.93改进：bypass 优先，绕过豁免校验 */
+     V1.94改进：bypass 优先，绕过豁免校验 */
   if (typeof window.__tpi_collectAndSave !== 'function') {
     window.__tpi_collectAndSave = function(dateStr) {
       try {
@@ -43116,7 +43141,7 @@ h3.card-title, h4.card-title,
     };
   }
 
-  console.log('[TPI V1.93] 终极备份/恢复补丁已安装 ✅ — 豁免校验完全绕过+DOM直读+全量存储扫描+多路预保存+IDB三路合并');
+  console.log('[TPI V1.94] 终极备份/恢复补丁已安装 ✅ — 豁免校验完全绕过+DOM直读+全量存储扫描+多路预保存+IDB三路合并');
 })();
 </script>
 
