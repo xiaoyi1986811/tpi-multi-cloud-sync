@@ -29469,6 +29469,10 @@ window.__tpi_syncDateToMain = function(){
     /* V1.92: 收集全量 localStorage 键（排除敏感项）*/
     function _pickGlobalKeys(dateStr){
       const SENSITIVE = /token|secret|password|pat\b/i;
+      /* V1.93修复：排除临时/快照/草稿类键，防止 globals 膨胀到数MB
+         排除：tpi_draft_*、tpi_unsaved_data_*、tpi_upload_snapshots_*
+               tpi_error_logs、tpi_banner_dismissed_*、tpi_direct_raw_* */
+      const BLOAT_RE = /^tpi_(draft|unsaved_data|upload_snapshots|error_logs|banner_dismissed|direct_raw)_/;
       const keys = new Set();
       /* 固定必收键 */
       const FIXED = [
@@ -29477,7 +29481,7 @@ window.__tpi_syncDateToMain = function(){
         'tpi_submod_state','tpi_compact_mode','tpi_font_size',
         'tpi_mobile_tips_enabled','tpi_quicknav_hidden',
         'tpi_backup_reminder_disabled','tpi_last_manual_backup',
-        'tpi_exemption_weekly','tpi_error_logs',
+        'tpi_exemption_weekly',
         'tpi_storage_full_warning','tpi_rating_override',
         'tpi_no_landscape_hint','tpi_auto_backup_cfg',
         'lastModeChangeTime','__tpi_app_version','tpi_device_id',
@@ -29486,17 +29490,18 @@ window.__tpi_syncDateToMain = function(){
         'tpi_goal_settings','tpi_notification_prefs'
       ];
       FIXED.forEach(k => keys.add(k));
-      /* 当前日期相关键 */
+      /* 当前日期相关键（仅当日杂事，不含快照） */
       if (dateStr) {
         keys.add('tpi_misc_records_' + dateStr);
-        keys.add('tpi_upload_snapshots_' + dateStr);
+        /* V1.93: 不再打包 upload_snapshots，避免自我嵌套膨胀 */
       }
-      /* V1.92: 扫描全部 localStorage，收录所有 tpi_ 前缀键（非敏感）*/
+      /* V1.93: 扫描全部 localStorage，收录所有 tpi_ 前缀键（非敏感、非临时）*/
       try {
         const ls = window.localStorage;
         for (let i = 0; i < ls.length; i++) {
           const k = ls.key(i);
           if (!k || SENSITIVE.test(k)) continue;
+          if (BLOAT_RE.test(k)) continue; /* V1.93: 跳过临时/快照键 */
           if (k.startsWith('tpi_') || k === 'selectedMode' || k === 'vacationPeriods' || k === 'lastModeChangeTime') {
             /* 跳过单日数据键（单独存入 day 字段）*/
             if (/^tpi_data_\d{4}-\d{2}-\d{2}$/.test(k)) continue;
@@ -30108,11 +30113,16 @@ window.tpiSaveToday = async function () {
         } catch(_) {}
       } catch(e) {}
 
-      /* V1.92: 当日上传成功后，异步更新 master 全局设置文件，确保签到/杂事等全局数据同步 */
+      /* V1.93: 当日上传成功后，异步更新 master 全局设置文件，确保签到/杂事等全局数据同步 */
       try {
         (async () => {
           try {
             const SENSITIVE_RE = /token|secret|password|pat\b/i;
+            /* V1.93修复：排除临时/快照类键，避免 master 文件膨胀到数MB
+               排除：tpi_draft_*（草稿）、tpi_unsaved_data_*（未保存快照）、
+                     tpi_upload_snapshots_*（上传历史快照）、tpi_data_*（当日数据）
+                     tpi_error_logs（调试日志）、tpi_banner_dismissed_*（横幅状态） */
+            const BLOAT_RE = /^tpi_(draft|unsaved_data|upload_snapshots|error_logs|banner_dismissed)_/;
             const masterSettings = {};
             try {
               const ls = localStorage;
@@ -30120,6 +30130,7 @@ window.tpiSaveToday = async function () {
                 const _k = ls.key(_i);
                 if(!_k || SENSITIVE_RE.test(_k)) continue;
                 if(/^tpi_data_\d{4}-\d{2}-\d{2}$/.test(_k)) continue;
+                if(BLOAT_RE.test(_k)) continue; /* V1.93: 跳过临时/快照键 */
                 if(_k.startsWith('tpi_') || _k==='selectedMode' || _k==='vacationPeriods' || _k==='lastModeChangeTime'){
                   const _v = ls.getItem(_k);
                   if(_v != null) masterSettings[_k] = _v;
@@ -30141,7 +30152,7 @@ window.tpiSaveToday = async function () {
             const userMaster = await __tpi_getAuth();
             const safeUserM  = String(userMaster.$id||'').replace(/[^a-zA-Z0-9_\-]/g,'_');
             const masterObj  = {
-              schema: 'tpi_master_v192',
+              schema: 'tpi_master_v193',
               exportedAt: new Date().toISOString(),
               deviceId: (typeof getOrCreateDeviceId==='function' ? getOrCreateDeviceId() : '') || '',
               settings: masterSettings,
@@ -30153,9 +30164,9 @@ window.tpiSaveToday = async function () {
             const mBlob = new Blob([masterStr], {type:'application/json'});
             const mFile = new File([mBlob], masterId+'.json', {type:'application/json'});
             await __awStorage().createFile(bktMaster, masterId, mFile);
-            console.log('[V1.92 当日上传] master 全局文件已同步更新 ✅');
+            console.log('[V1.93 当日上传] master 全局文件已同步更新 ✅ (精简版，已排除草稿/快照键)');
           } catch(masterErr) {
-            console.warn('[V1.92 当日上传] master 更新失败（不影响当日数据）:', masterErr);
+            console.warn('[V1.93 当日上传] master 更新失败（不影响当日数据）:', masterErr);
           }
         })();
       } catch(_) {}
