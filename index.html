@@ -117,13 +117,13 @@
   };
 })();
 </script>
-<meta content="全维效能管理系统 TPI（V2.07）" property="og:title"/>
+<meta content="全维效能管理系统 TPI（V2.11）" property="og:title"/>
 <meta content="全维效能管理系统（TPI）| 全面追踪 · 科学管理 · 高效提升" property="og:description"/>
 <meta content="website" property="og:type"/>
 <meta content="https://mytpi.netlify.app/" property="og:url"/>
 <meta content="zh_CN" property="og:locale"/>
 <meta name="twitter:card" content="summary"/>
-<meta name="twitter:title" content="全维效能管理系统 TPI（V2.07）"/>
+<meta name="twitter:title" content="全维效能管理系统 TPI（V2.11）"/>
 <meta name="twitter:description" content="全维效能管理系统（TPI）"/>
 <meta content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=5.0, user-scalable=yes, viewport-fit=cover" name="viewport"/>
 <meta content="全维效能管理系统（TPI）- 跨设备同步 | 支持电脑/手机/平板访问" name="description"/>
@@ -1529,9 +1529,6 @@ window.__tpi_clearAllForm = function() {
         'hsm-total-score':'HSM模块总分','fli-total-score':'FLI模块总分',
         'logistics-total-score':'Logistics模块总分','bonus-total-score':'BONUS模块总分',
         'ignition-total':'燃点总分','tpi-total-score':'TPI合计（实时计算）',
-        'type-s-score-morning':'Type-S晨间分','type-s-score-afternoon':'Type-S午间分',
-        'type-s-score-evening1':'Type-S晚间1分','type-s-score-evening2':'Type-S晚间2分',
-        'type-s-score-flexible':'Type-S弹性分',
         'total-hours':'总学习时长','total-pages':'总阅读页数','total-words':'总写作字数'
       };
       Object.keys(scoreMap).forEach(function(k){
@@ -1947,7 +1944,7 @@ window.__tpi_clearAllForm = function() {
       md += `**今日反思**：${getVal('daily-reflection')}\n\n`;
       md += `**微小胜利**：\n- ${getVal('victory-1')}\n- ${getVal('victory-2')}\n- ${getVal('victory-3')}\n\n`;
 
-      md += `---\n*报告由全维效能管理系统 TPI（V2.07）自动生成，时间：${new Date().toLocaleString('zh-CN')}*\n`;
+      md += `---\n*报告由全维效能管理系统 TPI（V2.11）自动生成，时间：${new Date().toLocaleString('zh-CN')}*\n`;
 
       // 下载文件
       const blob = new Blob([md], { type: 'text/markdown;charset=utf-8' });
@@ -2007,8 +2004,6 @@ const FIELDS = {
   textFields: [
     'daily-summary', 'cliffhanger', 'first-action', 'daily-reflection',
     'misc-edit-content', 'fli-core-notes',
-    'type-s-content-morning', 'type-s-content-afternoon',
-    'type-s-content-evening1', 'type-s-content-evening2', 'type-s-content-flexible',
     'victory-1', 'victory-2', 'victory-3',
     'json-import-area', 'bonus-reason', 'template-content-input'
   ],
@@ -2362,8 +2357,7 @@ window.collectDailyData = function() {
       'stats-avg-tpi','stats-max-tpi','avg-tpi','max-tpi','min-tpi',
       'ami-total-score','bcm-total-score','hsm-total-score','fli-total-score',
       'logistics-total-score','bonus-total-score','ignition-total',
-      'tpi-total-score','type-s-score-morning','type-s-score-afternoon',
-      'type-s-score-evening1','type-s-score-evening2','type-s-score-flexible',
+      'tpi-total-score',
       'total-hours','total-pages','total-words'
     ];
     var _skipVals = new Set(['','0','0.0','计算中...','待评级','暂无数据','计算失败','数据无效']);
@@ -2683,7 +2677,7 @@ window.getTpiDayDataAsync = async function(dateStr) {
   } catch (e) {}
 })();
 </script>
-<title>全维效能管理系统 TPI（V2.07）</title>
+<title>全维效能管理系统 TPI（V2.11）</title>
 <script>
    'use strict';
         const getCurrentDate = () => {
@@ -2694,7 +2688,7 @@ window.getTpiDayDataAsync = async function(dateStr) {
             return `${year}-${month}-${day}`;
         };
 
-        window.TPI_VERSION = '全维效能管理系统 TPI（V2.07）';
+        window.TPI_VERSION = '全维效能管理系统 TPI（V2.11）';
         window.TPI_APP_VERSION = '1.88';
 
         // V1.50: 检查是否有待恢复的数据（import后不刷新，直接恢复）
@@ -2789,7 +2783,7 @@ window.TPI.DOM = window.TPI.DOM || {
                             : '三十';
             const lunarStr = `农历${lunarMonth}${lunarDay}${lunar.isLeap ? '(闰)' : ''}`;
 
-            document.title = `全维效能管理系统 TPI（V2.07）（${window.TPI_BUILD_DATE} ${weekday} ${lunarStr}）`;
+            document.title = `全维效能管理系统 TPI（V2.11）（${window.TPI_BUILD_DATE} ${weekday} ${lunarStr}）`;
 
             const dateDisplay = document.getElementById('current-date-display');
             if (dateDisplay) {
@@ -2935,7 +2929,10 @@ window.MathJax = {
 <script>
    'use strict';
     const LunarCalendar=(function(){'use strict';const L=[0x04bd8,0x04ae0,0x0a570,0x054d5,0x0d260,0x0d950,0x16554,0x056a0,0x09ad0,0x055d2,0x04ae0,0x0a5b6,0x0a4d0,0x0d250,0x1d255,0x0b540,0x0d6a0,0x0ada2,0x095b0,0x14977,0x04970,0x0a4b0,0x0b4b5,0x06a50,0x06d40,0x1ab54,0x02b60,0x09570,0x052f2,0x04970,0x06566,0x0d4a0,0x0ea50,0x06e95,0x05ad0,0x02b60,0x186e3,0x092e0,0x1c8d7,0x0c950,0x0d4a0,0x1d8a6,0x0b550,0x056a0,0x1a5b4,0x025d0,0x092d0,0x0d2b2,0x0a950,0x0b557,0x06ca0,0x0b550,0x15355,0x04da0,0x0a5b0,0x14573,0x052b0,0x0a9a8,0x0e950,0x06aa0,0x0aea6,0x0ab50,0x04b60,0x0aae4,0x0a570,0x05260,0x0f263,0x0d950,0x05b57,0x056a0,0x096d0,0x04dd5,0x04ad0,0x0a4d0,0x0d4d4,0x0d250,0x0d558,0x0b540,0x0b6a0,0x195a6,0x095b0,0x049b0,0x0a974,0x0a4b0,0x0b27a,0x06a50,0x06d40,0x0af46,0x0ab60,0x09570,0x04af5,0x04970,0x064b0,0x074a3,0x0ea50,0x06b58,0x055c0,0x0ab60,0x096d5,0x092e0,0x0c960,0x0d954,0x0d4a0,0x0da50,0x07552,0x056a0,0x0abb7,0x025d0,0x092d0,0x0cab5,0x0a950,0x0b4a0,0x0baa4,0x0ad50,0x055d9,0x04ba0,0x0a5b0,0x15176,0x052b0,0x0a930,0x07954,0x06aa0,0x0ad50,0x05b52,0x04b60,0x0a6e6,0x0a4e0,0x0d260,0x0ea65,0x0d530,0x05aa0,0x076a3,0x096d0,0x04afb,0x04ad0,0x0a4d0,0x1d0b6,0x0d250,0x0d520,0x0dd45,0x0b5a0,0x056d0,0x055b2,0x049b0,0x0a577,0x0a4b0,0x0aa50,0x1b255,0x06d20,0x0ada0,0x14b63,0x09370,0x049f8,0x04970,0x064b0,0x168a6,0x0ea50,0x06b20,0x1a6c4,0x0aae0,0x0a2e0,0x0d2e3,0x0c960,0x0d557,0x0d4a0,0x0da50,0x05d55,0x056a0,0x0a6d0,0x055d4,0x052d0,0x0a9b8,0x0a950,0x0b4a0,0x0b6a6,0x0ad50,0x055a0,0x0aba4,0x0a5b0,0x052b0,0x0b273,0x06930,0x07337,0x06aa0,0x0ad50,0x14b55,0x04b60,0x0a570,0x054e4,0x0d160,0x0e968,0x0d520,0x0daa0,0x16aa6,0x056d0,0x04ae0,0x0a9d4,0x0a2d0,0x0d150,0x0f252,0x0d520,0x0dda0];function g(y){return(L[y-1900]>>13)&0x0f}function m(y,mo){return(L[y-1900]&(0x10000>>mo))?30:29}function y(yr){let s=348;for(let i=0x8000;i>0x8;i>>=1)s+=(L[yr-1900]&i)?1:0;const lm=g(yr);if(lm>0)s+=(L[yr-1900]&0x10000)?30:29;return s}function s2l(d){const b=new Date(1900,0,31);let o=Math.floor((d-b)/86400000),ly,lm,ld,il=false;for(ly=1900;ly<2101;ly++){const yd=y(ly);if(o<yd)break;o-=yd}const lpm=g(ly);for(lm=1;lm<13;lm++){let md;if(lpm>0&&lm===lpm+1){if(!il){--lm;il=true;md=(L[ly-1900]&0x10000)?30:29}else{il=false;md=m(ly,lm)}}else md=m(ly,lm);if(o<md)break;o-=md}return{year:ly,month:lm,day:o+1,isLeap:il}}function l2s(yr,mo,da,il=false){const b=new Date(1900,0,31);let o=0;for(let y=1900;y<yr;y++)o+=y(y);const lm=g(yr);for(let m=1;m<mo;m++)o+=m(yr,m);if(lm>0&&mo>lm)o+=(L[yr-1900]&0x10000)?30:29;if(il)o+=m(yr,mo);o+=da-1;return new Date(b.getTime()+o*86400000)}return{solarToLunar:s2l,lunarToSolar:l2s,getLeapMonth:g}})();
-    const RealtimeCalculator=(function(){'use strict';function sp(v,d=0){const p=parseFloat(v);return isNaN(p)||!isFinite(p)?d:p}function cl(v,mn,mx){return Math.max(mn,Math.min(mx,v))}function st(e,t){if(e)e.textContent=String(t)}function cds(id){const ins=document.querySelectorAll(`#${id} input[type="number"]:not([readonly])`);let t=0;ins.forEach(i=>{const v=sp(i.value,0),mn=sp(i.min,-Infinity),mx=sp(i.max,Infinity);t+=cl(v,mn,mx)});return Math.max(0,t)}function uds(id,sid){const sc=cds(id),el=document.getElementById(sid);if(el){if(el.tagName==='INPUT')el.value=sc.toFixed(2);else st(el,sc.toFixed(2))}return sc}function ctt(){const ds=['academic-score','personal-score','life-score','logistics-score'];let t=0;ds.forEach(d=>{const el=document.getElementById(d);if(el){const v=el.tagName==='INPUT'?el.value:el.textContent;t+=sp(v,0)}});return Math.max(0,t)}function utr(ts){const re=document.getElementById('tpi-rating');if(!re)return;let r='poor';if(ts>=210)r='overload';else if(ts>=156)r='excellent';else if(ts>=121)r='good';else if(ts>=95)r='normal';re.value=r;}function init(){document.addEventListener('input',function(e){if(e.target.type==='number'&&!e.target.readOnly){clearTimeout(e.target._ct);e.target._ct=setTimeout(()=>rec(),100)}},true);document.addEventListener('blur',function(e){if(e.target.type==='number'){const v=sp(e.target.value),mn=sp(e.target.min,-Infinity),mx=sp(e.target.max,Infinity);if(v<mn)e.target.value=mn;else if(v>mx)e.target.value=mx;rec()}},true);window.__tpi_debug_log('✅ 实时计算系统已初始化')}function rec(){try{uds('academic-dimension','academic-score');uds('personal-dimension','personal-score');uds('life-dimension','life-score');uds('logistics-dimension','logistics-score');const tt=ctt();utr(tt);if(window.TPI&&typeof window.TPI.calculateTPI==='function'){window.TPI.calculateTPI();}else if(typeof window.calculateTPI==='function'){window.calculateTPI();}}catch(e){console.error('❌ 计算错误:',e)}}return{init:init,recalculate:rec}})();
+    const RealtimeCalculator=(function(){'use strict';function sp(v,d=0){const p=parseFloat(v);return isNaN(p)||!isFinite(p)?d:p}function cl(v,mn,mx){return Math.max(mn,Math.min(mx,v))}function st(e,t){if(e)e.textContent=String(t)}function cds(id){const ins=document.querySelectorAll(`#${id} input[type="number"]:not([readonly])`);let t=0;ins.forEach(i=>{const v=sp(i.value,0),mn=sp(i.min,-Infinity),mx=sp(i.max,Infinity);t+=cl(v,mn,mx)});return Math.max(0,t)}function uds(id,sid){const sc=cds(id),el=document.getElementById(sid);if(el){if(el.tagName==='INPUT')el.value=sc.toFixed(2);else st(el,sc.toFixed(2))}return sc}function ctt(){const ds=['academic-score','personal-score','life-score','logistics-score'];let t=0;ds.forEach(d=>{const el=document.getElementById(d);if(el){const v=el.tagName==='INPUT'?el.value:el.textContent;t+=sp(v,0)}});return Math.max(0,t)}/* V2.11 修复：utr() 基于已废弃的旧版四维度体系（academic/personal/life/logistics）
+   这些维度元素已不存在于DOM，导致 tt 永远为0，会将 rating 误设为 poor 后再被
+   autoRateTPI() 覆盖，造成闪烁。此处禁用 utr()，评级统一交由 autoRateTPI() 处理。*/
+function utr(ts){/* disabled in V2.11 - rating managed by autoRateTPI() */}function init(){document.addEventListener('input',function(e){if(e.target.type==='number'&&!e.target.readOnly){clearTimeout(e.target._ct);e.target._ct=setTimeout(()=>rec(),100)}},true);document.addEventListener('blur',function(e){if(e.target.type==='number'){const v=sp(e.target.value),mn=sp(e.target.min,-Infinity),mx=sp(e.target.max,Infinity);if(v<mn)e.target.value=mn;else if(v>mx)e.target.value=mx;rec()}},true);window.__tpi_debug_log('✅ 实时计算系统已初始化')}function rec(){try{uds('academic-dimension','academic-score');uds('personal-dimension','personal-score');uds('life-dimension','life-score');uds('logistics-dimension','logistics-score');const tt=ctt();utr(tt);if(window.TPI&&typeof window.TPI.calculateTPI==='function'){window.TPI.calculateTPI();}else if(typeof window.calculateTPI==='function'){window.calculateTPI();}}catch(e){console.error('❌ 计算错误:',e)}}return{init:init,recalculate:rec}})();
 
     const InputValidator = (function() {
 
@@ -3117,82 +3114,7 @@ window.MathJax = {
         });
     }
 
-    window.validateTypeS = function(period) {
-        const scoreInput = document.getElementById(`type-s-score-${period}`);
-        const contentTextarea = document.getElementById(`type-s-content-${period}`);
-        const errorDiv = document.getElementById(`type-s-error-${period}`);
-
-        if (!scoreInput || !contentTextarea || !errorDiv) {
-            console.warn(`Type S elements not found for period: ${period}`);
-            return true;
-        }
-
-        const score = parseFloat(scoreInput.value) || 0;
-        const content = contentTextarea.value.trim();
-
-        if (score > 0 && content === '') {
-            errorDiv.style.display = 'block';
-            contentTextarea.style.borderColor = '#0d9488';
-            contentTextarea.style.boxShadow = '0 0 0 3px rgba(239, 68, 68, 0.1)';
-            return false;
-        } else {
-            errorDiv.style.display = 'none';
-            contentTextarea.style.borderColor = '';
-            contentTextarea.style.boxShadow = '';
-
-            if (score > 0 && content !== '' && window.SuccessNotifier) {
-                window.InputValidator.showToast(`✅ Type S (${period}) 内容已填写`, 'success');
-            }
-        }
-
-        try {
-            const warnId = `type-s-quality-hint-${period}`;
-            let warnEl = document.getElementById(warnId);
-            if (!warnEl) {
-                warnEl = document.createElement('div');
-                warnEl.id = warnId;
-                warnEl.style.cssText = 'font-size:11px;margin-top:3px;color:#6b7280;display:none;';
-                contentTextarea.parentNode.insertBefore(warnEl, contentTextarea.nextSibling);
-            }
-            const charCount = content.length;
-            if (score > 0) {
-                let msg = `字数：${charCount}（建议 20-80 字）`;
-                let color = '#6b7280';
-                if (charCount < 10 && score > 0) {
-                    msg = `⚠️ 内容仅 ${charCount} 字，请确认分值 ${score} 分是否合理`;
-                    color = '#d97706';
-                } else if (charCount >= 20 && charCount <= 80) {
-                    msg = `✅ 字数 ${charCount}（适宜范围）`;
-                    color = '#059669';
-                }
-                warnEl.style.color = color;
-                warnEl.textContent = msg;
-                warnEl.style.display = 'block';
-            } else {
-                warnEl.style.display = 'none';
-            }
-        } catch(e) {}
-
-        try {
-            const insuffWarnId = `type-s-insuff-${period}`;
-            let insuffWarnEl = document.getElementById(insuffWarnId);
-            if (!insuffWarnEl) {
-                insuffWarnEl = document.createElement('span');
-                insuffWarnEl.id = insuffWarnId;
-                insuffWarnEl.style.cssText = 'font-size:10px;color:#dc2626;margin-left:4px;display:none;';
-                scoreInput.parentNode && scoreInput.parentNode.insertBefore(insuffWarnEl, scoreInput.nextSibling);
-            }
-            const charCount = content.length;
-            if (score > 0 && charCount < 5) {
-                insuffWarnEl.textContent = '(因字数不足，请补充内容)';
-                insuffWarnEl.style.display = 'inline';
-            } else {
-                insuffWarnEl.style.display = 'none';
-            }
-        } catch(e) {}
-
-        return true;
-    };
+    // validateTypeS 已于 V2.08 随 Type S 功能整体移除
 
     function lockFocusFactorUntilEvening() {
         const focusSelects = document.querySelectorAll('select[aria-label*="专注系数"]');
@@ -3209,45 +3131,7 @@ window.MathJax = {
         lockFocusFactorUntilEvening();
     }
 
-    window.__tpiLoadTypeSArchive = function() {
-        try {
-            var container = document.getElementById('type-s-archive-content');
-            if (!container) return;
-            var periods = [
-                ['type-s-content-morning','晨间'],['type-s-content-afternoon','午间'],
-                ['type-s-content-evening1','晚间1'],['type-s-content-evening2','晚间2'],
-                ['type-s-content-flexible','机动']
-            ];
-            var allEntries = [];
-            var today = new Date();
-            for (var i = 0; i < 90; i++) {
-                var d = new Date(today.getTime() - i * 86400000);
-                var ds = d.toISOString().split('T')[0];
-                var raw = (window.__tpi_ls_get || function(){return null;})('tpi_data_' + ds);
-                if (!raw) continue;
-                try {
-                    var obj = JSON.parse(raw);
-                    var dayEntries = [];
-                    periods.forEach(function(p) {
-                        var v = obj[p[0]];
-                        if (v && String(v).trim()) dayEntries.push({ period: p[1], text: String(v).trim() });
-                    });
-                    if (dayEntries.length) allEntries.push({ date: ds, entries: dayEntries });
-                } catch(e) {}
-            }
-            if (allEntries.length === 0) {
-                container.innerHTML = '<p style="color:#9ca3af;font-size:13px;text-align:center;">近90天暂无Type S结晶记录</p>';
-                return;
-            }
-            var html = allEntries.map(function(day) {
-                var rows = day.entries.map(function(e) {
-                    return '<div style="margin-bottom:6px;padding:6px 10px;background:white;border-radius:6px;border-left: 3px solid #6ee7b7;"><span style="font-size:11px;color:#7c3aed;font-weight:700;">[' + e.period + ']</span> <span style="font-size:12px;color:#374151;">' + e.text + '</span></div>';
-                }).join('');
-                return '<details style="margin-bottom:8px;"><summary style="cursor:pointer;font-size:13px;font-weight:600;color:#5b21b6;padding:4px 0;">' + day.date + ' <span style="font-size:11px;color:#9ca3af;font-weight:400;">(' + day.entries.length + ' 条)</span></summary><div style="padding:6px 0;">' + rows + '</div></details>';
-            }).join('');
-            container.innerHTML = '<p style="font-size:11px;color:#6b7280;margin-bottom:8px;">共找到 ' + allEntries.length + ' 天的结晶记录（近90天）</p>' + html;
-        } catch(e) { console.error('[§59] Type S档案加载失败:', e); }
-    };
+    // __tpiLoadTypeSArchive 已于 V2.08 随 Type S 功能整体移除
 
     function initializeTier2System() {
         const tier2Textareas = document.querySelectorAll('textarea[aria-label*="备注"]');
@@ -7032,7 +6916,7 @@ th, td {
 </style>
 
 <!-- ═══════════════════════════════════════════════════════════
-     TPI V2.07 Android 移动端专项优化样式
+     TPI V2.11 Android 移动端专项优化样式
      优化范围：触控目标、字体、输入框、布局、滚动、表格
      ═══════════════════════════════════════════════════════════ -->
 <style id="tpi-android-mobile-v201">
@@ -8079,7 +7963,7 @@ document.addEventListener('click', function(e) {
 <div class="header-content">
 <div class="header-title">
 <h1 style="font-size:clamp(1.5rem, 3vw, 2.5rem);font-weight:800;background:linear-gradient(135deg,#0f766e 0%,#0d9488 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;letter-spacing:-0.02em;">
-        全维效能管理系统 TPI（V2.07）
+        全维效能管理系统 TPI（V2.11）
        </h1>
 
 <div style="display:inline-flex;align-items:center;gap:6px;flex-shrink:0;">
@@ -8176,7 +8060,7 @@ document.addEventListener('click', function(e) {
 
 </div>
 </div>
-<!-- 签到森林奖励系统 TPIV2.07 -->
+<!-- 签到森林奖励系统 TPIV2.11 -->
 <div class="tpi-tree-rewards" style="margin-top: 20px; padding: 16px; background: linear-gradient(145deg, #f0fdf4, #f7fee7); border-radius: 16px; border: 2px solid #86efac; box-shadow: 0 6px 16px rgba(13,148,136,0.12);">
   <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
     <span style="font-weight: 700; font-size: 1.1rem; color: #2e7d32;">🌳 签到森林</span>
@@ -15423,7 +15307,6 @@ const TPI = (function() {
                 WRITE_PRICE_TYPE_B: 1.0,     // Type B：批判性建构 (Tier 2)
                 WRITE_PRICE_TYPE_C: 1.8,     // Type C：正式写作/输出 (Tier 3)
                 WRITE_PRICE_TYPE_D: 2.8,     // Type D：核心攻坚（每100当量）
-                WRITE_PRICE_TYPE_S: 2.0,     // Type S：思维结晶（2.0/分，直接分值×系数）
 
                 ONSITE_PRICE_NORMAL: 2.0,    // 常态（Input/Passive）
                 ONSITE_PRICE_OUTPUT: 3.0,    // 绝地（Output/Active）
@@ -15883,6 +15766,7 @@ const TPI = (function() {
 
                         bonusCheckboxes.forEach(cb => {
                             cb.disabled = true;
+                            cb.checked = false; // V2.10 修复：与 applyModeEffects 行为统一，切入斯多葛时清除勾选
                             if (cb.parentElement) {
                                 cb.parentElement.style.opacity = '0.5';
                                 cb.parentElement.title = '斯多葛模式下Bonus不计入TPI';
@@ -15947,7 +15831,7 @@ const TPI = (function() {
                 reminderMessage = '🅱️ 复苏/冷启动模式：允许低产。动态达标线 (查表法): 0休→70, 1休→60, 2休→50, 3休→40, 4休→暂停。';
                 break;
                    case 'stoic': // V4标准
-                reminderMessage = '©️ 斯多葛/止损模式：接受流失事实。AMI×1.2补偿，FLI正常计入，公式：TPI = min(120, 95 + (AMI×1.2 + FLI − 95) × 0.5)，Sys_Net与Bonus不计入，最高120分。';
+                reminderMessage = '©️ 斯多葛/止损模式：接受流失事实。AMI×1.2补偿，FLI正常计入。计算：x = AMI×1.2 + FLI；若 x ≤ 95 则 TPI = x；若 x > 95 则 TPI = min(120, 95 + (x−95)×0.5)。Sys_Net 与 Bonus 不计入，最高120分。';
                 break;
                     case 'vacation':
                         reminderMessage = '🏖️ 假期/停机模式：彻底切断，此时"不做学术"是最高道德。';
@@ -16903,12 +16787,8 @@ function calculateAMI() {
                         typeDCount++;
                     }
 
-                    let typeSVal = safeParseFloat(writeInputs[4]?.value);
-                    if (typeSVal > 0) {
-                        rowWriteScore += typeSVal * CONSTANTS.WRITE_PRICE_TYPE_S * focus;
-                    }
             const onsiteTypeSelect = row.querySelector('select[aria-label*="现场类型"]');
-            const typeLHours = safeParseFloat(writeInputs[5]?.value);
+            const typeLHours = safeParseFloat(writeInputs[4]?.value);
             if (typeLHours > 0) {
                 let onsitePrice = CONSTANTS.ONSITE_PRICE_NORMAL; // 默认常态单价
                 if (onsiteTypeSelect && onsiteTypeSelect.value) {
@@ -17194,15 +17074,18 @@ function calculateAMI() {
                 const yesterdayDisplay = document.getElementById('bcm-sleep-yesterday-display');
                 if (yesterdayDisplay) yesterdayDisplay.textContent = yesterdayTime || '--:--';
 
-                const minutes = timeToMinutes(timeStr);
+                // V2.10 修复：睡眠时间跨午夜（如 00:30），必须使用 toNightMinutes 而非 timeToMinutes。
+                // timeToMinutes('00:30')=30，无法满足 ≥22*60 的判断；
+                // toNightMinutes 将 00:00~06:00 映射到 1440~1800（即24h~30h），逻辑自洽。
+                const minutes = toNightMinutes(timeStr);
 
                 if (minutes >= 22 * 60) {
                     baseScore = 5;
                 }
-                else if (minutes < 30) {
+                else if (minutes < 24 * 60 + 30) {
                     baseScore = 3;
                 }
-                else if (minutes >= 30 && minutes <= 60) {
+                else if (minutes >= 24 * 60 + 30 && minutes <= 25 * 60) {
                     baseScore = 1;
                 }
                 else {
@@ -17505,6 +17388,9 @@ function calculateAMI() {
             }
 
         function checkAutoBonuses() {
+            // V2.09 修复：斯多葛/复苏模式禁用所有加分项，自动勾选无意义且会引起抖动
+            const _currentModeForBonus = (state && state.selectedMode) ? state.selectedMode : (__tpi_ls_get('selectedMode') || 'normal');
+            if (_currentModeForBonus === 'stoic' || _currentModeForBonus === 'recovery') return;
 
             if (state.typeDCount >= 3) {
                 checkBonusBox('warrior');
@@ -17565,9 +17451,10 @@ function calculateAMI() {
             const bcmStreak = checkBCMStreakDays(3, 18); // 18分 = BCM_RAW_CAP(20)的90%（连续稳定达标线）
             if (bcmStreak) { checkBonusBox('bcm_streak'); } else { uncheckBonusBox('bcm_streak'); }
 
-            const mv1 = document.getElementById('micro-victory-1')?.value?.trim();
-            const mv2 = document.getElementById('micro-victory-2')?.value?.trim();
-            const mv3 = document.getElementById('micro-victory-3')?.value?.trim();
+            // V2.11 修复：微小胜利实际DOM id为 victory-1/2/3，而非 micro-victory-1/2/3
+            const mv1 = (document.getElementById('victory-1') || document.getElementById('micro-victory-1'))?.value?.trim();
+            const mv2 = (document.getElementById('victory-2') || document.getElementById('micro-victory-2'))?.value?.trim();
+            const mv3 = (document.getElementById('victory-3') || document.getElementById('micro-victory-3'))?.value?.trim();
             if (mv1 && mv2 && mv3) { checkBonusBox('micro-victories'); } else { uncheckBonusBox('micro-victories'); }
 
             const returnBox = document.querySelector('input[name="bonus-item"][value="return"]');
@@ -17589,6 +17476,9 @@ function calculateAMI() {
                     }
                 } catch(e) {}
             }
+            // V2.10 修复：所有 checkbox 状态调整完毕后，统一触发一次 calculateBonus()，
+            // 避免之前每个 checkBonusBox/uncheckBonusBox 分别触发导致的中间态抖动。
+            calculateBonus();
         }
 
         function checkStreakDays(days) {
@@ -17630,22 +17520,26 @@ function calculateAMI() {
                 }
             }
             const todayBcmElem = document.getElementById('bcm-total-score');
-            const todayBcm = todayBcmElem ? safeParseFloat(todayBcmElem.value || 0) : (state && state.bcmRawScore ? state.bcmRawScore : 0);
+            // V2.10 修复：bcm-total-score 是 <span>，应读 textContent 而非 value（后者永远 undefined）
+            const todayBcm = todayBcmElem ? safeParseFloat(todayBcmElem.textContent || todayBcmElem.value || 0) : (state && state.bcmRawScore ? state.bcmRawScore : 0);
             return todayBcm >= minBCM;
         }
 
+        // V2.10 修复：checkBonusBox/uncheckBonusBox 只修改 checkbox 状态，不在每次勾选时单独调用
+        // calculateBonus()，避免 checkAutoBonuses 执行期间多次中间态计算。
+        // checkAutoBonuses 调用完毕后由 calculateAMI → calculateTPI 统一触发一次 calculateBonus()。
         function checkBonusBox(val) {
             const el = document.querySelector(`input[name="bonus-item"][value="${val}"]`);
             if (el && !el.checked) {
                 el.checked = true;
-                calculateBonus();
+                // 不在此处调用 calculateBonus()，由上层统一触发
             }
         }
         function uncheckBonusBox(val) {
             const el = document.querySelector(`input[name="bonus-item"][value="${val}"]`);
             if (el && el.checked) {
                 el.checked = false;
-                calculateBonus();
+                // 不在此处调用 calculateBonus()，由上层统一触发
             }
         }
 
@@ -17902,8 +17796,6 @@ window.MixedModeCalculator = (function() {
             var typeDWords = typeDVal < 12 ? typeDVal * (C.TYPE_D_EQUIVALENT || 400) : typeDVal;
             writeScore += typeDWords / 100 * (C.WRITE_PRICE_TYPE_D || 2.8);
         }
-        var typeSInput = (_writeSource).querySelector('input[id^="type-s-score"]') || (_writeSource).querySelector('input.type-s-input');
-        if (typeSInput) writeScore += sp(typeSInput.value) * (C.WRITE_PRICE_TYPE_S || 2.0);
 
         var focusSelect = row.querySelector('.focus-coefficient-select');
         var focus = sp(focusSelect ? focusSelect.value : 1.0) || 1.0;
@@ -17966,7 +17858,10 @@ window.MixedModeCalculator = (function() {
             var sysNet = 0;
             try { sysNet = (typeof calcSysNet === 'function') ? calcSysNet() : 0; } catch(e) {}
 
-            var bonusDisabled = stoicCount > 0;
+            // V2.08 修复：仅当所有非假期时段均为 stoic 时才禁用 Bonus，
+            // 存在任何 normal/recovery 时段时 Bonus 仍可用
+            var activeNonVacation = 4 - vacationCount;
+            var bonusDisabled = activeNonVacation > 0 && stoicCount >= activeNonVacation;
             var bonus = 0;
             if (!bonusDisabled) {
                 try { bonus = (typeof calcBonus === 'function') ? calcBonus() : 0; } catch(e) {}
@@ -18096,14 +17991,32 @@ window.MixedModeCalculator = (function() {
                 try {
                     let ami = safeParseFloat(document.getElementById('ami-score')?.value || 0);
                     const fli = safeParseFloat(document.getElementById('fli-score')?.value || 0);
-                    const bonus = calculateBonus();
+
+                    // V2.09 修复：selectedMode 提前到函数顶部声明，避免后续各分支引用时出现 TDZ 问题
+                    const selectedMode = state.selectedMode || 'normal';
+
+                    // V2.09 修复：斯多葛/复苏模式下 bonus 不参与计分，但仍需调用以保持
+                    // checkboxes 状态同步；调用后若模式禁用 bonus，则将显示字段归零
+                    const bonus = (function() {
+                        const raw = calculateBonus();
+                        if (selectedMode === 'stoic' || selectedMode === 'recovery') {
+                            // V2.10 修复：同步清除所有 bonus checkbox 勾选，防止切回普通模式时残留爆分
+                            document.querySelectorAll('input[name="bonus-item"]:checked').forEach(cb => { cb.checked = false; });
+                            const bonusTotal = document.getElementById('bonus-total-score');
+                            const bonusInp   = document.getElementById('bonus-score');
+                            if (bonusTotal) bonusTotal.textContent = '0.0';
+                            if (bonusInp)   bonusInp.value         = '0.0';
+                            return 0;
+                        }
+                        return raw;
+                    })();
 
                     const sysNet = calculateSysNet(); // 已负值归零
 
                     const sysScoreElem = document.getElementById('sys-score');
                     if (sysScoreElem) sysScoreElem.value = sysNet.toFixed(1);
 
-                    if (sysNet < CONSTANTS.SYS_NET_SAFETY_THRESHOLD) {
+                    if (sysNet < CONSTANTS.SYS_NET_SAFETY_THRESHOLD && selectedMode !== 'stoic') {
                         showSafetyAlert("Sys < 12: 触发自动保护，次日强制复苏模式");
 
                         (function(){
@@ -18130,21 +18043,8 @@ window.MixedModeCalculator = (function() {
                                 5000
                             );
                         }, 1000);
-                    } else {
-                        if (__tpi_ls_get('force_recovery_mode') === 'true') {
-                            const triggerDate = __tpi_ls_get('force_recovery_date');
-                            const today = (typeof __tpi_getSelectedDate === 'function') ? __tpi_getSelectedDate() : (()=>{const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;})();
-
-                            if (triggerDate === today) {
-                                __tpi_ls_remove('force_recovery_mode');
-                                __tpi_ls_remove('force_recovery_reason');
-                                __tpi_ls_remove('force_recovery_date');
-                                try { __tpi_ls_remove('force_recovery_meta'); } catch(_) {}
-                            }
-                        }
                     }
 
-                    const selectedMode = state.selectedMode || 'normal';
                     let tpiTotal = 0;
 
                     if (selectedMode === 'vacation' && state.vacationPeriods === 4) {
@@ -18229,46 +18129,13 @@ window.MixedModeCalculator = (function() {
                         tpiTotal = Math.min(CONSTANTS.RECOVERY_MODE_CAP, tpiTotal);
                     }
 
-                    var typeSIds = [
-                        'type-s-score-morning', 'type-s-score-afternoon',
-                        'type-s-score-evening1', 'type-s-score-evening2', 'type-s-score-flexible'
-                    ];
-                    var contentIds = [
-                        'type-s-content-morning', 'type-s-content-afternoon',
-                        'type-s-content-evening1', 'type-s-content-evening2', 'type-s-content-flexible'
-                    ];
-                    var typeSPenalty = 0;
-                    for (var i = 0; i < typeSIds.length; i++) {
-                        var scoreEl = document.getElementById(typeSIds[i]);
-                        var contentEl = document.getElementById(contentIds[i]);
-                        if (scoreEl && contentEl) {
-                            var score = parseFloat(scoreEl.value) || 0;
-                            var content = (contentEl.value || '').trim();
-                            if (score > 0 && content.length < 5) {
-                                typeSPenalty += score;
-                                scoreEl.style.border = '1px solid #0d9488';
-                                var parent = contentEl.parentNode;
-                                if (parent && !parent.querySelector('.type-s-warning')) {
-                                    var warn = document.createElement('div');
-                                    warn.className = 'type-s-warning';
-                                    warn.style.cssText = 'font-size:10px;color:#ef4444;margin-top:2px;';
-                                    warn.textContent = '(因字数不足，本项暂未计入总分)';
-                                    parent.appendChild(warn);
-                                }
-                            } else {
-                                scoreEl.style.border = '';
-                                var existingWarn = contentEl.parentNode ? contentEl.parentNode.querySelector('.type-s-warning') : null;
-                                if (existingWarn) existingWarn.remove();
-                            }
-                        }
-                    }
-                    tpiTotal = Math.max(0, tpiTotal - typeSPenalty);
-
                     tpiTotal = Math.max(0, tpiTotal);
 
                     updateDisplay(tpiTotal.toFixed(1));
 
-                    if (tpiTotal > CONSTANTS.TPI_OVERLOAD_THRESHOLD) {
+                    // V2.09 修复：斯多葛模式上限120，永远不会触发过载(210)；
+                    // 复苏模式上限95同理。此处仅对常态/混合模式生效。
+                    if (tpiTotal > CONSTANTS.TPI_OVERLOAD_THRESHOLD && selectedMode !== 'stoic' && selectedMode !== 'recovery') {
                         NotifySystem.showToast(`🔥 能量平衡协议触发(TPI>${CONSTANTS.TPI_OVERLOAD_THRESHOLD}): 明日上限将锁死为95`, "warning");
                         try {
                             const _today = (typeof __tpi_getSelectedDate === 'function') ? __tpi_getSelectedDate() :
@@ -18372,10 +18239,8 @@ window.MixedModeCalculator = (function() {
                 } else {
                     targetElement.innerHTML = '动态目标: max(40, 70 - 休息×10)';
                     targetElement.style.display = 'block';
-
-                    if (state.tpi >= 95) {
-                        __tpi_ls_set('recovery_rest_periods', '0');
-                    }
+                    // V2.08 修复：不在非复苏模式下自动重置休息时段数，
+                    // 避免用户切换模式时丢失已保存的休息段设置
                 }
             }
 
@@ -18596,7 +18461,9 @@ window.MixedModeCalculator = (function() {
                 },
 
                 checkAndTrigger: function(sysNet, tpi, bonus) {
-                    if (sysNet < CONSTANTS.SYS_NET_SAFETY_THRESHOLD) {
+                    // V2.11 修复：斯多葛模式下 sys_net 不参与 TPI 计算，不应触发系统红线
+                    const _currentMode = (window.__tpi_main_state && window.__tpi_main_state.selectedMode) || 'normal';
+                    if (sysNet < CONSTANTS.SYS_NET_SAFETY_THRESHOLD && _currentMode !== 'stoic') {
                         this.triggerSysRedLine(sysNet);
                         return true;
                     }
@@ -18606,7 +18473,7 @@ window.MixedModeCalculator = (function() {
                         return true;
                     }
 
-                    if (bonus > CONSTANTS.BONUS_TOTAL_CAP || tpi > 130) {
+                    if (tpi >= CONSTANTS.TPI_HIGH_PERFORMANCE) {
                         this.triggerRewardMoment(tpi, bonus);
                         return true;
                     }
@@ -19596,7 +19463,8 @@ try {
                     input.addEventListener('change', handler);
                 });
 
-        document.querySelectorAll('#micro-victory-1, #micro-victory-2, #micro-victory-3').forEach(input => {
+        // V2.11 修复：微小胜利实际DOM id为 victory-1/2/3，兼容两套id
+        document.querySelectorAll('#victory-1, #victory-2, #victory-3, #micro-victory-1, #micro-victory-2, #micro-victory-3').forEach(input => {
             const handler = debounce(() => { checkAutoBonuses(); calculateBonus(); calculateTPI(); }, 500);
             input.addEventListener('input', handler);
             input.addEventListener('blur', handler);
@@ -19767,10 +19635,13 @@ try {
 
                 const totalScore = baseScore + dynamicBonus;
 
-                statusElem.textContent = status;
-                scoreElem.value = totalScore.toFixed(1);
+                // V2.09 修复：规则说明"不扣分、而非负分"，防守分最低为 0
+                const clampedScore = Math.max(0, totalScore);
 
-                return totalScore;
+                statusElem.textContent = status;
+                scoreElem.value = clampedScore.toFixed(1);
+
+                return clampedScore;
             }
 
             function initialize() {
@@ -19985,7 +19856,7 @@ try {
                            if (tpi >= CONSTANTS.STREAK_MIN_TPI) { // 连胜标准引用CONSTANTS.STREAK_MIN_TPI(100)
                                     winStreak++;
                                     warnStreak = 0;
-                                } else if (tpi < 95) { // 预警标准: 95
+                                } else if (tpi < CONSTANTS.TPI_BASELINE) { // V2.09 修复：预警阈值统一用常量 TPI_BASELINE(95)，而非硬编码
                                     warnStreak++;
                                     winStreak = 0;
                                 } else {
@@ -23127,7 +22998,7 @@ window.addEventListener('resize', function() {
                         <div style="display:flex;justify-content:space-between;align-items:center;padding:16px 24px;background:#f8fafc;border-bottom: 1px solid #d1fae5;flex-shrink:0;">
                             <h3 style="margin:0;font-size:18px;color:#1e293b;">👁️ 报告预览</h3>
                             <div style="display:flex;gap:10px;">
-                                <button type="button" onclick="(function(){var p=document.getElementById('tpi-preview-body');if(p){var w=window.open('','_blank');if(w){w.document.write('<html><head><meta charset=UTF-8><title>全维效能管理系统 TPI（V2.07）</title><style>body{font-family:Arial,sans-serif;max-width:900px;margin:40px auto;padding:20px;}h2{color:#0d9488;}table{width:100%;border-collapse:collapse;margin:20px 0;}th,td{padding:10px;border: 1px solid #bbf7d0;}th{background:#f3f4f6;}.btn{padding:10px 20px;margin:10px 5px;cursor:pointer;border: 1px solid #86efac;border-radius:6px;background:#fff;}</style><\/head><body>'+p.innerHTML+'<div style=text-align:center;margin-top:30px><button type="button" class=btn onclick=window.print()>🖨️ 打印</button><button type="button" class=btn onclick=window.close()>关闭</button></div><\/body></html>');w.document.close();}}})()" style="padding:6px 14px;border: 1px solid #6ee7b7;border-radius:6px;background:#fff;cursor:pointer;font-size:13px;color:#334155;transition:all 0.15s;" onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background='#fff'">🌐 新窗口打开</button>
+                                <button type="button" onclick="(function(){var p=document.getElementById('tpi-preview-body');if(p){var w=window.open('','_blank');if(w){w.document.write('<html><head><meta charset=UTF-8><title>全维效能管理系统 TPI（V2.11）</title><style>body{font-family:Arial,sans-serif;max-width:900px;margin:40px auto;padding:20px;}h2{color:#0d9488;}table{width:100%;border-collapse:collapse;margin:20px 0;}th,td{padding:10px;border: 1px solid #bbf7d0;}th{background:#f3f4f6;}.btn{padding:10px 20px;margin:10px 5px;cursor:pointer;border: 1px solid #86efac;border-radius:6px;background:#fff;}</style><\/head><body>'+p.innerHTML+'<div style=text-align:center;margin-top:30px><button type="button" class=btn onclick=window.print()>🖨️ 打印</button><button type="button" class=btn onclick=window.close()>关闭</button></div><\/body></html>');w.document.close();}}})()" style="padding:6px 14px;border: 1px solid #6ee7b7;border-radius:6px;background:#fff;cursor:pointer;font-size:13px;color:#334155;transition:all 0.15s;" onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background='#fff'">🌐 新窗口打开</button>
                                 <button class="tpi-preview-close-btn" type="button" onclick="document.getElementById('tpi-preview-modal').remove()" style="padding:6px 14px;border: 1px solid #86efac;border-radius:6px;background:#f9fafb;color:#374151;cursor:pointer;font-size:13px;font-weight:600;transition:background 0.15s;">✕ 关闭</button>
                             </div>
                         </div>
@@ -23933,7 +23804,7 @@ window.addEventListener('resize', function() {
                 filename = 'TPI_数据导出_' + new Date().toISOString().split('T')[0] + '.txt';
                 mimeType = 'text/plain';
             } else if (format === 'html') {
-                let html = `<html><head><meta charset="UTF-8"><title>全维效能管理系统 TPI（V2.07）</title><\/head><body>
+                let html = `<html><head><meta charset="UTF-8"><title>全维效能管理系统 TPI（V2.11）</title><\/head><body>
 
         <div id="score-dashboard" style="background: linear-gradient(135deg, #e0e7ff 0%, #ddd6fe 100%); padding: 8px 16px; border-radius: 0; margin: 0; color: #1e293b; box-shadow: 0 2px 6px rgba(0,0,0,0.1);">
             <div style="max-width: 1400px; margin: 0 auto; display: flex; align-items: center; justify-content: center; gap: 10px; flex-wrap: nowrap;">
@@ -24948,7 +24819,7 @@ window.archiveOldDataComplete = function() {
                         alert('✅ JSON导出成功！');
                     }
                     else if (format === 'html') {
-                        let html = '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>全维效能管理系统 TPI（V2.07）</title>';
+                        let html = '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>全维效能管理系统 TPI（V2.11）</title>';
                         html += `<style>
 
     .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 10001; align-items: center; justify-content: center; }
@@ -27496,7 +27367,7 @@ window.addEventListener('unhandledrejection', function(event) {
   }
 
   function backupAllDataNow(){
-    const out = { _meta: { version: (window.TPI_VERSION||'全维效能管理系统 TPI（V2.07）'), appVersion: (window.TPI_APP_VERSION||'1.70'), exportedAt: new Date().toISOString() }, localStorage: {} };
+    const out = { _meta: { version: (window.TPI_VERSION||'全维效能管理系统 TPI（V2.11）'), appVersion: (window.TPI_APP_VERSION||'1.70'), exportedAt: new Date().toISOString() }, localStorage: {} };
     for(let i=0;i<__tpi_ls_length();i++){
       const k = __tpi_ls_key(i);
       if(!k) continue;
@@ -27803,7 +27674,7 @@ try{
       }
       window.__tpi_backup_lock = true;
 
-      const out = { _meta: { version: (window.TPI_VERSION||'全维效能管理系统 TPI（V2.07）'), appVersion: (window.TPI_APP_VERSION||'1.70'), exportedAt: new Date().toISOString() }, localStorage: {} };
+      const out = { _meta: { version: (window.TPI_VERSION||'全维效能管理系统 TPI（V2.11）'), appVersion: (window.TPI_APP_VERSION||'1.70'), exportedAt: new Date().toISOString() }, localStorage: {} };
 
       for(let i=0;i<__tpi_ls_length();i++){
         const k = __tpi_ls_key(i);
@@ -28354,7 +28225,7 @@ try{
       }
       window.__tpi_backup_lock = true;
 
-      const out = { _meta: { version: (window.TPI_VERSION||'全维效能管理系统 TPI（V2.07）'), appVersion: (window.TPI_APP_VERSION||'1.70'), exportedAt: new Date().toISOString() }, localStorage: {} };
+      const out = { _meta: { version: (window.TPI_VERSION||'全维效能管理系统 TPI（V2.11）'), appVersion: (window.TPI_APP_VERSION||'1.70'), exportedAt: new Date().toISOString() }, localStorage: {} };
 
       for(let i=0;i<__tpi_ls_length();i++){
         const k = __tpi_ls_key(i);
@@ -30237,10 +30108,10 @@ window.__tpi_syncDateToMain = function(){
     /* V1.93: 收集全量 localStorage 键（排除敏感项）*/
     function _pickGlobalKeys(dateStr){
       const SENSITIVE = /token|secret|password|pat\b/i;
-      /* V2.07: 排除临时/快照/草稿/云端备份缓存键，防止 globals 套娃膨胀 */
+      /* V2.08: 排除临时/快照/草稿/云端备份缓存键，防止 globals 套娃膨胀 */
       const BLOAT_RE = /^tpi_(draft|unsaved_data|upload_snapshots|download_snapshots|error_logs|banner_dismissed|direct_raw|cloud_backup)_/;
       const keys = new Set();
-      /* 固定必收键（V2.07: 补全所有非 tpi_ 前缀的用户数据键）*/
+      /* 固定必收键（V2.08: 补全所有非 tpi_ 前缀的用户数据键）*/
       const FIXED = [
         'tpi_checkin_data','selectedMode','vacationPeriods',
         'tpi_action_logs','tpi_date_bookmarks','tpi_collapsed_state',
@@ -30254,7 +30125,7 @@ window.__tpi_syncDateToMain = function(){
         'tpi_display_prefs','tpi_theme','tpi_dark_mode',
         'tpi_user_notes','tpi_weekly_summary',
         'tpi_goal_settings','tpi_notification_prefs',
-        /* V2.07: 补全混合模式、恢复模式、深色模式等非 tpi_ 前缀的用户状态键 */
+        /* V2.08: 补全混合模式、恢复模式、深色模式等非 tpi_ 前缀的用户状态键 */
         'dark-mode',
         'mixed_auto_calc','mixed_manual_total',
         'force_recovery_mode','force_recovery_date','force_recovery_reason','force_recovery_meta',
@@ -30266,7 +30137,7 @@ window.__tpi_syncDateToMain = function(){
       if (dateStr) {
         keys.add('tpi_misc_records_' + dateStr);
       }
-      /* V2.07: 扫描全部 localStorage，收录所有用户设置键（排除临时键和套娃键）*/
+      /* V2.08: 扫描全部 localStorage，收录所有用户设置键（排除临时键和套娃键）*/
       try {
         const ls = window.localStorage;
         for (let i = 0; i < ls.length; i++) {
@@ -30275,7 +30146,7 @@ window.__tpi_syncDateToMain = function(){
           if (BLOAT_RE.test(k)) continue;
           if (/^tpi_data_\d{4}-\d{2}-\d{2}$/.test(k)) continue;
           if (/^tpi_misc_records_\d{4}-\d{2}-\d{2}$/.test(k)) { keys.add(k); continue; }
-          /* V2.07: 同时收录 mixed_period_* / manual_mode_override_* 等动态前缀键 */
+          /* V2.08: 同时收录 mixed_period_* / manual_mode_override_* 等动态前缀键 */
           if (k.startsWith('tpi_') || k.startsWith('mixed_') || k.startsWith('manual_mode_override_') ||
               k === 'selectedMode' || k === 'vacationPeriods' || k === 'lastModeChangeTime' ||
               k === 'dark-mode' || k === 'force_recovery_mode' || k === 'force_recovery_date' ||
@@ -31412,7 +31283,7 @@ const __download_end_time = Date.now();
         }
       } catch(_) {}
 
-      /* ── 3. 收集所有全局设置键（V2.07: 排除临时/快照/草稿/云端备份缓存键）── */
+      /* ── 3. 收集所有全局设置键（V2.08: 排除临时/快照/草稿/云端备份缓存键）── */
       const BULK_BLOAT_RE = /^tpi_(draft|unsaved_data|upload_snapshots|download_snapshots|error_logs|banner_dismissed|direct_raw|cloud_backup)_/;
       const masterSettings = {};
       try {
@@ -31423,7 +31294,7 @@ const __download_end_time = Date.now();
           if(/^tpi_data_\d{4}-\d{2}-\d{2}$/.test(k)) continue;
           if(BULK_BLOAT_RE.test(k)) continue;
           if(/^tpi_misc_records_/.test(k)) { masterSettings[k] = ls.getItem(k); continue; }
-          /* V2.07: 收录 mixed_period_* / manual_mode_override_* / dark-mode / force_recovery_* 等所有用户状态键 */
+          /* V2.08: 收录 mixed_period_* / manual_mode_override_* / dark-mode / force_recovery_* 等所有用户状态键 */
           if(k.startsWith('tpi_') || k.startsWith('mixed_') || k.startsWith('manual_mode_override_') ||
              k==='selectedMode' || k==='vacationPeriods' || k==='lastModeChangeTime' ||
              k==='dark-mode' || k==='force_recovery_mode' || k==='force_recovery_date' ||
@@ -31437,7 +31308,7 @@ const __download_end_time = Date.now();
 
       const totalSteps = allDatesSorted.length + 1;
       if(allDatesSorted.length === 0){
-        /* V2.07修复：无历史日期记录时，仍继续上传 master 全局设置文件（不提前返回）*/
+        /* V2.08修复：无历史日期记录时，仍继续上传 master 全局设置文件（不提前返回）*/
         if(prog) prog.textContent = '⚠️ 本地暂无历史日期数据，将仅上传全局设置文件…';
       }
 
@@ -31623,7 +31494,7 @@ const __download_end_time = Date.now();
             } catch(idbErr){ console.warn('[V1.97 全量下载] IDB 写入失败 '+dateStr+'（不影响 LS 恢复）:', idbErr); }
           }
 
-          /* V2.07: 还原全局设置（globals，含各日期的 misc 记录）→ localStorage
+          /* V2.08: 还原全局设置（globals，含各日期的 misc 记录）→ localStorage
              排除套娃/临时键，确保 mixed_* / dark-mode / force_recovery_* 等均被还原 */
           if(unpacked && unpacked.obj && unpacked.obj.globals){
             const _DL_BLOAT = /^tpi_(draft|unsaved_data|upload_snapshots|download_snapshots|error_logs|banner_dismissed|direct_raw|cloud_backup)_/;
@@ -42470,7 +42341,7 @@ td {
     'calculateAMI', 'calculateBCM', 'calculateFLI', 'calculateTPI',
     'calculateBonus', 'calculateMorningScore', 'calculateSleepScore',
     'calculateDefenseScore', 'updateFieldLMultiplier', 'fillFieldLTemplate',
-    'validateTypeS', '__mixedManualTotalInput', '__tpiNavSearch',
+    '__mixedManualTotalInput', '__tpiNavSearch',
     '__mixedAutoCalcToggle', '__mixedPeriodChange',
     'updateExemptionCounts',
     'autoClean30Days', 'autoCleanOldData', 'closeAllModals', 'closeLandscapeTip',
@@ -43188,7 +43059,7 @@ h3.card-title, h4.card-title,
   function _v157_collectAll(){
     var result={
       _meta:{
-        version: window.TPI_VERSION||'全维效能管理系统 TPI（V2.07）',
+        version: window.TPI_VERSION||'全维效能管理系统 TPI（V2.11）',
         appVersion: window.TPI_APP_VERSION||'1.70',
         backupVersion:'V1.57',
         backupFormat:'full_v157_ultimate',
@@ -43557,7 +43428,7 @@ h3.card-title, h4.card-title,
 
     var result = {
       _meta: {
-        version: window.TPI_VERSION || '全维效能管理系统 TPI（V2.07）',
+        version: window.TPI_VERSION || '全维效能管理系统 TPI（V2.11）',
         appVersion: window.TPI_APP_VERSION || '1.70',
         backupVersion: 'V1.60',
         backupFormat: 'full_v159_ultimate',
