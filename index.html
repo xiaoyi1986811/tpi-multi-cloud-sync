@@ -117,13 +117,13 @@
   };
 })();
 </script>
-<meta content="全维效能管理系统 TPI（V2.12）" property="og:title"/>
+<meta content="全维效能管理系统 TPI（V2.19）" property="og:title"/>
 <meta content="全维效能管理系统（TPI）| 全面追踪 · 科学管理 · 高效提升" property="og:description"/>
 <meta content="website" property="og:type"/>
 <meta content="https://mytpi.netlify.app/" property="og:url"/>
 <meta content="zh_CN" property="og:locale"/>
 <meta name="twitter:card" content="summary"/>
-<meta name="twitter:title" content="全维效能管理系统 TPI（V2.12）"/>
+<meta name="twitter:title" content="全维效能管理系统 TPI（V2.19）"/>
 <meta name="twitter:description" content="全维效能管理系统（TPI）"/>
 <meta content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=5.0, user-scalable=yes, viewport-fit=cover" name="viewport"/>
 <meta content="全维效能管理系统（TPI）- 跨设备同步 | 支持电脑/手机/平板访问" name="description"/>
@@ -719,6 +719,11 @@
           try { if (window.TPI && typeof window.TPI.calculateTPI === 'function') window.TPI.calculateTPI(); } catch(e) {}
           try { if (typeof updateCheckInStatus === 'function') updateCheckInStatus(); } catch(e) {}
           try { if (typeof updateStatistics === 'function') updateStatistics(); } catch(e) {}
+          /* V2.19修复: 确保签到/树木/奖杯在数据写入稳定后再次刷新 */
+          setTimeout(function(){
+            try{ if(typeof window.__tpi_refreshCheckin==='function') window.__tpi_refreshCheckin(); }catch(_){}
+            try{ if(typeof updateCheckInStatus==='function') updateCheckInStatus(); }catch(_){}
+          }, 400);
           /* 4. 刷新打卡状态 */
           try {
             var checkinRaw = (function(){ try{ return localStorage.getItem('tpi_checkin_data')||window.__tpi_ls_get('tpi_checkin_data'); }catch(_){ return null; } })();
@@ -1663,6 +1668,24 @@ window.__tpi_clearAllForm = function() {
     try {
       var bdgArr = dd['_badgeStates'] || [];
       if(!bdgArr.length && dd['_viewState'] && dd['_viewState']['#badges-state']) bdgArr = dd['_viewState']['#badges-state'].badges || [];
+      /* V2.19修复: 若备份中无 _badgeStates，尝试从 DOM 实时收集 */
+      if(!bdgArr.length){
+        try{
+          var _liveBadges = [];
+          document.querySelectorAll('.badge-item').forEach(function(b){
+            var nameEl = b.querySelector('.badge-name');
+            var catEl = b.querySelector('.badge-category');
+            var progEl = b.querySelector('.badge-progress');
+            if(nameEl) _liveBadges.push({
+              name: nameEl.textContent || '',
+              category: catEl ? catEl.textContent : '',
+              unlocked: b.classList.contains('unlocked'),
+              progress: progEl ? progEl.textContent : ''
+            });
+          });
+          if(_liveBadges.length) bdgArr = _liveBadges;
+        }catch(_){}
+      }
       if(Array.isArray(bdgArr) && bdgArr.length > 0){
         lines.push('## 成就徽章状态');
         lines.push('');
@@ -1717,6 +1740,9 @@ window.__tpi_clearAllForm = function() {
   }
   /* V1.99: exportCurrentSnapshot — 统一入口，始终导出完整版单文件，内置并发锁防止重复触发 */
   window.exportCurrentSnapshot = function(format){
+    /* V2.19修复: 导出前先强制刷新签到状态，确保 checkin 数据最新 */
+    try{ if(typeof window.__tpi_refreshCheckin==='function') window.__tpi_refreshCheckin(); }catch(_){}
+    try{ if(typeof updateCheckInStatus==='function') updateCheckInStatus(); }catch(_){}
     /* V2.00: 全局统一锁 — 防止任何导出路径并发产生多个文件 */
     if(window.__tpi_any_export_active){
       _toast('⏳ 导出进行中，请稍候再试…', 'warning');
@@ -1944,7 +1970,7 @@ window.__tpi_clearAllForm = function() {
       md += `**今日反思**：${getVal('daily-reflection')}\n\n`;
       md += `**微小胜利**：\n- ${getVal('victory-1')}\n- ${getVal('victory-2')}\n- ${getVal('victory-3')}\n\n`;
 
-      md += `---\n*报告由全维效能管理系统 TPI（V2.12）自动生成，时间：${new Date().toLocaleString('zh-CN')}*\n`;
+      md += `---\n*报告由全维效能管理系统 TPI（V2.19）自动生成，时间：${new Date().toLocaleString('zh-CN')}*\n`;
 
       // 下载文件
       const blob = new Blob([md], { type: 'text/markdown;charset=utf-8' });
@@ -2331,6 +2357,10 @@ window.collectDailyData = function() {
   try {
     const _ciRaw = __tpi_ls_get('tpi_checkin_data');
     if (_ciRaw) data["checkinData"] = JSON.parse(_ciRaw);
+    /* V2.19修复: 若 LS 中没有但内存状态有，也纳入收集 */
+    if (!data["checkinData"] && window.__tpi_main_state && window.__tpi_main_state.checkinData) {
+      data["checkinData"] = window.__tpi_main_state.checkinData;
+    }
   } catch (_e) { console.warn('[collectDailyData] checkinData pack failed:', _e); }
 
   data["_formState"] = __tpi_collectFormState();
@@ -2466,7 +2496,9 @@ window.restoreUIFromData = function(data) {
     } catch (_e) { console.warn('[restoreUIFromData] vacationPeriods restore failed:', _e); }
   }
 
-  if (data["checkinData"] && typeof data["checkinData"] === 'object') {
+  /* V2.19修复: 同时支持 data.checkinData 和 data.checkin 两种字段名（兼容不同导出格式）*/
+  const _v219_checkinSrc = data["checkinData"] || data["checkin"] || null;
+  if (_v219_checkinSrc && typeof _v219_checkinSrc === 'object') {
     try {
       let _localCI = { dates: [], currentStreak: 0, maxStreak: 0 };
       try {
@@ -2474,16 +2506,23 @@ window.restoreUIFromData = function(data) {
         if (_localRaw) _localCI = JSON.parse(_localRaw);
       } catch (_e2) {}
       const _localDates = new Set(_localCI.dates || []);
-      (data["checkinData"].dates || []).forEach(d => _localDates.add(d));
+      (_v219_checkinSrc.dates || []).forEach(d => _localDates.add(d));
       const _mergedDates = Array.from(_localDates).sort();
-      const _mergedMax = Math.max(_localCI.maxStreak || 0, data["checkinData"].maxStreak || 0);
+      const _mergedMax = Math.max(_localCI.maxStreak || 0, _v219_checkinSrc.maxStreak || 0);
       const _mergedCI = { dates: _mergedDates, currentStreak: 0, maxStreak: _mergedMax };
       __tpi_ls_set('tpi_checkin_data', JSON.stringify(_mergedCI));
+      /* V2.19修复: 刷新签到UI + 树木徽章 + 里程碑奖杯 */
       if (typeof window.__tpi_refreshCheckin === 'function') {
         window.__tpi_refreshCheckin();
       }
+      /* 延迟二次刷新确保DOM已就绪 */
+      setTimeout(function(){
+        try{ if(typeof window.__tpi_refreshCheckin==='function') window.__tpi_refreshCheckin(); }catch(_){}
+        try{ if(typeof updateCheckInStatus==='function') updateCheckInStatus(); }catch(_){}
+        try{ if(typeof updateTreeRewards==='function') updateTreeRewards(); }catch(_){}
+      }, 300);
     } catch (_e) { console.warn('[restoreUIFromData] checkinData restore failed:', _e); }
-  }
+  } /* end checkin block */
 
   if (data.exemptionData) {
     try {
@@ -2677,7 +2716,7 @@ window.getTpiDayDataAsync = async function(dateStr) {
   } catch (e) {}
 })();
 </script>
-<title>全维效能管理系统 TPI（V2.12）</title>
+<title>全维效能管理系统 TPI（V2.19）</title>
 <script>
    'use strict';
         const getCurrentDate = () => {
@@ -2688,8 +2727,8 @@ window.getTpiDayDataAsync = async function(dateStr) {
             return `${year}-${month}-${day}`;
         };
 
-        window.TPI_VERSION = '全维效能管理系统 TPI（V2.12）';
-        window.TPI_APP_VERSION = '1.88';
+        window.TPI_VERSION = '全维效能管理系统 TPI（V2.19）';
+        window.TPI_APP_VERSION = '2.19';
 
         // V1.50: 检查是否有待恢复的数据（import后不刷新，直接恢复）
         // 此标志由各导入函数设置，用于在初始化完成后自动加载
@@ -2783,7 +2822,7 @@ window.TPI.DOM = window.TPI.DOM || {
                             : '三十';
             const lunarStr = `农历${lunarMonth}${lunarDay}${lunar.isLeap ? '(闰)' : ''}`;
 
-            document.title = `全维效能管理系统 TPI（V2.12）（${window.TPI_BUILD_DATE} ${weekday} ${lunarStr}）`;
+            document.title = `全维效能管理系统 TPI（V2.19）（${window.TPI_BUILD_DATE} ${weekday} ${lunarStr}）`;
 
             const dateDisplay = document.getElementById('current-date-display');
             if (dateDisplay) {
@@ -2929,10 +2968,10 @@ window.MathJax = {
 <script>
    'use strict';
     const LunarCalendar=(function(){'use strict';const L=[0x04bd8,0x04ae0,0x0a570,0x054d5,0x0d260,0x0d950,0x16554,0x056a0,0x09ad0,0x055d2,0x04ae0,0x0a5b6,0x0a4d0,0x0d250,0x1d255,0x0b540,0x0d6a0,0x0ada2,0x095b0,0x14977,0x04970,0x0a4b0,0x0b4b5,0x06a50,0x06d40,0x1ab54,0x02b60,0x09570,0x052f2,0x04970,0x06566,0x0d4a0,0x0ea50,0x06e95,0x05ad0,0x02b60,0x186e3,0x092e0,0x1c8d7,0x0c950,0x0d4a0,0x1d8a6,0x0b550,0x056a0,0x1a5b4,0x025d0,0x092d0,0x0d2b2,0x0a950,0x0b557,0x06ca0,0x0b550,0x15355,0x04da0,0x0a5b0,0x14573,0x052b0,0x0a9a8,0x0e950,0x06aa0,0x0aea6,0x0ab50,0x04b60,0x0aae4,0x0a570,0x05260,0x0f263,0x0d950,0x05b57,0x056a0,0x096d0,0x04dd5,0x04ad0,0x0a4d0,0x0d4d4,0x0d250,0x0d558,0x0b540,0x0b6a0,0x195a6,0x095b0,0x049b0,0x0a974,0x0a4b0,0x0b27a,0x06a50,0x06d40,0x0af46,0x0ab60,0x09570,0x04af5,0x04970,0x064b0,0x074a3,0x0ea50,0x06b58,0x055c0,0x0ab60,0x096d5,0x092e0,0x0c960,0x0d954,0x0d4a0,0x0da50,0x07552,0x056a0,0x0abb7,0x025d0,0x092d0,0x0cab5,0x0a950,0x0b4a0,0x0baa4,0x0ad50,0x055d9,0x04ba0,0x0a5b0,0x15176,0x052b0,0x0a930,0x07954,0x06aa0,0x0ad50,0x05b52,0x04b60,0x0a6e6,0x0a4e0,0x0d260,0x0ea65,0x0d530,0x05aa0,0x076a3,0x096d0,0x04afb,0x04ad0,0x0a4d0,0x1d0b6,0x0d250,0x0d520,0x0dd45,0x0b5a0,0x056d0,0x055b2,0x049b0,0x0a577,0x0a4b0,0x0aa50,0x1b255,0x06d20,0x0ada0,0x14b63,0x09370,0x049f8,0x04970,0x064b0,0x168a6,0x0ea50,0x06b20,0x1a6c4,0x0aae0,0x0a2e0,0x0d2e3,0x0c960,0x0d557,0x0d4a0,0x0da50,0x05d55,0x056a0,0x0a6d0,0x055d4,0x052d0,0x0a9b8,0x0a950,0x0b4a0,0x0b6a6,0x0ad50,0x055a0,0x0aba4,0x0a5b0,0x052b0,0x0b273,0x06930,0x07337,0x06aa0,0x0ad50,0x14b55,0x04b60,0x0a570,0x054e4,0x0d160,0x0e968,0x0d520,0x0daa0,0x16aa6,0x056d0,0x04ae0,0x0a9d4,0x0a2d0,0x0d150,0x0f252,0x0d520,0x0dda0];function g(y){return(L[y-1900]>>13)&0x0f}function m(y,mo){return(L[y-1900]&(0x10000>>mo))?30:29}function y(yr){let s=348;for(let i=0x8000;i>0x8;i>>=1)s+=(L[yr-1900]&i)?1:0;const lm=g(yr);if(lm>0)s+=(L[yr-1900]&0x10000)?30:29;return s}function s2l(d){const b=new Date(1900,0,31);let o=Math.floor((d-b)/86400000),ly,lm,ld,il=false;for(ly=1900;ly<2101;ly++){const yd=y(ly);if(o<yd)break;o-=yd}const lpm=g(ly);for(lm=1;lm<13;lm++){let md;if(lpm>0&&lm===lpm+1){if(!il){--lm;il=true;md=(L[ly-1900]&0x10000)?30:29}else{il=false;md=m(ly,lm)}}else md=m(ly,lm);if(o<md)break;o-=md}return{year:ly,month:lm,day:o+1,isLeap:il}}function l2s(yr,mo,da,il=false){const b=new Date(1900,0,31);let o=0;for(let y=1900;y<yr;y++)o+=y(y);const lm=g(yr);for(let m=1;m<mo;m++)o+=m(yr,m);if(lm>0&&mo>lm)o+=(L[yr-1900]&0x10000)?30:29;if(il)o+=m(yr,mo);o+=da-1;return new Date(b.getTime()+o*86400000)}return{solarToLunar:s2l,lunarToSolar:l2s,getLeapMonth:g}})();
-    const RealtimeCalculator=(function(){'use strict';function sp(v,d=0){const p=parseFloat(v);return isNaN(p)||!isFinite(p)?d:p}function cl(v,mn,mx){return Math.max(mn,Math.min(mx,v))}function st(e,t){if(e)e.textContent=String(t)}function cds(id){const ins=document.querySelectorAll(`#${id} input[type="number"]:not([readonly])`);let t=0;ins.forEach(i=>{const v=sp(i.value,0),mn=sp(i.min,-Infinity),mx=sp(i.max,Infinity);t+=cl(v,mn,mx)});return Math.max(0,t)}function uds(id,sid){const sc=cds(id),el=document.getElementById(sid);if(el){if(el.tagName==='INPUT')el.value=sc.toFixed(2);else st(el,sc.toFixed(2))}return sc}function ctt(){const ds=['academic-score','personal-score','life-score','logistics-score'];let t=0;ds.forEach(d=>{const el=document.getElementById(d);if(el){const v=el.tagName==='INPUT'?el.value:el.textContent;t+=sp(v,0)}});return Math.max(0,t)}/* V2.12 修复：utr() 基于已废弃的旧版四维度体系（academic/personal/life/logistics）
+    const RealtimeCalculator=(function(){'use strict';function sp(v,d=0){const p=parseFloat(v);return isNaN(p)||!isFinite(p)?d:p}function cl(v,mn,mx){return Math.max(mn,Math.min(mx,v))}function st(e,t){if(e)e.textContent=String(t)}function cds(id){const ins=document.querySelectorAll(`#${id} input[type="number"]:not([readonly])`);let t=0;ins.forEach(i=>{const v=sp(i.value,0),mn=sp(i.min,-Infinity),mx=sp(i.max,Infinity);t+=cl(v,mn,mx)});return Math.max(0,t)}function uds(id,sid){const sc=cds(id),el=document.getElementById(sid);if(el){if(el.tagName==='INPUT')el.value=sc.toFixed(2);else st(el,sc.toFixed(2))}return sc}function ctt(){const ds=['academic-score','personal-score','life-score','logistics-score'];let t=0;ds.forEach(d=>{const el=document.getElementById(d);if(el){const v=el.tagName==='INPUT'?el.value:el.textContent;t+=sp(v,0)}});return Math.max(0,t)}/* V2.13 修复：utr() 基于已废弃的旧版四维度体系（academic/personal/life/logistics）
    这些维度元素已不存在于DOM，导致 tt 永远为0，会将 rating 误设为 poor 后再被
    autoRateTPI() 覆盖，造成闪烁。此处禁用 utr()，评级统一交由 autoRateTPI() 处理。*/
-function utr(ts){/* disabled in V2.12 - rating managed by autoRateTPI() */}function init(){document.addEventListener('input',function(e){if(e.target.type==='number'&&!e.target.readOnly){clearTimeout(e.target._ct);e.target._ct=setTimeout(()=>rec(),100)}},true);document.addEventListener('blur',function(e){if(e.target.type==='number'){const v=sp(e.target.value),mn=sp(e.target.min,-Infinity),mx=sp(e.target.max,Infinity);if(v<mn)e.target.value=mn;else if(v>mx)e.target.value=mx;rec()}},true);window.__tpi_debug_log('✅ 实时计算系统已初始化')}function rec(){try{uds('academic-dimension','academic-score');uds('personal-dimension','personal-score');uds('life-dimension','life-score');uds('logistics-dimension','logistics-score');const tt=ctt();utr(tt);if(window.TPI&&typeof window.TPI.calculateTPI==='function'){window.TPI.calculateTPI();}else if(typeof window.calculateTPI==='function'){window.calculateTPI();}}catch(e){console.error('❌ 计算错误:',e)}}return{init:init,recalculate:rec}})();
+function utr(ts){/* disabled in V2.13 - rating managed by autoRateTPI() */}function init(){document.addEventListener('input',function(e){if(e.target.type==='number'&&!e.target.readOnly){clearTimeout(e.target._ct);e.target._ct=setTimeout(()=>rec(),100)}},true);document.addEventListener('blur',function(e){if(e.target.type==='number'){const v=sp(e.target.value),mn=sp(e.target.min,-Infinity),mx=sp(e.target.max,Infinity);if(v<mn)e.target.value=mn;else if(v>mx)e.target.value=mx;rec()}},true);window.__tpi_debug_log('✅ 实时计算系统已初始化')}function rec(){try{uds('academic-dimension','academic-score');uds('personal-dimension','personal-score');uds('life-dimension','life-score');uds('logistics-dimension','logistics-score');const tt=ctt();utr(tt);if(window.TPI&&typeof window.TPI.calculateTPI==='function'){window.TPI.calculateTPI();}else if(typeof window.calculateTPI==='function'){window.calculateTPI();}}catch(e){console.error('❌ 计算错误:',e)}}return{init:init,recalculate:rec}})();
 
     const InputValidator = (function() {
 
@@ -4099,6 +4138,10 @@ window.restoreBackup = async function(backupKey) {
 
         if(window.tpiToast) window.tpiToast('✅ 备份恢复成功！正在刷新页面数据…', 'success');
         window.__tpi_softReload(500);
+        /* V2.19修复: softReload 后额外触发签到/树木/奖杯刷新 */
+        setTimeout(function(){
+          try{ if(typeof window.__tpi_refreshCheckin==='function') window.__tpi_refreshCheckin(); }catch(_){}
+        }, 800);
     } catch (error) {
         console.error('❌ [restoreBackup] 恢复失败:', error);
         console.error('❌ [restoreBackup] 错误堆栈:', error.stack);
@@ -6916,7 +6959,7 @@ th, td {
 </style>
 
 <!-- ═══════════════════════════════════════════════════════════
-     TPI V2.12 Android 移动端专项优化样式
+     TPI V2.13 Android 移动端专项优化样式
      优化范围：触控目标、字体、输入框、布局、滚动、表格
      ═══════════════════════════════════════════════════════════ -->
 <style id="tpi-android-mobile-v201">
@@ -7965,7 +8008,7 @@ document.addEventListener('click', function(e) {
 <h1 style="font-size:clamp(1.5rem, 3vw, 2.5rem);font-weight:800;background:linear-gradient(135deg,#0f766e 0%,#0d9488 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;letter-spacing:-0.02em;">
         全维效能管理系统 TPI
        </h1>
-<span class="version-badge" title="当前插件版本 V2.12">V2.12</span>
+<span class="version-badge" title="当前插件版本 V2.19">V2.19</span>
 
 <div style="display:inline-flex;align-items:center;gap:6px;flex-shrink:0;">
 
@@ -8031,14 +8074,14 @@ document.addEventListener('click', function(e) {
 </div>
 
 <div class="checkin-status-container mb-3" id="checkin-status-container" style="padding: 20px; background: linear-gradient(135deg, rgba(13,148,136,0.10) 0%, rgba(99, 102, 241, 0.08) 100%); border-radius: 12px; color: var(--color-text-primary); border: 1px solid var(--color-border); box-shadow: var(--shadow-sm); text-align:center;">
-<div style="display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 20px;">
-<div>
-<div class="tpi-u-5c4b9e">今日状态</div>
-<div id="checkin-status-text" style="font-size: 24px; font-weight: 700;">未签到</div>
+<div style="display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 24px;">
+<div style="text-align:center;">
+<div class="tpi-u-5c4b9e" style="text-align:center;">今日状态</div>
+<div id="checkin-status-text" style="font-size: 24px; font-weight: 700; text-align:center;">未签到</div>
 </div>
-<div style="text-align: right;">
-<div class="tpi-u-5c4b9e">连续签到</div>
-<div style="font-size: 32px; font-weight: 700; display: flex; align-items: baseline; gap: 5px;">
+<div style="text-align:center;">
+<div class="tpi-u-5c4b9e" style="text-align:center;">连续签到</div>
+<div style="font-size: 32px; font-weight: 700; display: flex; align-items: baseline; gap: 5px; justify-content:center;">
 <span id="checkin-streak-display">0</span>
 <span style="font-size: 16px; color: var(--color-text-muted);">天</span>
 </div>
@@ -8061,40 +8104,192 @@ document.addEventListener('click', function(e) {
 
 </div>
 </div>
-<!-- 签到森林奖励系统 TPIV2.12 -->
-<div class="tpi-tree-rewards" style="margin-top: 20px; padding: 16px; background: linear-gradient(145deg, #f0fdf4, #f7fee7); border-radius: 16px; border: 2px solid #86efac; box-shadow: 0 6px 16px rgba(13,148,136,0.12);">
-  <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
-    <span style="font-weight: 700; font-size: 1.1rem; color: #2e7d32;">🌳 签到森林</span>
+<!-- 签到森林奖励系统 TPIV2.14 升级版：SVG彩色树 + 树木统计面板 + 10年容量 -->
+<div class="tpi-tree-rewards" id="tpi-tree-rewards-root" style="margin-top: 20px; padding: 18px; background: linear-gradient(145deg, #f0fdf4, #f7fee7); border-radius: 16px; border: 2px solid #86efac; box-shadow: 0 6px 16px rgba(13,148,136,0.12);">
+  <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px;">
+    <span style="font-weight: 700; font-size: 1.1rem; color: #2e7d32; text-align:center; flex:1;">🌳 签到森林</span>
     <span style="font-size: 0.9rem; background: #2e7d32; color: white; padding: 3px 12px; border-radius: 20px; font-weight: 600;">累计 <span id="total-checkin-days">0</span> 天</span>
   </div>
-  <div style="display: flex; gap: 12px; justify-content: space-around; align-items: flex-end; text-align: center;">
-    <!-- 小树 7天 -->
-    <div style="flex: 1;">
-      <div id="tree-sapling" style="font-size: 2.6rem; color:#22c55e; filter: drop-shadow(0 4px 6px rgba(74,222,128,0.4)); transition: all 0.3s; opacity: 0.4;">🌱</div>
-      <div style="font-weight: 600; font-size: 0.8rem; color: #15803d;">小树</div>
-      <div style="font-size: 0.7rem; color: #166534;">7天</div>
+
+  <!-- 四种树展示区（不同颜色的SVG树） -->
+  <div style="display: grid; grid-template-columns: repeat(4,1fr); gap: 10px; text-align:center; align-items:flex-end; margin-bottom: 14px;">
+
+    <!-- 小树：绿色系 -->
+    <div id="tree-sapling-wrap" style="display:flex;flex-direction:column;align-items:center;gap:4px;opacity:0.35;transition:opacity 0.4s,filter 0.4s;">
+      <svg id="tree-sapling" width="38" height="52" viewBox="0 0 38 52" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <radialGradient id="sg-leaf" cx="40%" cy="35%"><stop offset="0%" stop-color="#d9f7be"/><stop offset="100%" stop-color="#52c41a"/></radialGradient>
+        </defs>
+        <rect x="17" y="38" width="4" height="14" rx="2" fill="#a07840"/>
+        <ellipse cx="19" cy="34" rx="13" ry="12" fill="url(#sg-leaf)"/>
+        <ellipse cx="15" cy="26" rx="3" ry="1.5" fill="rgba(255,255,255,0.3)"/>
+      </svg>
+      <div style="font-weight:700;font-size:0.78rem;color:#15803d;">小树</div>
+      <div style="font-size:0.68rem;color:#166534;background:#dcfce7;padding:2px 8px;border-radius:10px;">7天</div>
     </div>
-    <!-- 中树 28天 -->
-    <div style="flex: 1;">
-      <div id="tree-medium" style="font-size: 3.4rem; color:#16a34a; filter: drop-shadow(0 4px 8px rgba(34,197,94,0.5)); transition: all 0.3s; opacity: 0.4;">🌴</div>
-      <div style="font-weight: 600; font-size: 0.8rem; color: #16a34a;">中树</div>
-      <div style="font-size: 0.7rem; color: #166534;">28天</div>
+
+    <!-- 中树：青绿/蓝绿色系 -->
+    <div id="tree-medium-wrap" style="display:flex;flex-direction:column;align-items:center;gap:4px;opacity:0.35;transition:opacity 0.4s,filter 0.4s;">
+      <svg id="tree-medium" width="48" height="66" viewBox="0 0 48 66" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="mb-trunk" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stop-color="#7c5c2a"/><stop offset="100%" stop-color="#4a3010"/></linearGradient>
+          <radialGradient id="mb-l1" cx="42%" cy="38%"><stop offset="0%" stop-color="#87e8de"/><stop offset="100%" stop-color="#13a8a8"/></radialGradient>
+          <radialGradient id="mb-l2" cx="44%" cy="30%"><stop offset="0%" stop-color="#b5f5ec"/><stop offset="100%" stop-color="#36cfc9"/></radialGradient>
+        </defs>
+        <rect x="20" y="50" width="8" height="16" rx="3" fill="url(#mb-trunk)"/>
+        <ellipse cx="24" cy="46" rx="18" ry="12" fill="url(#mb-l1)"/>
+        <ellipse cx="24" cy="32" rx="13" ry="11" fill="url(#mb-l2)"/>
+        <ellipse cx="20" cy="23" rx="3" ry="1.3" fill="rgba(255,255,255,0.25)"/>
+      </svg>
+      <div style="font-weight:700;font-size:0.78rem;color:#0891b2;">中树</div>
+      <div style="font-size:0.68rem;color:#0e7490;background:#cffafe;padding:2px 8px;border-radius:10px;">28天</div>
     </div>
-    <!-- 大树 84天 -->
-    <div style="flex: 1;">
-      <div id="tree-large" style="font-size: 4.2rem; color:#2563eb; filter: drop-shadow(0 6px 10px rgba(59,130,246,0.5)); transition: all 0.3s; opacity: 0.4;">🌳</div>
-      <div style="font-weight: 600; font-size: 0.8rem; color: #2563eb;">大树</div>
-      <div style="font-size: 0.7rem; color: #1e3a8a;">84天</div>
+
+    <!-- 大树：金橙色系 -->
+    <div id="tree-large-wrap" style="display:flex;flex-direction:column;align-items:center;gap:4px;opacity:0.35;transition:opacity 0.4s,filter 0.4s;">
+      <svg id="tree-large" width="60" height="84" viewBox="0 0 60 84" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="bb-trunk" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stop-color="#6b3a10"/><stop offset="50%" stop-color="#9b5e22"/><stop offset="100%" stop-color="#6b3a10"/></linearGradient>
+          <radialGradient id="bb-l1" cx="38%" cy="42%"><stop offset="0%" stop-color="#ffc069"/><stop offset="100%" stop-color="#d46b08"/></radialGradient>
+          <radialGradient id="bb-l2" cx="40%" cy="35%"><stop offset="0%" stop-color="#ffd591"/><stop offset="100%" stop-color="#fa8c16"/></radialGradient>
+          <radialGradient id="bb-l3" cx="43%" cy="28%"><stop offset="0%" stop-color="#ffe7ba"/><stop offset="100%" stop-color="#ffc069"/></radialGradient>
+        </defs>
+        <path d="M24,84 Q18,79 12,80" stroke="#6b3a10" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+        <path d="M36,84 Q42,79 48,80" stroke="#6b3a10" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+        <rect x="24" y="62" width="12" height="22" rx="4" fill="url(#bb-trunk)"/>
+        <ellipse cx="30" cy="58" rx="24" ry="16" fill="url(#bb-l1)"/>
+        <ellipse cx="30" cy="43" rx="18" ry="14" fill="url(#bb-l2)"/>
+        <ellipse cx="30" cy="30" rx="12" ry="10" fill="url(#bb-l3)"/>
+        <ellipse cx="25" cy="22" rx="4" ry="1.7" fill="rgba(255,255,255,0.2)" transform="rotate(-12,25,22)"/>
+      </svg>
+      <div style="font-weight:700;font-size:0.78rem;color:#b45309;">大树</div>
+      <div style="font-size:0.68rem;color:#92400e;background:#fef3c7;padding:2px 8px;border-radius:10px;">84天</div>
     </div>
-    <!-- 神树 168天 -->
-    <div style="flex: 1;">
-      <div id="tree-legend" style="font-size: 5rem; color:#9333ea; filter: drop-shadow(0 8px 12px rgba(168,85,247,0.6)); transition: all 0.3s; opacity: 0.4;">🌲</div>
-      <div style="font-weight: 600; font-size: 0.8rem; color: #9333ea;">神树</div>
-      <div style="font-size: 0.7rem; color: #6b21a5;">168天</div>
+
+    <!-- 神树：深绿+金冠，紫色光晕 -->
+    <div id="tree-legend-wrap" style="display:flex;flex-direction:column;align-items:center;gap:4px;opacity:0.35;transition:opacity 0.4s,filter 0.4s;">
+      <svg id="tree-legend" width="74" height="108" viewBox="0 0 74 108" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <radialGradient id="kaura" cx="50%" cy="40%"><stop offset="0%" stop-color="rgba(168,85,247,0.35)"/><stop offset="70%" stop-color="rgba(147,51,234,0.1)"/><stop offset="100%" stop-color="rgba(168,85,247,0)"/></radialGradient>
+          <linearGradient id="kt-trunk" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stop-color="#5c2a0a"/><stop offset="50%" stop-color="#9b6022"/><stop offset="100%" stop-color="#5c2a0a"/></linearGradient>
+          <radialGradient id="kl1" cx="36%" cy="45%"><stop offset="0%" stop-color="#d9f7be"/><stop offset="100%" stop-color="#237804"/></radialGradient>
+          <radialGradient id="kl2" cx="38%" cy="37%"><stop offset="0%" stop-color="#b7eb8f"/><stop offset="100%" stop-color="#389e0d"/></radialGradient>
+          <radialGradient id="kl3" cx="40%" cy="30%"><stop offset="0%" stop-color="#d9f7be"/><stop offset="100%" stop-color="#52c41a"/></radialGradient>
+          <radialGradient id="kl4" cx="43%" cy="22%"><stop offset="0%" stop-color="#f0ffe0"/><stop offset="100%" stop-color="#95de64"/></radialGradient>
+          <linearGradient id="kcr" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#fff0a0"/><stop offset="40%" stop-color="#ffd700"/><stop offset="100%" stop-color="#a07700"/></linearGradient>
+        </defs>
+        <ellipse cx="37" cy="50" rx="32" ry="32" fill="url(#kaura)"/>
+        <path d="M29,108 Q21,102 13,103" stroke="#5c2a0a" stroke-width="3" fill="none" stroke-linecap="round"/>
+        <path d="M45,108 Q53,102 61,103" stroke="#5c2a0a" stroke-width="3" fill="none" stroke-linecap="round"/>
+        <rect x="28" y="78" width="15" height="30" rx="5" fill="url(#kt-trunk)"/>
+        <ellipse cx="37" cy="72" rx="30" ry="18" fill="url(#kl1)"/>
+        <ellipse cx="37" cy="54" rx="24" ry="17" fill="url(#kl2)"/>
+        <ellipse cx="37" cy="38" rx="18" ry="15" fill="url(#kl3)"/>
+        <ellipse cx="37" cy="24" rx="12" ry="11" fill="url(#kl4)"/>
+        <!-- 金冠 -->
+        <path d="M22,14 L22,5 L28,9 L33,0 L37,5 L41,0 L46,9 L52,5 L52,14 Z" fill="url(#kcr)" stroke="#907000" stroke-width="0.8"/>
+        <rect x="22" y="10" width="30" height="5" rx="2" fill="rgba(255,215,0,0.5)"/>
+        <circle cx="32" cy="12" r="2.3" fill="#ff88c8"/>
+        <circle cx="37" cy="11" r="2.7" fill="#fffbe0" stroke="#e6c000" stroke-width=".6"/>
+        <circle cx="42" cy="12" r="2.3" fill="#74d7ff"/>
+      </svg>
+      <div style="font-weight:700;font-size:0.78rem;color:#7c3aed;">神树</div>
+      <div style="font-size:0.68rem;color:#6d28d9;background:#f5f3ff;padding:2px 8px;border-radius:10px;">168天</div>
     </div>
   </div>
-  <div style="margin-top: 14px; font-size: 0.8rem; color: #14532d; background: #ecfdf5; padding: 8px 12px; border-radius: 8px; text-align: center;">
-    <span>累计签到达到相应天数，树会从幼苗长成参天大树！继续坚持～</span>
+
+  <!-- 树木数量统计面板 V2.14 -->
+  <div id="tpi-tree-count-panel" style="margin-bottom:14px;padding:12px 14px;background:linear-gradient(135deg,#fff7ed,#f0fdf4);border-radius:12px;border:1.5px solid #a7f3d0;box-shadow:0 2px 8px rgba(13,148,136,0.08);">
+    <div style="font-size:12px;font-weight:700;color:#065f46;text-align:center;margin-bottom:10px;letter-spacing:0.03em;">🌲 我的树木总览（换算后）</div>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;text-align:center;">
+      <!-- 神树 -->
+      <div id="tpi-count-legend" style="background:linear-gradient(135deg,#faf5ff,#ede9fe);border-radius:10px;border:1.5px solid #c4b5fd;padding:8px 4px;">
+        <div style="font-size:1.4rem;">👑</div>
+        <div style="font-size:11px;font-weight:700;color:#6d28d9;margin:2px 0;">神树</div>
+        <div id="tpi-count-legend-val" style="font-size:1.5rem;font-weight:900;color:#7c3aed;line-height:1.1;">0</div>
+        <div style="font-size:9px;color:#a78bfa;margin-top:2px;">168天/颗</div>
+      </div>
+      <!-- 大树 -->
+      <div id="tpi-count-large" style="background:linear-gradient(135deg,#fffbeb,#fef3c7);border-radius:10px;border:1.5px solid #fcd34d;padding:8px 4px;">
+        <div style="font-size:1.4rem;">🔆</div>
+        <div style="font-size:11px;font-weight:700;color:#92400e;margin:2px 0;">大树</div>
+        <div id="tpi-count-large-val" style="font-size:1.5rem;font-weight:900;color:#b45309;line-height:1.1;">0</div>
+        <div style="font-size:9px;color:#d97706;margin-top:2px;">84天/颗</div>
+      </div>
+      <!-- 中树 -->
+      <div id="tpi-count-medium" style="background:linear-gradient(135deg,#ecfeff,#cffafe);border-radius:10px;border:1.5px solid #67e8f9;padding:8px 4px;">
+        <div style="font-size:1.4rem;">🌊</div>
+        <div style="font-size:11px;font-weight:700;color:#0e7490;margin:2px 0;">中树</div>
+        <div id="tpi-count-medium-val" style="font-size:1.5rem;font-weight:900;color:#0891b2;line-height:1.1;">0</div>
+        <div style="font-size:9px;color:#0891b2;margin-top:2px;">28天/颗</div>
+      </div>
+      <!-- 小树 -->
+      <div id="tpi-count-sapling" style="background:linear-gradient(135deg,#f0fdf4,#dcfce7);border-radius:10px;border:1.5px solid #86efac;padding:8px 4px;">
+        <div style="font-size:1.4rem;">🌱</div>
+        <div style="font-size:11px;font-weight:700;color:#166534;margin:2px 0;">小树</div>
+        <div id="tpi-count-sapling-val" style="font-size:1.5rem;font-weight:900;color:#16a34a;line-height:1.1;">0</div>
+        <div style="font-size:9px;color:#4ade80;margin-top:2px;">7天/颗</div>
+      </div>
+    </div>
+    <div id="tpi-tree-count-summary" style="margin-top:9px;font-size:11px;color:#374151;text-align:center;background:#f9fafb;border-radius:8px;padding:5px 10px;line-height:1.7;"></div>
+  </div>
+
+  <!-- 进度条：各阶段签到进度 -->
+  <div id="tree-progress-bars" style="margin-bottom: 12px; display:flex; flex-direction:column; gap:6px;">
+    <div style="display:flex;align-items:center;gap:8px;">
+      <span style="font-size:11px;color:#15803d;width:30px;text-align:right;font-weight:600;">小树</span>
+      <div style="flex:1;background:#e7fbe6;border-radius:99px;height:8px;overflow:hidden;">
+        <div id="prog-sapling" style="height:100%;border-radius:99px;background:linear-gradient(90deg,#86efac,#22c55e);transition:width 0.8s;width:0%;"></div>
+      </div>
+      <span id="prog-sapling-txt" style="font-size:10px;color:#15803d;width:38px;text-align:left;font-family:monospace;">0/7</span>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px;">
+      <span style="font-size:11px;color:#0891b2;width:30px;text-align:right;font-weight:600;">中树</span>
+      <div style="flex:1;background:#e0f7fa;border-radius:99px;height:8px;overflow:hidden;">
+        <div id="prog-medium" style="height:100%;border-radius:99px;background:linear-gradient(90deg,#67e8f9,#0891b2);transition:width 0.8s;width:0%;"></div>
+      </div>
+      <span id="prog-medium-txt" style="font-size:10px;color:#0891b2;width:38px;text-align:left;font-family:monospace;">0/28</span>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px;">
+      <span style="font-size:11px;color:#b45309;width:30px;text-align:right;font-weight:600;">大树</span>
+      <div style="flex:1;background:#fef3c7;border-radius:99px;height:8px;overflow:hidden;">
+        <div id="prog-large" style="height:100%;border-radius:99px;background:linear-gradient(90deg,#fcd34d,#d97706);transition:width 0.8s;width:0%;"></div>
+      </div>
+      <span id="prog-large-txt" style="font-size:10px;color:#b45309;width:38px;text-align:left;font-family:monospace;">0/84</span>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px;">
+      <span style="font-size:11px;color:#7c3aed;width:30px;text-align:right;font-weight:600;">神树</span>
+      <div style="flex:1;background:#f5f3ff;border-radius:99px;height:8px;overflow:hidden;">
+        <div id="prog-legend" style="height:100%;border-radius:99px;background:linear-gradient(90deg,#c4b5fd,#7c3aed);transition:width 0.8s;width:0%;"></div>
+      </div>
+      <span id="prog-legend-txt" style="font-size:10px;color:#7c3aed;width:38px;text-align:left;font-family:monospace;">0/168</span>
+    </div>
+  </div>
+
+  <!-- 长期里程碑（10年·120+奖杯） -->
+  <div style="margin-bottom:10px;">
+    <div style="font-size:11px;font-weight:700;color:#374151;text-align:center;margin-bottom:6px;">🏆 长期成就里程碑 <span id="trophy-unlock-count" style="color:#059669;font-size:10px;"></span></div>
+    <!-- 分阶标签切换 -->
+    <div id="trophy-tab-bar" style="display:flex;gap:3px;justify-content:center;margin-bottom:6px;flex-wrap:wrap;">
+      <button onclick="trophyShowTab(0)" id="trophy-tab-0" style="font-size:9.5px;padding:2px 7px;border-radius:99px;border:1px solid #d1d5db;background:#f3f4f6;color:#374151;cursor:pointer;font-weight:600;">🌱 第1年</button>
+      <button onclick="trophyShowTab(1)" id="trophy-tab-1" style="font-size:9.5px;padding:2px 7px;border-radius:99px;border:1px solid #d1d5db;background:#f3f4f6;color:#374151;cursor:pointer;font-weight:600;">🌿 第2年</button>
+      <button onclick="trophyShowTab(2)" id="trophy-tab-2" style="font-size:9.5px;padding:2px 7px;border-radius:99px;border:1px solid #d1d5db;background:#f3f4f6;color:#374151;cursor:pointer;font-weight:600;">🌳 第3年</button>
+      <button onclick="trophyShowTab(3)" id="trophy-tab-3" style="font-size:9.5px;padding:2px 7px;border-radius:99px;border:1px solid #d1d5db;background:#f3f4f6;color:#374151;cursor:pointer;font-weight:600;">⭐ 第4年</button>
+      <button onclick="trophyShowTab(4)" id="trophy-tab-4" style="font-size:9.5px;padding:2px 7px;border-radius:99px;border:1px solid #d1d5db;background:#f3f4f6;color:#374151;cursor:pointer;font-weight:600;">🌟 第5年</button>
+      <button onclick="trophyShowTab(5)" id="trophy-tab-5" style="font-size:9.5px;padding:2px 7px;border-radius:99px;border:1px solid #d1d5db;background:#f3f4f6;color:#374151;cursor:pointer;font-weight:600;">💎 第6年</button>
+      <button onclick="trophyShowTab(6)" id="trophy-tab-6" style="font-size:9.5px;padding:2px 7px;border-radius:99px;border:1px solid #d1d5db;background:#f3f4f6;color:#374151;cursor:pointer;font-weight:600;">🏆 第7年</button>
+      <button onclick="trophyShowTab(7)" id="trophy-tab-7" style="font-size:9.5px;padding:2px 7px;border-radius:99px;border:1px solid #d1d5db;background:#f3f4f6;color:#374151;cursor:pointer;font-weight:600;">🔥 第8年</button>
+      <button onclick="trophyShowTab(8)" id="trophy-tab-8" style="font-size:9.5px;padding:2px 7px;border-radius:99px;border:1px solid #d1d5db;background:#f3f4f6;color:#374151;cursor:pointer;font-weight:600;">👑 第9年</button>
+      <button onclick="trophyShowTab(9)" id="trophy-tab-9" style="font-size:9.5px;padding:2px 7px;border-radius:99px;border:1px solid #d1d5db;background:#f3f4f6;color:#374151;cursor:pointer;font-weight:600;">♾️ 第10年</button>
+    </div>
+    <!-- 奖杯网格容器 -->
+    <div id="tree-milestones" style="display:grid;grid-template-columns:repeat(6,1fr);gap:4px;text-align:center;"></div>
+    <!-- 当前选中奖杯信息 -->
+    <div id="trophy-info-bar" style="margin-top:5px;min-height:18px;text-align:center;font-size:10px;color:#6b7280;"></div>
+  </div>
+
+  <div style="margin-top: 6px; font-size: 0.8rem; color: #14532d; background: #ecfdf5; padding: 8px 12px; border-radius: 8px; text-align: center;">
+    <span>🌱 小树(7天) → 🌊 中树(28天) → 🔆 大树(84天) → 👑 神树(168天) · 支持10年长期记录</span>
   </div>
 </div>
 <div class="checkin-help" style="padding: 15px; background: var(--color-bg-tertiary); border-left: 4px solid rgba(13,148,136,0.55); border-radius: 8px;">
@@ -8215,13 +8410,14 @@ document.addEventListener('click', function(e) {
       <b>🔄 版本升级（旧版本 → 新版本）</b><br>
       ① 在<b>旧版本</b>页面登录云账号 → 点击对应同步方式的 <b>「全量上传」</b><br>
       ② 打开<b>新版本</b>页面 → 用<b>同一账号</b>登录 → 点击 <b>「全量下载」</b><br>
+      <span style="color:#0d9488;font-size:12px;">✅ V2.19 全量上传/下载已完整包含：签到记录、树木徽章、里程碑奖杯</span><br>
       ③ 下载完成后点击提示中的 <b>「立即刷新页面」</b><br>
       <span style="color:#0891b2;">⚠️ 注意：必须先上传再下载，否则新版为空。</span>
     </div>
     <div style="flex:1;min-width:260px;">
       <b>📱 跨设备同步（手机 ↔ 电脑 等）</b><br>
-      ① 在设备A点击 <b>「全量上传」</b>（将当前所有历史数据上传云端）<br>
-      ② 在设备B登录同一账号 → 点击 <b>「全量下载」</b>（将云端所有数据拉取到本地）<br>
+      ① 在设备A点击 <b>「全量上传」</b>（将当前所有历史数据上传云端，含签到/徽章/奖杯）<br>
+      ② 在设备B登录同一账号 → 点击 <b>「全量下载」</b>（将云端所有数据拉取到本地，刷新后生效）<br>
       ③ 刷新页面确认数据完整<br>
       <span style="color:#0891b2;">⚠️ 注意：每台设备均存储独立的本地数据，切勿在未上传的设备上直接"全量下载"覆盖有用数据。</span>
     </div>
@@ -14976,7 +15172,7 @@ document.addEventListener('click', function(e) {
 <div class="card-content">
 <!-- ===== 合并：数据导入/导出 & 备份/恢复 ===== -->
 <div class="tpi-submodule" id="submod-dp-import" style="border-color: #6ee7b7;margin-bottom:16px;">
-  <div class="tpi-submodule-header" onclick="tpiToggleSubmodule('submod-dp-import')" role="button" tabindex="0" aria-expanded="true" aria-controls="submod-dp-import-body" title="展开/折叠 全量数据导入/导出与备份/恢复" style="background:linear-gradient(135deg,#ecfdf5,#f8fffd);border-bottom-color: #6ee7b7;">
+  <div class="tpi-submodule-header" onclick="tpiToggleSubmodule('submod-dp-import')" role="button" tabindex="0" aria-expanded="true" aria-controls="submod-dp-import-body" title="展开/折叠 全量数据导入/导出与备份/恢复（含签到/树木徽章/里程碑奖杯）" style="background:linear-gradient(135deg,#ecfdf5,#f8fffd);border-bottom-color: #6ee7b7;">
     <div style="display:flex;align-items:center;gap:8px;">
       <span style="font-size:18px;">📦</span>
       <span style="font-size:15px;font-weight:700;color:#059669;">全量数据导入/导出 &amp; 备份/恢复</span>
@@ -15018,10 +15214,10 @@ document.addEventListener('click', function(e) {
           <span style="display:inline-block;font-size:11px;font-weight:600;color:#b45309;background:#fef3c7;border:1px solid #f59e0b;padding:1px 8px;border-radius:8px;margin-left:6px;">推荐</span>
         </div>
         <div style="padding:8px 10px;background:rgba(255,255,255,0.65);border-left:3px solid #f59e0b;border-radius:6px;font-size:11.5px;color:#78350f;line-height:1.65;text-align:center;">
-          含所有历史数据（打卡、杂事、设置等），可跨版本、跨设备 100% 恢复。<b>这是最推荐的备份方式。</b>
+          含所有历史数据（每日打卡、签到记录、树木徽章、里程碑奖杯、杂事、设置等），可跨版本、跨设备 100% 恢复。<b>这是最推荐的备份方式。</b>
         </div>
         <button type="button" class="btn btn-secondary" onclick="window.TPI.backupAllData()" style="width:100%;justify-content:center;">
-          💽 备份所有数据（全量JSON）
+          💽 备份所有数据（含签到/徽章/奖杯）
         </button>
         <button type="button" class="btn btn-secondary" onclick="window.TPI.restoreBackup()" style="width:100%;justify-content:center;">
           🔄 恢复备份（全量还原）
@@ -15037,7 +15233,7 @@ document.addEventListener('click', function(e) {
           <span style="font-size:13.5px;font-weight:700;color:#065f46;">📥 导入 JSON 数据</span>
         </div>
         <p style="margin:0;font-size:12px;color:#6b7280;text-align:center;line-height:1.6;">
-          💡 可直接将 JSON 文件<b>拖拽</b>到此区域<br>支持全量备份包 / 单日快照，自动识别 100% 导入
+          💡 可直接将 JSON 文件<b>拖拽</b>到此区域<br>支持全量备份包 / 单日快照，自动识别 100% 导入<br><span style="color:#0d9488;font-size:11px;">✅ 导入后自动恢复签到记录、树木徽章、里程碑奖杯</span>
         </p>
         <input accept=".json" id="import-file" style="width:100%;padding:6px;border:1px solid #a7f3d0;border-radius:6px;font-size:12px;background:rgba(255,255,255,0.8);" type="file"/>
         <button type="button" class="btn btn-primary" onclick="window.importDataComplete()" style="width:100%;justify-content:center;" title="自动识别全量备份包/全量导出/单日数据，均可100%导入">
@@ -17452,7 +17648,7 @@ function calculateAMI() {
             const bcmStreak = checkBCMStreakDays(3, 18); // 18分 = BCM_RAW_CAP(20)的90%（连续稳定达标线）
             if (bcmStreak) { checkBonusBox('bcm_streak'); } else { uncheckBonusBox('bcm_streak'); }
 
-            // V2.12 修复：微小胜利实际DOM id为 victory-1/2/3，而非 micro-victory-1/2/3
+            // V2.13 修复：微小胜利实际DOM id为 victory-1/2/3，而非 micro-victory-1/2/3
             const mv1 = (document.getElementById('victory-1') || document.getElementById('micro-victory-1'))?.value?.trim();
             const mv2 = (document.getElementById('victory-2') || document.getElementById('micro-victory-2'))?.value?.trim();
             const mv3 = (document.getElementById('victory-3') || document.getElementById('micro-victory-3'))?.value?.trim();
@@ -18462,7 +18658,7 @@ window.MixedModeCalculator = (function() {
                 },
 
                 checkAndTrigger: function(sysNet, tpi, bonus) {
-                    // V2.12 修复：斯多葛模式下 sys_net 不参与 TPI 计算，不应触发系统红线
+                    // V2.13 修复：斯多葛模式下 sys_net 不参与 TPI 计算，不应触发系统红线
                     const _currentMode = (window.__tpi_main_state && window.__tpi_main_state.selectedMode) || 'normal';
                     if (sysNet < CONSTANTS.SYS_NET_SAFETY_THRESHOLD && _currentMode !== 'stoic') {
                         this.triggerSysRedLine(sysNet);
@@ -19125,6 +19321,8 @@ try {
                                         }
                                     });
                                     showNotification(`✅ 成功导入 ${data.length} 条记录`, 'success');
+                                    /* V2.19修复: 多条记录导入后触发签到刷新 */
+                                    setTimeout(function(){ try{ if(typeof window.__tpi_refreshCheckin==='function') window.__tpi_refreshCheckin(); }catch(_){} }, 300);
                                 }
                             } else {
                                 restoreFormData(data[0]);
@@ -19464,7 +19662,7 @@ try {
                     input.addEventListener('change', handler);
                 });
 
-        // V2.12 修复：微小胜利实际DOM id为 victory-1/2/3，兼容两套id
+        // V2.13 修复：微小胜利实际DOM id为 victory-1/2/3，兼容两套id
         document.querySelectorAll('#victory-1, #victory-2, #victory-3, #micro-victory-1, #micro-victory-2, #micro-victory-3').forEach(input => {
             const handler = debounce(() => { checkAutoBonuses(); calculateBonus(); calculateTPI(); }, 500);
             input.addEventListener('input', handler);
@@ -20335,16 +20533,42 @@ ${reflection}
                     }
                 }
 
+                               // V2.18修复：切换日期前先保存当前日期数据，再取消待定的自动保存计时器，防止旧日期数据污染新日期
+                function __tpi_flushAndCancelPendingSave() {
+                    // 1. 立即将当前表单数据写入当前日期对应的 localStorage，确保不丢失
+                    try {
+                        if (typeof saveToLocalStorage === 'function') saveToLocalStorage();
+                    } catch(_) {}
+                    // 2. 取消 AutoSaveManager 的待定防抖计时器，避免切换后旧数据被写入新日期
+                    try {
+                        if (window.AutoSaveManager && window.AutoSaveManager._timer) {
+                            clearTimeout(window.AutoSaveManager._timer);
+                            window.AutoSaveManager._timer = null;
+                        }
+                    } catch(_) {}
+                }
+
                                function changeDate(days) {
                     if (document.activeElement && typeof document.activeElement.blur === 'function') {
                         document.activeElement.blur();
                     }
+
+                    // V2.18修复：切换前先保存当前日期，并取消待定的自动保存计时器
+                    __tpi_flushAndCancelPendingSave();
 
                     const currentDate = new Date(dateInput.value);
                     currentDate.setDate(currentDate.getDate() + days);
                     dateInput.value = currentDate.toISOString().split('T')[0];
                     loadFromLocalStorage();
                     updateWeekday();
+
+                    // V2.18修复：加载完成后再次取消可能由 loadFromLocalStorage 触发的计时器
+                    try {
+                        if (window.AutoSaveManager && window.AutoSaveManager._timer) {
+                            clearTimeout(window.AutoSaveManager._timer);
+                            window.AutoSaveManager._timer = null;
+                        }
+                    } catch(_) {}
                 }
 
                 if (prevBtn) prevBtn.addEventListener('click', () => changeDate(-1));
@@ -20369,13 +20593,34 @@ ${reflection}
                 }
                 if (todayBtn) {
                     todayBtn.addEventListener('click', () => {
+                        // V2.18修复：跳转到今天前先保存当前日期，并取消待定的自动保存计时器
+                        __tpi_flushAndCancelPendingSave();
                         dateInput.value = new Date().toISOString().split('T')[0];
                         loadFromLocalStorage();
                         updateWeekday();
+                        // V2.18修复：加载完成后再次取消计时器
+                        try {
+                            if (window.AutoSaveManager && window.AutoSaveManager._timer) {
+                                clearTimeout(window.AutoSaveManager._timer);
+                                window.AutoSaveManager._timer = null;
+                            }
+                        } catch(_) {}
                     });
                 }
 
-                dateInput.addEventListener('change', updateWeekday);
+                dateInput.addEventListener('change', function() {
+                    // V2.18修复：手动选择日期时同样先保存当前日期、取消待定计时器，再加载新日期
+                    __tpi_flushAndCancelPendingSave();
+                    loadFromLocalStorage();
+                    // 加载完成后再次取消计时器
+                    try {
+                        if (window.AutoSaveManager && window.AutoSaveManager._timer) {
+                            clearTimeout(window.AutoSaveManager._timer);
+                            window.AutoSaveManager._timer = null;
+                        }
+                    } catch(_) {}
+                    updateWeekday();
+                });
                 updateWeekday();
 
                 (function initHistoryBanner() {
@@ -22999,7 +23244,7 @@ window.addEventListener('resize', function() {
                         <div style="display:flex;justify-content:space-between;align-items:center;padding:16px 24px;background:#f8fafc;border-bottom: 1px solid #d1fae5;flex-shrink:0;">
                             <h3 style="margin:0;font-size:18px;color:#1e293b;">👁️ 报告预览</h3>
                             <div style="display:flex;gap:10px;">
-                                <button type="button" onclick="(function(){var p=document.getElementById('tpi-preview-body');if(p){var w=window.open('','_blank');if(w){w.document.write('<html><head><meta charset=UTF-8><title>全维效能管理系统 TPI（V2.12）</title><style>body{font-family:Arial,sans-serif;max-width:900px;margin:40px auto;padding:20px;}h2{color:#0d9488;}table{width:100%;border-collapse:collapse;margin:20px 0;}th,td{padding:10px;border: 1px solid #bbf7d0;}th{background:#f3f4f6;}.btn{padding:10px 20px;margin:10px 5px;cursor:pointer;border: 1px solid #86efac;border-radius:6px;background:#fff;}</style><\/head><body>'+p.innerHTML+'<div style=text-align:center;margin-top:30px><button type="button" class=btn onclick=window.print()>🖨️ 打印</button><button type="button" class=btn onclick=window.close()>关闭</button></div><\/body></html>');w.document.close();}}})()" style="padding:6px 14px;border: 1px solid #6ee7b7;border-radius:6px;background:#fff;cursor:pointer;font-size:13px;color:#334155;transition:all 0.15s;" onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background='#fff'">🌐 新窗口打开</button>
+                                <button type="button" onclick="(function(){var p=document.getElementById('tpi-preview-body');if(p){var w=window.open('','_blank');if(w){w.document.write('<html><head><meta charset=UTF-8><title>全维效能管理系统 TPI（V2.19）</title><style>body{font-family:Arial,sans-serif;max-width:900px;margin:40px auto;padding:20px;}h2{color:#0d9488;}table{width:100%;border-collapse:collapse;margin:20px 0;}th,td{padding:10px;border: 1px solid #bbf7d0;}th{background:#f3f4f6;}.btn{padding:10px 20px;margin:10px 5px;cursor:pointer;border: 1px solid #86efac;border-radius:6px;background:#fff;}</style><\/head><body>'+p.innerHTML+'<div style=text-align:center;margin-top:30px><button type="button" class=btn onclick=window.print()>🖨️ 打印</button><button type="button" class=btn onclick=window.close()>关闭</button></div><\/body></html>');w.document.close();}}})()" style="padding:6px 14px;border: 1px solid #6ee7b7;border-radius:6px;background:#fff;cursor:pointer;font-size:13px;color:#334155;transition:all 0.15s;" onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background='#fff'">🌐 新窗口打开</button>
                                 <button class="tpi-preview-close-btn" type="button" onclick="document.getElementById('tpi-preview-modal').remove()" style="padding:6px 14px;border: 1px solid #86efac;border-radius:6px;background:#f9fafb;color:#374151;cursor:pointer;font-size:13px;font-weight:600;transition:background 0.15s;">✕ 关闭</button>
                             </div>
                         </div>
@@ -23805,7 +24050,7 @@ window.addEventListener('resize', function() {
                 filename = 'TPI_数据导出_' + new Date().toISOString().split('T')[0] + '.txt';
                 mimeType = 'text/plain';
             } else if (format === 'html') {
-                let html = `<html><head><meta charset="UTF-8"><title>全维效能管理系统 TPI（V2.12）</title><\/head><body>
+                let html = `<html><head><meta charset="UTF-8"><title>全维效能管理系统 TPI（V2.19）</title><\/head><body>
 
         <div id="score-dashboard" style="background: linear-gradient(135deg, #e0e7ff 0%, #ddd6fe 100%); padding: 8px 16px; border-radius: 0; margin: 0; color: #1e293b; box-shadow: 0 2px 6px rgba(0,0,0,0.1);">
             <div style="max-width: 1400px; margin: 0 auto; display: flex; align-items: center; justify-content: center; gap: 10px; flex-wrap: nowrap;">
@@ -24820,7 +25065,7 @@ window.archiveOldDataComplete = function() {
                         alert('✅ JSON导出成功！');
                     }
                     else if (format === 'html') {
-                        let html = '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>全维效能管理系统 TPI（V2.12）</title>';
+                        let html = '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>全维效能管理系统 TPI（V2.19）</title>';
                         html += `<style>
 
     .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 10001; align-items: center; justify-content: center; }
@@ -27368,7 +27613,7 @@ window.addEventListener('unhandledrejection', function(event) {
   }
 
   function backupAllDataNow(){
-    const out = { _meta: { version: (window.TPI_VERSION||'全维效能管理系统 TPI（V2.12）'), appVersion: (window.TPI_APP_VERSION||'1.70'), exportedAt: new Date().toISOString() }, localStorage: {} };
+    const out = { _meta: { version: (window.TPI_VERSION||'全维效能管理系统 TPI（V2.19）'), appVersion: (window.TPI_APP_VERSION||'2.19'), exportedAt: new Date().toISOString() }, localStorage: {} };
     for(let i=0;i<__tpi_ls_length();i++){
       const k = __tpi_ls_key(i);
       if(!k) continue;
@@ -27675,7 +27920,7 @@ try{
       }
       window.__tpi_backup_lock = true;
 
-      const out = { _meta: { version: (window.TPI_VERSION||'全维效能管理系统 TPI（V2.12）'), appVersion: (window.TPI_APP_VERSION||'1.70'), exportedAt: new Date().toISOString() }, localStorage: {} };
+      const out = { _meta: { version: (window.TPI_VERSION||'全维效能管理系统 TPI（V2.19）'), appVersion: (window.TPI_APP_VERSION||'2.19'), exportedAt: new Date().toISOString() }, localStorage: {} };
 
       for(let i=0;i<__tpi_ls_length();i++){
         const k = __tpi_ls_key(i);
@@ -28226,7 +28471,7 @@ try{
       }
       window.__tpi_backup_lock = true;
 
-      const out = { _meta: { version: (window.TPI_VERSION||'全维效能管理系统 TPI（V2.12）'), appVersion: (window.TPI_APP_VERSION||'1.70'), exportedAt: new Date().toISOString() }, localStorage: {} };
+      const out = { _meta: { version: (window.TPI_VERSION||'全维效能管理系统 TPI（V2.19）'), appVersion: (window.TPI_APP_VERSION||'2.19'), exportedAt: new Date().toISOString() }, localStorage: {} };
 
       for(let i=0;i<__tpi_ls_length();i++){
         const k = __tpi_ls_key(i);
@@ -28373,32 +28618,480 @@ try{
       console.error('更新签到状态失败:', e);
     }
   }
-// 更新签到森林树的状态
+// 更新签到森林树的状态 (V2.14 升级版：SVG彩色树 + 树木数量统计面板 + 进度条 + 10年里程碑)
 function updateTreeRewards() {
   try {
     const data = getCheckInData();
-    const totalDays = data.dates.length; // 累计签到天数
-    document.getElementById('total-checkin-days').textContent = totalDays;
+    const totalDays = data.dates.length;
+    const el_total = document.getElementById('total-checkin-days');
+    if (el_total) el_total.textContent = totalDays;
 
-    const thresholds = [7, 28, 84, 168];
-    const treeIds = ['tree-sapling', 'tree-medium', 'tree-large', 'tree-legend'];
+    // ── 树阶段：激活/淡出包装层 ──
+    const stages = [
+      { wrapId: 'tree-sapling-wrap', threshold: 7,   glow: '0 0 12px rgba(74,222,128,0.8)',   progId: 'prog-sapling', progTxt: 'prog-sapling-txt', next: 28,   label: '{n}/7'   },
+      { wrapId: 'tree-medium-wrap',  threshold: 28,  glow: '0 0 12px rgba(6,182,212,0.8)',    progId: 'prog-medium',  progTxt: 'prog-medium-txt',  next: 84,   label: '{n}/28'  },
+      { wrapId: 'tree-large-wrap',   threshold: 84,  glow: '0 0 12px rgba(251,191,36,0.8)',   progId: 'prog-large',   progTxt: 'prog-large-txt',   next: 168,  label: '{n}/84'  },
+      { wrapId: 'tree-legend-wrap',  threshold: 168, glow: '0 0 16px rgba(168,85,247,0.9)',   progId: 'prog-legend',  progTxt: 'prog-legend-txt',  next: 3650, label: '{n}/168' },
+    ];
 
-    for (let i = 0; i < thresholds.length; i++) {
-      const el = document.getElementById(treeIds[i]);
-      if (el) {
-        if (totalDays >= thresholds[i]) {
-          el.style.opacity = '1';
-          // 添加发光效果
-          if (i === 0) el.style.textShadow = '0 0 8px #4ade80';
-          else if (i === 1) el.style.textShadow = '0 0 8px #22c55e';
-          else if (i === 2) el.style.textShadow = '0 0 8px #3b82f6';
-          else if (i === 3) el.style.textShadow = '0 0 10px #a855f7';
+    stages.forEach(function(s) {
+      const wrap = document.getElementById(s.wrapId);
+      if (wrap) {
+        if (totalDays >= s.threshold) {
+          wrap.style.opacity = '1';
+          wrap.style.filter = 'drop-shadow(' + s.glow + ')';
         } else {
-          el.style.opacity = '0.4';
-          el.style.textShadow = 'none';
+          wrap.style.opacity = '0.35';
+          wrap.style.filter = 'none';
         }
       }
-    }
+      // 进度条
+      const prog = document.getElementById(s.progId);
+      const progTxt = document.getElementById(s.progTxt);
+      if (prog && progTxt) {
+        const from = s.threshold === 7 ? 0 : stages[stages.indexOf(s)-1] ? stages[stages.indexOf(s)-1].threshold : 0;
+        const cap = s.threshold;
+        const cur = Math.min(totalDays, cap);
+        const pct = Math.round(cur / cap * 100);
+        prog.style.width = pct + '%';
+        const label = s.label.replace('{n}', cur);
+        progTxt.textContent = (totalDays >= cap ? '✅' : label);
+      }
+    });
+
+    // ── V2.14 树木数量统计（换算为高级单位后的余量）──
+    (function() {
+      var remaining = totalDays;
+      var cntLegend  = Math.floor(remaining / 168); remaining -= cntLegend * 168;
+      var cntLarge   = Math.floor(remaining / 84);  remaining -= cntLarge  * 84;
+      var cntMedium  = Math.floor(remaining / 28);  remaining -= cntMedium * 28;
+      var cntSapling = Math.floor(remaining / 7);   remaining -= cntSapling * 7;
+      var leftDays   = remaining; // 不足一棵小树的剩余天数
+
+      var setVal = function(id, v) { var el = document.getElementById(id); if (el) el.textContent = v; };
+      setVal('tpi-count-legend-val',  cntLegend);
+      setVal('tpi-count-large-val',   cntLarge);
+      setVal('tpi-count-medium-val',  cntMedium);
+      setVal('tpi-count-sapling-val', cntSapling);
+
+      // 高亮有树的卡片，无树则半透明
+      var cards = [
+        { id: 'tpi-count-legend',  cnt: cntLegend  },
+        { id: 'tpi-count-large',   cnt: cntLarge   },
+        { id: 'tpi-count-medium',  cnt: cntMedium  },
+        { id: 'tpi-count-sapling', cnt: cntSapling },
+      ];
+      cards.forEach(function(c) {
+        var el = document.getElementById(c.id);
+        if (el) el.style.opacity = (c.cnt > 0 || totalDays > 0) ? '1' : '0.4';
+      });
+
+      // 摘要文字
+      var sumEl = document.getElementById('tpi-tree-count-summary');
+      if (sumEl) {
+        if (totalDays === 0) {
+          sumEl.textContent = '尚未开始签到，快来种下你的第一棵小树吧！🌱';
+        } else {
+          var parts = [];
+          if (cntLegend  > 0) parts.push('👑 神树 ×' + cntLegend);
+          if (cntLarge   > 0) parts.push('🔆 大树 ×' + cntLarge);
+          if (cntMedium  > 0) parts.push('🌊 中树 ×' + cntMedium);
+          if (cntSapling > 0) parts.push('🌱 小树 ×' + cntSapling);
+          var suffix = '';
+          if (leftDays > 0) {
+            suffix = '，再签到 ' + (7 - leftDays) + ' 天可获得新小树';
+          } else if (parts.length === 0) {
+            suffix = '累计 ' + totalDays + ' 天，再签到 ' + (7 - totalDays) + ' 天可获得第一棵小树！';
+          }
+          sumEl.innerHTML = (parts.length > 0 ? '<strong>' + parts.join(' &nbsp; ') + '</strong>' : '累计 ' + totalDays + ' 天') + (suffix ? '<br><span style="color:#6b7280;">' + suffix + '</span>' : '');
+        }
+      }
+    })();
+
+
+    // ── 290个奖杯里程碑系统（10年容量，10组分级展示，每组恰好29个，与第1年数量一致）──
+    window.__trophyAllMilestones = window.__trophyAllMilestones || (function() {
+      // tab0: 第1年 (1-365天) 29个
+      var t0 = [
+        { days:1,   icon:'🌟', label:'第1天',  tip:'累计签到1天' },
+        { days:3,   icon:'🔥', label:'3天',    tip:'累计签到3天' },
+        { days:7,   icon:'🌱', label:'7天',    tip:'累计签到7天' },
+        { days:14,  icon:'🌿', label:'14天',   tip:'累计签到14天' },
+        { days:21,  icon:'💪', label:'21天',   tip:'累计签到21天' },
+        { days:30,  icon:'🌕', label:'30天',   tip:'累计签到30天' },
+        { days:45,  icon:'🦋', label:'45天',   tip:'累计签到45天' },
+        { days:55,  icon:'🎵', label:'55天',   tip:'累计签到55天' },
+        { days:60,  icon:'🎯', label:'60天',   tip:'累计签到60天' },
+        { days:66,  icon:'🎸', label:'66天',   tip:'累计签到66天' },
+        { days:75,  icon:'🏃', label:'75天',   tip:'累计签到75天' },
+        { days:77,  icon:'🍀', label:'77天',   tip:'累计签到77天' },
+        { days:88,  icon:'🎋', label:'88天',   tip:'累计签到88天' },
+        { days:90,  icon:'🌳', label:'90天',   tip:'累计签到90天' },
+        { days:100, icon:'💯', label:'100天',  tip:'累计签到100天' },
+        { days:111, icon:'🔢', label:'111天',  tip:'累计签到111天' },
+        { days:120, icon:'🌊', label:'120天',  tip:'累计签到120天' },
+        { days:150, icon:'⚡', label:'150天',  tip:'累计签到150天' },
+        { days:180, icon:'🏅', label:'180天',  tip:'累计签到180天' },
+        { days:200, icon:'🎖️', label:'200天',  tip:'累计签到200天' },
+        { days:210, icon:'🦅', label:'210天',  tip:'累计签到210天' },
+        { days:240, icon:'🎸', label:'240天',  tip:'累计签到240天' },
+        { days:270, icon:'🌈', label:'270天',  tip:'累计签到270天' },
+        { days:288, icon:'🎲', label:'288天',  tip:'累计签到288天' },
+        { days:300, icon:'🌙', label:'300天',  tip:'累计签到300天' },
+        { days:330, icon:'❄️', label:'330天',  tip:'累计签到330天' },
+        { days:333, icon:'🔱', label:'333天',  tip:'累计签到333天' },
+        { days:360, icon:'🌟', label:'360天',  tip:'累计签到360天' },
+        { days:365, icon:'⭐', label:'365天',  tip:'累计签到365天，坚持满1年！', special:true },
+      ];
+      // tab1: 第2年 (366-730天) 29个
+      var t1 = [
+        { days:380,  icon:'🌸', label:'380天',  tip:'累计签到380天' },
+        { days:390,  icon:'🎋', label:'390天',  tip:'累计签到390天' },
+        { days:400,  icon:'🎪', label:'400天',  tip:'累计签到400天' },
+        { days:410,  icon:'🦄', label:'410天',  tip:'累计签到410天' },
+        { days:420,  icon:'🧿', label:'420天',  tip:'累计签到420天' },
+        { days:444,  icon:'🌀', label:'444天',  tip:'累计签到444天' },
+        { days:450,  icon:'🏰', label:'450天',  tip:'累计签到450天' },
+        { days:460,  icon:'🌺', label:'460天',  tip:'累计签到460天' },
+        { days:470,  icon:'🌊', label:'470天',  tip:'累计签到470天' },
+        { days:480,  icon:'🎮', label:'480天',  tip:'累计签到480天' },
+        { days:490,  icon:'🧊', label:'490天',  tip:'累计签到490天' },
+        { days:500,  icon:'🎠', label:'500天',  tip:'累计签到500天' },
+        { days:510,  icon:'🔯', label:'510天',  tip:'累计签到510天' },
+        { days:525,  icon:'🌺', label:'525天',  tip:'累计签到525天' },
+        { days:540,  icon:'🧩', label:'540天',  tip:'累计签到540天' },
+        { days:555,  icon:'🎆', label:'555天',  tip:'累计签到555天' },
+        { days:570,  icon:'🦁', label:'570天',  tip:'累计签到570天' },
+        { days:588,  icon:'🌸', label:'588天',  tip:'累计签到588天' },
+        { days:600,  icon:'🎗️', label:'600天',  tip:'累计签到600天' },
+        { days:630,  icon:'🌀', label:'630天',  tip:'累计签到630天' },
+        { days:650,  icon:'🏆', label:'650天',  tip:'累计签到650天' },
+        { days:660,  icon:'🎇', label:'660天',  tip:'累计签到660天' },
+        { days:666,  icon:'🔮', label:'666天',  tip:'累计签到666天' },
+        { days:680,  icon:'🌙', label:'680天',  tip:'累计签到680天' },
+        { days:690,  icon:'💫', label:'690天',  tip:'累计签到690天' },
+        { days:700,  icon:'🌈', label:'700天',  tip:'累计签到700天' },
+        { days:710,  icon:'❄️', label:'710天',  tip:'累计签到710天' },
+        { days:720,  icon:'🌟', label:'720天',  tip:'累计签到720天' },
+        { days:730,  icon:'💎', label:'730天',  tip:'累计签到730天，坚持满2年！', special:true },
+      ];
+      // tab2: 第3年 (731-1095天) 29个
+      var t2 = [
+        { days:750,  icon:'🌌', label:'750天',  tip:'累计签到750天' },
+        { days:760,  icon:'🎰', label:'760天',  tip:'累计签到760天' },
+        { days:777,  icon:'🍀', label:'777天',  tip:'累计签到777天' },
+        { days:790,  icon:'🌿', label:'790天',  tip:'累计签到790天' },
+        { days:800,  icon:'🛸', label:'800天',  tip:'累计签到800天' },
+        { days:820,  icon:'🦊', label:'820天',  tip:'累计签到820天' },
+        { days:840,  icon:'🏯', label:'840天',  tip:'累计签到840天' },
+        { days:855,  icon:'🌸', label:'855天',  tip:'累计签到855天' },
+        { days:870,  icon:'🔮', label:'870天',  tip:'累计签到870天' },
+        { days:888,  icon:'🎱', label:'888天',  tip:'累计签到888天' },
+        { days:900,  icon:'🌠', label:'900天',  tip:'累计签到900天' },
+        { days:920,  icon:'🦋', label:'920天',  tip:'累计签到920天' },
+        { days:930,  icon:'🎸', label:'930天',  tip:'累计签到930天' },
+        { days:945,  icon:'🌋', label:'945天',  tip:'累计签到945天' },
+        { days:960,  icon:'🚀', label:'960天',  tip:'累计签到960天' },
+        { days:975,  icon:'🌀', label:'975天',  tip:'累计签到975天' },
+        { days:990,  icon:'🧠', label:'990天',  tip:'累计签到990天' },
+        { days:999,  icon:'🎯', label:'999天',  tip:'累计签到999天' },
+        { days:1000, icon:'💯', label:'1000天', tip:'累计签到1000天，突破四位数！' },
+        { days:1010, icon:'🎋', label:'1010天', tip:'累计签到1010天' },
+        { days:1020, icon:'🌊', label:'1020天', tip:'累计签到1020天' },
+        { days:1035, icon:'🏅', label:'1035天', tip:'累计签到1035天' },
+        { days:1050, icon:'🎖️', label:'1050天', tip:'累计签到1050天' },
+        { days:1060, icon:'🦅', label:'1060天', tip:'累计签到1060天' },
+        { days:1065, icon:'🔢', label:'1065天', tip:'累计签到1065天' },
+        { days:1075, icon:'🌺', label:'1075天', tip:'累计签到1075天' },
+        { days:1080, icon:'🌙', label:'1080天', tip:'累计签到1080天' },
+        { days:1088, icon:'🌟', label:'1088天', tip:'累计签到1088天' },
+        { days:1095, icon:'🔱', label:'1095天', tip:'累计签到1095天，坚持满3年！', special:true },
+      ];
+      // tab3: 第4年 (1096-1460天) 29个
+      var t3 = [
+        { days:1096, icon:'🌱', label:'1096天', tip:'累计签到1096天' },
+        { days:1100, icon:'🎵', label:'1100天', tip:'累计签到1100天' },
+        { days:1108, icon:'🌊', label:'1108天', tip:'累计签到1108天' },
+        { days:1111, icon:'🔢', label:'1111天', tip:'累计签到1111天' },
+        { days:1120, icon:'🦅', label:'1120天', tip:'累计签到1120天' },
+        { days:1130, icon:'🌺', label:'1130天', tip:'累计签到1130天' },
+        { days:1140, icon:'🏃', label:'1140天', tip:'累计签到1140天' },
+        { days:1155, icon:'🍀', label:'1155天', tip:'累计签到1155天' },
+        { days:1160, icon:'🎸', label:'1160天', tip:'累计签到1160天' },
+        { days:1170, icon:'🎡', label:'1170天', tip:'累计签到1170天' },
+        { days:1180, icon:'🧿', label:'1180天', tip:'累计签到1180天' },
+        { days:1200, icon:'🌟', label:'1200天', tip:'累计签到1200天' },
+        { days:1210, icon:'🌙', label:'1210天', tip:'累计签到1210天' },
+        { days:1222, icon:'🎯', label:'1222天', tip:'累计签到1222天' },
+        { days:1234, icon:'🔮', label:'1234天', tip:'累计签到1234天' },
+        { days:1245, icon:'🌈', label:'1245天', tip:'累计签到1245天' },
+        { days:1260, icon:'🌸', label:'1260天', tip:'累计签到1260天' },
+        { days:1280, icon:'💫', label:'1280天', tip:'累计签到1280天' },
+        { days:1300, icon:'💥', label:'1300天', tip:'累计签到1300天' },
+        { days:1315, icon:'🛸', label:'1315天', tip:'累计签到1315天' },
+        { days:1330, icon:'🌌', label:'1330天', tip:'累计签到1330天' },
+        { days:1345, icon:'🦁', label:'1345天', tip:'累计签到1345天' },
+        { days:1365, icon:'🌙', label:'1365天', tip:'累计签到1365天' },
+        { days:1380, icon:'🔱', label:'1380天', tip:'累计签到1380天' },
+        { days:1400, icon:'🌈', label:'1400天', tip:'累计签到1400天' },
+        { days:1410, icon:'🎋', label:'1410天', tip:'累计签到1410天' },
+        { days:1420, icon:'⏰', label:'1420天', tip:'累计签到1420天' },
+        { days:1440, icon:'🏔️', label:'1440天', tip:'累计签到1440天' },
+        { days:1460, icon:'⭐', label:'1460天', tip:'累计签到1460天，坚持满4年！', special:true },
+      ];
+      // tab4: 第5年 (1461-1825天) 29个
+      var t4 = [
+        { days:1461, icon:'🌿', label:'1461天', tip:'累计签到1461天' },
+        { days:1470, icon:'🎪', label:'1470天', tip:'累计签到1470天' },
+        { days:1480, icon:'🏰', label:'1480天', tip:'累计签到1480天' },
+        { days:1490, icon:'🌺', label:'1490天', tip:'累计签到1490天' },
+        { days:1500, icon:'🏔️', label:'1500天', tip:'累计签到1500天' },
+        { days:1510, icon:'🧬', label:'1510天', tip:'累计签到1510天' },
+        { days:1520, icon:'🔮', label:'1520天', tip:'累计签到1520天' },
+        { days:1530, icon:'🌊', label:'1530天', tip:'累计签到1530天' },
+        { days:1545, icon:'🦄', label:'1545天', tip:'累计签到1545天' },
+        { days:1555, icon:'🎆', label:'1555天', tip:'累计签到1555天' },
+        { days:1570, icon:'🌠', label:'1570天', tip:'累计签到1570天' },
+        { days:1580, icon:'🧩', label:'1580天', tip:'累计签到1580天' },
+        { days:1600, icon:'🌌', label:'1600天', tip:'累计签到1600天' },
+        { days:1610, icon:'🎇', label:'1610天', tip:'累计签到1610天' },
+        { days:1620, icon:'🦁', label:'1620天', tip:'累计签到1620天' },
+        { days:1630, icon:'🎸', label:'1630天', tip:'累计签到1630天' },
+        { days:1650, icon:'🌈', label:'1650天', tip:'累计签到1650天' },
+        { days:1660, icon:'💎', label:'1660天', tip:'累计签到1660天' },
+        { days:1680, icon:'🌙', label:'1680天', tip:'累计签到1680天' },
+        { days:1690, icon:'🔱', label:'1690天', tip:'累计签到1690天' },
+        { days:1700, icon:'🚀', label:'1700天', tip:'累计签到1700天' },
+        { days:1710, icon:'🌸', label:'1710天', tip:'累计签到1710天' },
+        { days:1725, icon:'🍀', label:'1725天', tip:'累计签到1725天' },
+        { days:1750, icon:'💫', label:'1750天', tip:'累计签到1750天' },
+        { days:1760, icon:'🔥', label:'1760天', tip:'累计签到1760天' },
+        { days:1780, icon:'🌟', label:'1780天', tip:'累计签到1780天' },
+        { days:1800, icon:'🎖️', label:'1800天', tip:'累计签到1800天' },
+        { days:1810, icon:'🏅', label:'1810天', tip:'累计签到1810天' },
+        { days:1825, icon:'🌠', label:'1825天', tip:'累计签到1825天，坚持满5年！', special:true },
+      ];
+      // tab5: 第6年 (1826-2190天) 29个
+      var t5 = [
+        { days:1826, icon:'🌌', label:'1826天', tip:'累计签到1826天' },
+        { days:1840, icon:'🎯', label:'1840天', tip:'累计签到1840天' },
+        { days:1850, icon:'🦋', label:'1850天', tip:'累计签到1850天' },
+        { days:1860, icon:'🌊', label:'1860天', tip:'累计签到1860天' },
+        { days:1870, icon:'🧿', label:'1870天', tip:'累计签到1870天' },
+        { days:1880, icon:'🌺', label:'1880天', tip:'累计签到1880天' },
+        { days:1900, icon:'🎇', label:'1900天', tip:'累计签到1900天' },
+        { days:1910, icon:'🦁', label:'1910天', tip:'累计签到1910天' },
+        { days:1920, icon:'🌸', label:'1920天', tip:'累计签到1920天' },
+        { days:1930, icon:'🔮', label:'1930天', tip:'累计签到1930天' },
+        { days:1950, icon:'🛸', label:'1950天', tip:'累计签到1950天' },
+        { days:1960, icon:'🌙', label:'1960天', tip:'累计签到1960天' },
+        { days:1970, icon:'🏯', label:'1970天', tip:'累计签到1970天' },
+        { days:1980, icon:'🌿', label:'1980天', tip:'累计签到1980天' },
+        { days:2000, icon:'🎆', label:'2000天', tip:'累计签到2000天，里程碑！' },
+        { days:2010, icon:'🔱', label:'2010天', tip:'累计签到2010天' },
+        { days:2020, icon:'💫', label:'2020天', tip:'累计签到2020天' },
+        { days:2030, icon:'🎸', label:'2030天', tip:'累计签到2030天' },
+        { days:2050, icon:'🧠', label:'2050天', tip:'累计签到2050天' },
+        { days:2060, icon:'🌋', label:'2060天', tip:'累计签到2060天' },
+        { days:2070, icon:'⚡', label:'2070天', tip:'累计签到2070天' },
+        { days:2080, icon:'🌈', label:'2080天', tip:'累计签到2080天' },
+        { days:2100, icon:'🎠', label:'2100天', tip:'累计签到2100天' },
+        { days:2110, icon:'🌟', label:'2110天', tip:'累计签到2110天' },
+        { days:2120, icon:'🏆', label:'2120天', tip:'累计签到2120天' },
+        { days:2130, icon:'💎', label:'2130天', tip:'累计签到2130天' },
+        { days:2150, icon:'🔥', label:'2150天', tip:'累计签到2150天' },
+        { days:2160, icon:'🌠', label:'2160天', tip:'累计签到2160天' },
+        { days:2190, icon:'⭐', label:'2190天', tip:'累计签到2190天，坚持满6年！', special:true },
+      ];
+      // tab6: 第7年 (2191-2555天) 29个
+      var t6 = [
+        { days:2191, icon:'🌱', label:'2191天', tip:'累计签到2191天' },
+        { days:2200, icon:'🎵', label:'2200天', tip:'累计签到2200天' },
+        { days:2210, icon:'🧩', label:'2210天', tip:'累计签到2210天' },
+        { days:2222, icon:'🔯', label:'2222天', tip:'累计签到2222天' },
+        { days:2230, icon:'🌺', label:'2230天', tip:'累计签到2230天' },
+        { days:2250, icon:'🌸', label:'2250天', tip:'累计签到2250天' },
+        { days:2260, icon:'🦅', label:'2260天', tip:'累计签到2260天' },
+        { days:2270, icon:'🎡', label:'2270天', tip:'累计签到2270天' },
+        { days:2280, icon:'🌊', label:'2280天', tip:'累计签到2280天' },
+        { days:2300, icon:'🌙', label:'2300天', tip:'累计签到2300天' },
+        { days:2310, icon:'🚀', label:'2310天', tip:'累计签到2310天' },
+        { days:2320, icon:'🌌', label:'2320天', tip:'累计签到2320天' },
+        { days:2333, icon:'🎱', label:'2333天', tip:'累计签到2333天' },
+        { days:2350, icon:'🦄', label:'2350天', tip:'累计签到2350天' },
+        { days:2360, icon:'🌿', label:'2360天', tip:'累计签到2360天' },
+        { days:2380, icon:'🏰', label:'2380天', tip:'累计签到2380天' },
+        { days:2400, icon:'🦁', label:'2400天', tip:'累计签到2400天' },
+        { days:2420, icon:'🎯', label:'2420天', tip:'累计签到2420天' },
+        { days:2440, icon:'🔱', label:'2440天', tip:'累计签到2440天' },
+        { days:2450, icon:'🌈', label:'2450天', tip:'累计签到2450天' },
+        { days:2460, icon:'🎸', label:'2460天', tip:'累计签到2460天' },
+        { days:2480, icon:'🌋', label:'2480天', tip:'累计签到2480天' },
+        { days:2500, icon:'💥', label:'2500天', tip:'累计签到2500天' },
+        { days:2510, icon:'🧠', label:'2510天', tip:'累计签到2510天' },
+        { days:2520, icon:'🌠', label:'2520天', tip:'累计签到2520天' },
+        { days:2530, icon:'🎆', label:'2530天', tip:'累计签到2530天' },
+        { days:2540, icon:'💎', label:'2540天', tip:'累计签到2540天' },
+        { days:2545, icon:'🌟', label:'2545天', tip:'累计签到2545天' },
+        { days:2555, icon:'🔮', label:'2555天', tip:'累计签到2555天，坚持满7年！', special:true },
+      ];
+      // tab7: 第8年 (2556-2920天) 29个
+      var t7 = [
+        { days:2556, icon:'🌿', label:'2556天', tip:'累计签到2556天' },
+        { days:2560, icon:'🎋', label:'2560天', tip:'累计签到2560天' },
+        { days:2570, icon:'🌊', label:'2570天', tip:'累计签到2570天' },
+        { days:2580, icon:'🌸', label:'2580天', tip:'累计签到2580天' },
+        { days:2590, icon:'🏯', label:'2590天', tip:'累计签到2590天' },
+        { days:2600, icon:'🌠', label:'2600天', tip:'累计签到2600天' },
+        { days:2610, icon:'🦋', label:'2610天', tip:'累计签到2610天' },
+        { days:2620, icon:'🔥', label:'2620天', tip:'累计签到2620天' },
+        { days:2630, icon:'🌌', label:'2630天', tip:'累计签到2630天' },
+        { days:2650, icon:'🎸', label:'2650天', tip:'累计签到2650天' },
+        { days:2660, icon:'🧿', label:'2660天', tip:'累计签到2660天' },
+        { days:2670, icon:'🌺', label:'2670天', tip:'累计签到2670天' },
+        { days:2680, icon:'💫', label:'2680天', tip:'累计签到2680天' },
+        { days:2700, icon:'🧩', label:'2700天', tip:'累计签到2700天' },
+        { days:2710, icon:'🌙', label:'2710天', tip:'累计签到2710天' },
+        { days:2720, icon:'⚡', label:'2720天', tip:'累计签到2720天' },
+        { days:2730, icon:'🎰', label:'2730天', tip:'累计签到2730天' },
+        { days:2750, icon:'🚀', label:'2750天', tip:'累计签到2750天' },
+        { days:2760, icon:'🌈', label:'2760天', tip:'累计签到2760天' },
+        { days:2777, icon:'🧿', label:'2777天', tip:'累计签到2777天' },
+        { days:2800, icon:'🎯', label:'2800天', tip:'累计签到2800天' },
+        { days:2840, icon:'🏯', label:'2840天', tip:'累计签到2840天' },
+        { days:2850, icon:'🌟', label:'2850天', tip:'累计签到2850天' },
+        { days:2860, icon:'🔱', label:'2860天', tip:'累计签到2860天' },
+        { days:2870, icon:'🏔️', label:'2870天', tip:'累计签到2870天' },
+        { days:2880, icon:'🌸', label:'2880天', tip:'累计签到2880天' },
+        { days:2900, icon:'💎', label:'2900天', tip:'累计签到2900天' },
+        { days:2910, icon:'🌟', label:'2910天', tip:'累计签到2910天' },
+        { days:2920, icon:'🏆', label:'2920天', tip:'累计签到2920天，坚持满8年！', special:true },
+      ];
+      // tab8: 第9年 (2921-3285天) 29个
+      var t8 = [
+        { days:2921, icon:'👑', label:'2921天', tip:'累计签到2921天' },
+        { days:2930, icon:'🌌', label:'2930天', tip:'累计签到2930天' },
+        { days:2940, icon:'🦅', label:'2940天', tip:'累计签到2940天' },
+        { days:2950, icon:'🎆', label:'2950天', tip:'累计签到2950天' },
+        { days:2960, icon:'🌠', label:'2960天', tip:'累计签到2960天' },
+        { days:2970, icon:'🔮', label:'2970天', tip:'累计签到2970天' },
+        { days:2980, icon:'🌊', label:'2980天', tip:'累计签到2980天' },
+        { days:2990, icon:'🌺', label:'2990天', tip:'累计签到2990天' },
+        { days:3000, icon:'👑', label:'3000天', tip:'累计签到3000天，传奇级别！' },
+        { days:3010, icon:'🌟', label:'3010天', tip:'累计签到3010天' },
+        { days:3020, icon:'🔱', label:'3020天', tip:'累计签到3020天' },
+        { days:3030, icon:'💫', label:'3030天', tip:'累计签到3030天' },
+        { days:3040, icon:'🌈', label:'3040天', tip:'累计签到3040天' },
+        { days:3050, icon:'💎', label:'3050天', tip:'累计签到3050天' },
+        { days:3060, icon:'🚀', label:'3060天', tip:'累计签到3060天' },
+        { days:3070, icon:'🌸', label:'3070天', tip:'累计签到3070天' },
+        { days:3080, icon:'🦁', label:'3080天', tip:'累计签到3080天' },
+        { days:3100, icon:'🌌', label:'3100天', tip:'累计签到3100天' },
+        { days:3110, icon:'🎯', label:'3110天', tip:'累计签到3110天' },
+        { days:3120, icon:'🧠', label:'3120天', tip:'累计签到3120天' },
+        { days:3130, icon:'🌋', label:'3130天', tip:'累计签到3130天' },
+        { days:3150, icon:'🎸', label:'3150天', tip:'累计签到3150天' },
+        { days:3160, icon:'🌙', label:'3160天', tip:'累计签到3160天' },
+        { days:3170, icon:'🌿', label:'3170天', tip:'累计签到3170天' },
+        { days:3188, icon:'🌠', label:'3188天', tip:'累计签到3188天' },
+        { days:3200, icon:'🔥', label:'3200天', tip:'累计签到3200天' },
+        { days:3220, icon:'🌊', label:'3220天', tip:'累计签到3220天' },
+        { days:3250, icon:'🌺', label:'3250天', tip:'累计签到3250天' },
+        { days:3285, icon:'⭐', label:'3285天', tip:'累计签到3285天，坚持满9年！', special:true },
+      ];
+      // tab9: 第10年 (3286-3650天) 29个
+      var t9 = [
+        { days:3286, icon:'♾️', label:'3286天', tip:'累计签到3286天' },
+        { days:3290, icon:'🌌', label:'3290天', tip:'累计签到3290天' },
+        { days:3295, icon:'🦋', label:'3295天', tip:'累计签到3295天' },
+        { days:3300, icon:'🌟', label:'3300天', tip:'累计签到3300天' },
+        { days:3310, icon:'🎆', label:'3310天', tip:'累计签到3310天' },
+        { days:3320, icon:'💫', label:'3320天', tip:'累计签到3320天' },
+        { days:3333, icon:'🧿', label:'3333天', tip:'累计签到3333天' },
+        { days:3340, icon:'🌊', label:'3340天', tip:'累计签到3340天' },
+        { days:3350, icon:'🏆', label:'3350天', tip:'累计签到3350天' },
+        { days:3360, icon:'🔮', label:'3360天', tip:'累计签到3360天' },
+        { days:3370, icon:'🌸', label:'3370天', tip:'累计签到3370天' },
+        { days:3380, icon:'🚀', label:'3380天', tip:'累计签到3380天' },
+        { days:3388, icon:'🎸', label:'3388天', tip:'累计签到3388天' },
+        { days:3400, icon:'🏔️', label:'3400天', tip:'累计签到3400天' },
+        { days:3410, icon:'🌈', label:'3410天', tip:'累计签到3410天' },
+        { days:3420, icon:'🔱', label:'3420天', tip:'累计签到3420天' },
+        { days:3430, icon:'🦁', label:'3430天', tip:'累计签到3430天' },
+        { days:3440, icon:'🌙', label:'3440天', tip:'累计签到3440天' },
+        { days:3450, icon:'🛸', label:'3450天', tip:'累计签到3450天' },
+        { days:3470, icon:'🌿', label:'3470天', tip:'累计签到3470天' },
+        { days:3500, icon:'🎯', label:'3500天', tip:'累计签到3500天' },
+        { days:3520, icon:'⚡', label:'3520天', tip:'累计签到3520天' },
+        { days:3540, icon:'🧠', label:'3540天', tip:'累计签到3540天' },
+        { days:3550, icon:'🌋', label:'3550天', tip:'累计签到3550天' },
+        { days:3570, icon:'💎', label:'3570天', tip:'累计签到3570天' },
+        { days:3588, icon:'🔢', label:'3588天', tip:'累计签到3588天' },
+        { days:3600, icon:'🌠', label:'3600天', tip:'累计签到3600天' },
+        { days:3630, icon:'🌟', label:'3630天', tip:'累计签到3630天' },
+        { days:3650, icon:'♾️', label:'3650天', tip:'累计签到3650天，十年如一日！', special:true },
+      ];
+      // 合并去重排序
+      var all = [].concat(t0, t1, t2, t3, t4, t5, t6, t7, t8, t9);
+      var seen = {}; var deduped = [];
+      all.forEach(function(m) { seen[m.days] = m; });
+      Object.keys(seen).sort(function(a,b){return a-b;}).forEach(function(k){ deduped.push(seen[k]); });
+      return { tabs: [t0, t1, t2, t3, t4, t5, t6, t7, t8, t9], all: deduped };
+    })();
+
+    // 渲染奖杯网格（按当前tab）
+    window.__trophyCurrentTab = window.__trophyCurrentTab || 0;
+    window.__trophyTotalDays = totalDays;
+
+    window.trophyShowTab = function(idx) {
+      window.__trophyCurrentTab = idx;
+      var tabs = window.__trophyAllMilestones.tabs;
+      var td = window.__trophyTotalDays || 0;
+      var mc = document.getElementById('tree-milestones');
+      var infoBar = document.getElementById('trophy-info-bar');
+      if (!mc) return;
+      // 更新tab按钮样式
+      for (var i = 0; i < 10; i++) {
+        var btn = document.getElementById('trophy-tab-' + i);
+        if (!btn) continue;
+        if (i === idx) {
+          btn.style.background = 'linear-gradient(135deg,#059669,#0d9488)';
+          btn.style.color = '#fff';
+          btn.style.borderColor = '#059669';
+        } else {
+          btn.style.background = '#f3f4f6';
+          btn.style.color = '#374151';
+          btn.style.borderColor = '#d1d5db';
+        }
+      }
+      var list = tabs[idx];
+      mc.innerHTML = list.map(function(m) {
+        var unlocked = td >= m.days;
+        var isAnniversary = !!m.special;
+        var bg = unlocked
+          ? (isAnniversary ? 'linear-gradient(135deg,#fef08a,#fbbf24)' : 'linear-gradient(135deg,#d1fae5,#a7f3d0)')
+          : '#f3f4f6';
+        var border = unlocked ? (isAnniversary ? '#f59e0b' : '#6ee7b7') : '#e5e7eb';
+        var textColor = unlocked ? (isAnniversary ? '#78350f' : '#065f46') : '#9ca3af';
+        return '<div title="' + m.tip + '" onclick="var b=document.getElementById(\'trophy-info-bar\');if(b)b.textContent=\'' + m.tip + '\';" style="cursor:pointer;padding:4px 2px;border-radius:8px;background:' + bg +
+          ';border:1px solid ' + border + ';opacity:' + (unlocked ? '1' : '0.4') + ';transition:all 0.3s;box-shadow:' +
+          (unlocked ? (isAnniversary ? '0 2px 6px rgba(251,191,36,0.5)' : '0 1px 4px rgba(16,185,129,0.3)') : 'none') + ';">' +
+          '<div style="font-size:1.15rem;line-height:1.3;">' + m.icon + '</div>' +
+          '<div style="font-size:0.56rem;font-weight:700;color:' + textColor + ';line-height:1.2;margin-top:1px;">' + m.label + '</div>' +
+          '<div style="font-size:0.48rem;color:' + (unlocked ? (isAnniversary ? '#92400e' : '#047857') : '#b0b7c3') + ';line-height:1.1;margin-top:1px;">累计' + m.days + '天</div>' +
+          '</div>';
+      }).join('');
+      if (infoBar) infoBar.textContent = '点击奖杯查看说明';
+    };
+
+    // 更新解锁数量
+    var allM = window.__trophyAllMilestones.all;
+    var unlockedCount = allM.filter(function(m){ return totalDays >= m.days; }).length;
+    var cntEl = document.getElementById('trophy-unlock-count');
+    if (cntEl) cntEl.textContent = '已解锁 ' + unlockedCount + '/' + allM.length;
+
+    // 重新渲染当前tab
+    window.trophyShowTab(window.__trophyCurrentTab);
   } catch (e) {
     console.error('更新签到树失败:', e);
   }
@@ -28584,6 +29277,13 @@ function updateTreeRewards() {
   window.__tpi_refreshCheckin = function() {
     try { updateCheckInStatus(); } catch(e) { console.warn('[checkin] refreshCheckin failed:', e); }
   };
+
+  /* V2.19: 页面完全加载后，确保签到/树木/奖杯状态正确呈现 */
+  window.addEventListener('load', function() {
+    setTimeout(function(){
+      try{ if(typeof window.__tpi_refreshCheckin==='function') window.__tpi_refreshCheckin(); }catch(_){}
+    }, 800);
+  });
 
 })();
 </script>
@@ -30275,6 +30975,23 @@ window.__tpi_syncDateToMain = function(){
           if (v != null) globals[k]=v;
         });
       }catch(e){}
+      /* V2.19修复: 确保 tpi_checkin_data 始终被打包进 globals */
+      try{
+        if(!globals['tpi_checkin_data']){
+          const _ciV = __tpi_ls_get('tpi_checkin_data');
+          if(_ciV) globals['tpi_checkin_data'] = _ciV;
+        }
+        /* 同时记录一份 _badgeStates 快照到 globals（供导出文档参考）*/
+        if(!globals['_tpi_badge_snapshot']){
+          var _liveBdg = [];
+          document.querySelectorAll('.badge-item').forEach(function(b){
+            var nm = b.querySelector('.badge-name');
+            var pg = b.querySelector('.badge-progress');
+            if(nm) _liveBdg.push({name:(nm.textContent||'').trim(), unlocked:b.classList.contains('unlocked'), progress:pg?(pg.textContent||'').trim():''});
+          });
+          if(_liveBdg.length) globals['_tpi_badge_snapshot'] = JSON.stringify(_liveBdg);
+        }
+      }catch(_){}
 
       const meta = {
         schema: SYNC_SCHEMA,
@@ -31232,7 +31949,7 @@ const __download_end_time = Date.now();
     };
     try {
       setBusy(true);
-      if(prog) prog.textContent = '🔄 V1.97 正在准备全量上传（收集全部本地数据：DOM+LS+IDB 三路）…';
+      if(prog) prog.textContent = '🔄 V2.19 正在准备全量上传（收集全部本地数据：DOM+LS+IDB 三路，含签到/树木/奖杯…）';
 
       /* V1.93: 强制将当前 DOM 状态写入 localStorage ——
          bypass 先行（绕过豁免校验），再走正常路径，确保最新输入 100% 落入 LS。*/
@@ -31342,18 +32059,24 @@ const __download_end_time = Date.now();
       /* ── 5. 上传 master 全局设置文件（含所有杂事、设置、签到等）── */
       try {
         if(prog) prog.textContent = `📤 上传中 ${totalSteps}/${totalSteps}：全局设置与杂事记录（master）…`;
+        /* V2.19修复: 上传前确保 tpi_checkin_data 被显式纳入 masterSettings */
+        try{
+          const _ciRaw = (typeof window.__tpi_ls_get==='function' ? window.__tpi_ls_get('tpi_checkin_data') : localStorage.getItem('tpi_checkin_data'));
+          if(_ciRaw) masterSettings['tpi_checkin_data'] = _ciRaw;
+        }catch(_){}
         const masterObj = {
-          schema: 'tpi_master_v193',
+          schema: 'tpi_master_v219',
           exportedAt: new Date().toISOString(),
           deviceId: (typeof getOrCreateDeviceId==='function' ? getOrCreateDeviceId() : (window.__tpi_ls_get ? window.__tpi_ls_get('tpi_device_id') : '')||'')||'',
           settings: masterSettings,
           miscRecords: miscKeyMap
         };
         const masterStr = JSON.stringify(masterObj);
-        /* V1.93: 统一命名 _master_v193，清理旧版 v191/v192 残留 */
-        const masterId  = safeUser + '_master_v193';
+        /* V2.19: 统一命名 _master_v219，清理旧版 v191/v192/v193 残留 */
+        const masterId  = safeUser + '_master_v219';
         try { await __awStorage().deleteFile(bkt, safeUser + '_master_v191'); } catch(_) {}
         try { await __awStorage().deleteFile(bkt, safeUser + '_master_v192'); } catch(_) {}
+        try { await __awStorage().deleteFile(bkt, safeUser + '_master_v193'); } catch(_) {}
         try { await __awStorage().deleteFile(bkt, masterId); } catch(_) {}
         const mBlob = new Blob([masterStr], {type:'application/json'});
         const mFile = new File([mBlob], masterId+'.json', {type:'application/json'});
@@ -31364,7 +32087,7 @@ const __download_end_time = Date.now();
         fail++;
       }
 
-      const summary = `✅ V1.97 全量上传完成：${ok} 个文件成功（含 ${allDatesSorted.length} 天日记录 + 1 个全局设置文件）${fail>0?' / 失败 '+fail+' 个':''}`;
+      const summary = `✅ V2.19 全量上传完成：${ok} 个文件成功（含 ${allDatesSorted.length} 天日记录 + 1 个全局设置文件，含签到/树木/里程碑奖杯数据）${fail>0?' / 失败 '+fail+' 个':''}`;
       if(prog) prog.textContent = summary;
       try{ window.tpiToast && window.tpiToast(`✅ 全量上传完成：${allDatesSorted.length} 天数据 + 全局设置`, 'success'); }catch(_){}
       try { tpiShowMsg && tpiShowMsg('tpi-sync-msg', summary, false); } catch(_){}
@@ -31390,7 +32113,7 @@ const __download_end_time = Date.now();
     };
     try {
       setBusy(true);
-      if(prog) prog.textContent = '🔄 V1.97 正在获取云端文件列表…';
+      if(prog) prog.textContent = '🔄 V2.19 正在获取云端文件列表…';
 
       const user = await __tpi_getAuth();
       const bkt  = window.APPWRITE_BUCKET_ID || window.BUCKET_ID || '69b43eab003bf6126508';
@@ -31419,12 +32142,13 @@ const __download_end_time = Date.now();
       }
 
       /* ── 分离 master 文件与日期文件（V1.93: 优先识别 v193，向下兼容 v192/v191）── */
-      const masterFile = allFiles.find(f => f.$id === safeUser + '_master_v193')
+      const masterFile = allFiles.find(f => f.$id === safeUser + '_master_v219')
+                      || allFiles.find(f => f.$id === safeUser + '_master_v193')
                       || allFiles.find(f => f.$id === safeUser + '_master_v192')
                       || allFiles.find(f => f.$id === safeUser + '_master_v191')
                       || allFiles.find(f => f.$id === safeUser + '_master_v192_prev');
       const masterIds  = new Set([
-        safeUser + '_master_v193', safeUser + '_master_v192',
+        safeUser + '_master_v219', safeUser + '_master_v193', safeUser + '_master_v192',
         safeUser + '_master_v191', safeUser + '_master_v192_prev'
       ]);
       const dateFiles  = allFiles.filter(f => !masterIds.has(f.$id));
@@ -31451,6 +32175,10 @@ const __download_end_time = Date.now();
                 }
               }catch(_){}
             });
+          }
+          /* V2.19修复: 若 master 中有独立 checkin 字段也一并恢复 */
+          if(masterObj.checkin && typeof masterObj.checkin === 'object'){
+            try{ window.__tpi_ls_set('tpi_checkin_data', JSON.stringify(masterObj.checkin)); settingsRestored++; }catch(_){}
           }
 
           /* V1.93: 还原所有杂事记录（tpi_misc_records_YYYY-MM-DD）→ localStorage */
@@ -31495,14 +32223,33 @@ const __download_end_time = Date.now();
             } catch(idbErr){ console.warn('[V1.97 全量下载] IDB 写入失败 '+dateStr+'（不影响 LS 恢复）:', idbErr); }
           }
 
-          /* V2.08: 还原全局设置（globals，含各日期的 misc 记录）→ localStorage
+          /* V2.19: 还原全局设置（globals，含各日期的 misc 记录、签到数据）→ localStorage
              排除套娃/临时键，确保 mixed_* / dark-mode / force_recovery_* 等均被还原 */
           if(unpacked && unpacked.obj && unpacked.obj.globals){
             const _DL_BLOAT = /^tpi_(draft|unsaved_data|upload_snapshots|download_snapshots|error_logs|banner_dismissed|direct_raw|cloud_backup)_/;
             Object.keys(unpacked.obj.globals).forEach(gk=>{
               try{
-                if(/token|secret|password|pat\\b/i.test(gk)) return;
+                if(/token|secret|password|pat\b/i.test(gk)) return;
                 if(_DL_BLOAT.test(gk)) return;
+                if(gk === '_tpi_badge_snapshot') return; /* 快照仅作参考，不写入 LS */
+                /* V2.19: 对 tpi_checkin_data 做合并而非直接覆盖 */
+                if(gk === 'tpi_checkin_data'){
+                  try{
+                    const _existCI = window.__tpi_ls_get('tpi_checkin_data');
+                    const _newCI = JSON.parse(unpacked.obj.globals[gk]);
+                    if(_existCI){
+                      const _eCI = JSON.parse(_existCI);
+                      const _merged = new Set([...(_eCI.dates||[]),...(_newCI.dates||[])]);
+                      const _mergedArr = Array.from(_merged).sort();
+                      const _mergedObj = {dates:_mergedArr, currentStreak:0, maxStreak:Math.max(_eCI.maxStreak||0,_newCI.maxStreak||0)};
+                      window.__tpi_ls_set('tpi_checkin_data', JSON.stringify(_mergedObj));
+                    } else {
+                      window.__tpi_ls_set('tpi_checkin_data', unpacked.obj.globals[gk]);
+                    }
+                    settingsRestored++;
+                  }catch(_){ window.__tpi_ls_set(gk, unpacked.obj.globals[gk]); settingsRestored++; }
+                  return;
+                }
                 window.__tpi_ls_set(gk, unpacked.obj.globals[gk]);
                 if(/^tpi_misc_records_/.test(gk)) miscRestored++;
                 else settingsRestored++;
@@ -31529,10 +32276,17 @@ const __download_end_time = Date.now();
       } catch(_){}
 
       const dayCount = dateFiles.filter(f => /^\d{4}-\d{2}-\d{2}$/.test(f.$id.replace(safeUser+'_',''))).length;
-      const summary = `✅ V1.97 全量下载完成：${dayCount} 天日记录（LS+IDB 双写 ${idbRestored} 天）| ${miscRestored} 天杂事记录 | ${settingsRestored} 项设置键已恢复${fail>0?' | 失败 '+fail+' 个':''}。页面即将刷新…`;
+      const summary = `✅ V2.19 全量下载完成：${dayCount} 天日记录（LS+IDB 双写 ${idbRestored} 天）| ${miscRestored} 天杂事记录 | ${settingsRestored} 项设置键已恢复${fail>0?' | 失败 '+fail+' 个':''}。页面即将刷新…`;
       if(prog) prog.textContent = summary;
       try{ window.tpiToast && window.tpiToast(`✅ 全量下载完成：${dayCount} 天，刷新后生效`, 'success'); }catch(_){}
       try { tpiShowMsg && tpiShowMsg('tpi-sync-msg', summary, false); } catch(_){}
+      /* V2.19修复: 刷新前先更新内存状态中的签到数据，确保刷新后签到/树木/奖杯立即呈现 */
+      try{
+        const _ciRaw2 = window.__tpi_ls_get('tpi_checkin_data');
+        if(_ciRaw2 && window.__tpi_main_state) {
+          try{ window.__tpi_main_state.checkinData = JSON.parse(_ciRaw2); }catch(_){}
+        }
+      }catch(_){}
       setTimeout(()=>{ if(prog) prog.style.display='none'; if(ok>0) try{ location.reload(); }catch(_){} }, 4000);
     } catch(err) {
       console.error('❌ [V1.97 全量下载] 失败:', err);
@@ -32285,6 +33039,19 @@ async function loadTodaysData() {
 async function saveTodaysData() {
     const today = getTodayString();
     const bkt = window.BUCKET_ID || window.APPWRITE_BUCKET_ID || '69b43eab003bf6126508';
+
+    /* V2.19修复: 上传前确保签到数据已写入 localStorage，防止 pack 时遗漏 */
+    try{
+      if(typeof window.__tpi_refreshCheckin === 'function') window.__tpi_refreshCheckin();
+      // 将内存签到状态同步到 localStorage
+      if(window.__tpi_main_state && window.__tpi_main_state.checkinData){
+        const _ci = window.__tpi_main_state.checkinData;
+        const _ciExisting = window.__tpi_ls_get('tpi_checkin_data');
+        if(!_ciExisting){
+          window.__tpi_ls_set('tpi_checkin_data', JSON.stringify(_ci));
+        }
+      }
+    }catch(_){}
 
     let dataStr = '';
     try{
@@ -34993,7 +35760,7 @@ window.TPI.backupAllData=function(){
     } catch(_spErr) { console.warn('[V1.83备份] rawKV safeParse警告:',_spErr); }
 
     // V1.83: 记录备份版本标识，便于恢复时识别
-    data._meta.backupVersion='V1.83';
+    data._meta.backupVersion='V2.19';
     data._meta.backupFormat='full_v183_no_dead_pkg';
     data._meta.totalRawKV=Object.keys(data.rawKV).length;
 
@@ -43060,9 +43827,9 @@ h3.card-title, h4.card-title,
   function _v157_collectAll(){
     var result={
       _meta:{
-        version: window.TPI_VERSION||'全维效能管理系统 TPI（V2.12）',
-        appVersion: window.TPI_APP_VERSION||'1.70',
-        backupVersion:'V1.57',
+        version: window.TPI_VERSION||'全维效能管理系统 TPI（V2.19）',
+        appVersion: window.TPI_APP_VERSION||'2.19',
+        backupVersion:'V2.19',
         backupFormat:'full_v157_ultimate',
         exportedAt: new Date().toISOString(),
         storageType:'localStorage+IDB'
@@ -43185,6 +43952,14 @@ h3.card-title, h4.card-title,
     /* checkin */
     try{ if(obj.checkin) _dual_set('tpi_checkin_data', JSON.stringify(obj.checkin)); }catch(e){}
 
+    /* V2.19修复: 恢复签到数据后立即刷新签到UI、树木徽章和里程碑奖杯 */
+    try{
+      setTimeout(function(){
+        try{ if(typeof window.__tpi_refreshCheckin==='function') window.__tpi_refreshCheckin(); }catch(_){}
+        try{ if(typeof updateCheckInStatus==='function') updateCheckInStatus(); }catch(_){}
+      }, 200);
+    }catch(e){}
+
     /* settings */
     try{
       var st=obj.settings||{};
@@ -43223,6 +43998,13 @@ h3.card-title, h4.card-title,
           if(!confirm('📦 检测到【'+formatName+'】\n\n文件：'+file.name+'\n版本：'+(obj._meta.version||'未知')+'\n\n✅ 将完整恢复所有数据（含设置、杂事、签到）\n⚠️ 现有数据将被覆盖\n\n【确定】开始导入  【取消】放弃')) return;
           var r=_v157_applyData(obj);
           restored=r.restored; rawRestored=r.rawRestored;
+          /* V2.19修复: 全量备份导入后触发签到UI和奖杯刷新 */
+          try{
+            setTimeout(function(){
+              try{ if(typeof window.__tpi_refreshCheckin==='function') window.__tpi_refreshCheckin(); }catch(_){}
+              try{ if(typeof updateCheckInStatus==='function') updateCheckInStatus(); }catch(_){}
+            }, 300);
+          }catch(_){}
         }
         /* === 格式B：旧版全量包 { localStorage: {...} } === */
         else if(obj.localStorage&&typeof obj.localStorage==='object'){
@@ -43429,10 +44211,10 @@ h3.card-title, h4.card-title,
 
     var result = {
       _meta: {
-        version: window.TPI_VERSION || '全维效能管理系统 TPI（V2.12）',
-        appVersion: window.TPI_APP_VERSION || '1.70',
-        backupVersion: 'V1.60',
-        backupFormat: 'full_v159_ultimate',
+        version: window.TPI_VERSION || '全维效能管理系统 TPI（V2.19）',
+        appVersion: window.TPI_APP_VERSION || '2.19',
+        backupVersion: 'V2.19',
+        backupFormat: 'full_v219_ultimate',
         exportedAt: new Date().toISOString(),
         currentDate: curDate,
         storageType: 'localStorage+IDB+DOM',
@@ -43444,7 +44226,8 @@ h3.card-title, h4.card-title,
       miscRecords: {},
       checkin: null,
       settings: {},
-      rawKV: {}
+      rawKV: {},
+      badgeStates: []  /* V2.19: 快照时同步记录徽章状态（仅作元数据参考，不用于恢复）*/
     };
 
     /* === A：完整扫描 localStorage（无遗漏）=== */
@@ -43472,6 +44255,21 @@ h3.card-title, h4.card-title,
         }
       }
     } catch(e) { console.warn('[V1.59 collectAll LS]', e); }
+
+    /* V2.19修复: 同步收集当前DOM中的徽章状态（仅作元数据）*/
+    try {
+      var _bdgList = [];
+      document.querySelectorAll('.badge-item').forEach(function(b){
+        var nameEl = b.querySelector('.badge-name');
+        var progEl = b.querySelector('.badge-progress');
+        if(nameEl) _bdgList.push({
+          name: nameEl.textContent || '',
+          unlocked: b.classList.contains('unlocked'),
+          progress: progEl ? progEl.textContent : ''
+        });
+      });
+      if(_bdgList.length > 0) result.badgeStates = _bdgList;
+    } catch(e) {}
 
     /* === B：IDB内存镜像补充 === */
     try {
