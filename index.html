@@ -117,13 +117,13 @@
   };
 })();
 </script>
-<meta content="全维效能管理系统 TPI（V2.20）" property="og:title"/>
+<meta content="全维效能管理系统 TPI（V2.21）" property="og:title"/>
 <meta content="全维效能管理系统（TPI）| 全面追踪 · 科学管理 · 高效提升" property="og:description"/>
 <meta content="website" property="og:type"/>
 <meta content="https://mytpi.netlify.app/" property="og:url"/>
 <meta content="zh_CN" property="og:locale"/>
 <meta name="twitter:card" content="summary"/>
-<meta name="twitter:title" content="全维效能管理系统 TPI（V2.20）"/>
+<meta name="twitter:title" content="全维效能管理系统 TPI（V2.21）"/>
 <meta name="twitter:description" content="全维效能管理系统（TPI）"/>
 <meta content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=5.0, user-scalable=yes, viewport-fit=cover" name="viewport"/>
 <meta content="全维效能管理系统（TPI）- 跨设备同步 | 支持电脑/手机/平板访问" name="description"/>
@@ -1970,7 +1970,7 @@ window.__tpi_clearAllForm = function() {
       md += `**今日反思**：${getVal('daily-reflection')}\n\n`;
       md += `**微小胜利**：\n- ${getVal('victory-1')}\n- ${getVal('victory-2')}\n- ${getVal('victory-3')}\n\n`;
 
-      md += `---\n*报告由全维效能管理系统 TPI（V2.20）自动生成，时间：${new Date().toLocaleString('zh-CN')}*\n`;
+      md += `---\n*报告由全维效能管理系统 TPI（V2.21）自动生成，时间：${new Date().toLocaleString('zh-CN')}*\n`;
 
       // 下载文件
       const blob = new Blob([md], { type: 'text/markdown;charset=utf-8' });
@@ -2716,7 +2716,7 @@ window.getTpiDayDataAsync = async function(dateStr) {
   } catch (e) {}
 })();
 </script>
-<title>全维效能管理系统 TPI（V2.20）</title>
+<title>全维效能管理系统 TPI（V2.21）</title>
 <script>
    'use strict';
         const getCurrentDate = () => {
@@ -2727,7 +2727,7 @@ window.getTpiDayDataAsync = async function(dateStr) {
             return `${year}-${month}-${day}`;
         };
 
-        window.TPI_VERSION = '全维效能管理系统 TPI（V2.20）';
+        window.TPI_VERSION = '全维效能管理系统 TPI（V2.21）';
         window.TPI_APP_VERSION = '2.19';
 
         // V1.50: 检查是否有待恢复的数据（import后不刷新，直接恢复）
@@ -2822,7 +2822,7 @@ window.TPI.DOM = window.TPI.DOM || {
                             : '三十';
             const lunarStr = `农历${lunarMonth}${lunarDay}${lunar.isLeap ? '(闰)' : ''}`;
 
-            document.title = `全维效能管理系统 TPI（V2.20）（${window.TPI_BUILD_DATE} ${weekday} ${lunarStr}）`;
+            document.title = `全维效能管理系统 TPI（V2.21）（${window.TPI_BUILD_DATE} ${weekday} ${lunarStr}）`;
 
             const dateDisplay = document.getElementById('current-date-display');
             if (dateDisplay) {
@@ -11899,10 +11899,7 @@ document.addEventListener('click', function(e) {
            <strong>
             若有 [海明威桥] 指令，必须优先执行
            </strong>
-           ）。 →
-           <strong>
-            +2 分
-           </strong>
+           ）。
 </span>
 </label>
 </div>
@@ -11941,7 +11938,7 @@ document.addEventListener('click', function(e) {
 <label class="tpi-inline-03">
 <input aria-label="第一板块启动" id="start-morning-block" onchange="TPI.calculateAMI()" type="checkbox"/>
 <span>
-           🌅 第一板块启动 (建议08:30) →
+           🌅 第一板块启动 (建议08:00) →
            <strong>
             +2分
            </strong>
@@ -15558,7 +15555,7 @@ const TPI = (function() {
                 BCM_RAW_CAP: 20,             // BCM基础分封顶（V3调整：24→20，约占非AMI权重12%）
                 BCM_MIN_THRESHOLD: 10,       // BCM最低预警分（50%封顶值，低于此值触发子系统预警）
 
-                MORNING_LEGEND: 8 * 60 + 30, // 08:30（含缓冲→08:45）
+                MORNING_LEGEND: 8 * 60 + 0,  // 08:00（含缓冲→08:15）
                 MORNING_LATE: 9 * 60 + 0,    // 09:00（含缓冲→09:15）
                 MORNING_FAIL: 9 * 60 + 30,   // 09:30（含缓冲→09:45）
 
@@ -16838,10 +16835,6 @@ ${badge.description}
             function calculateIgnitionBonus() {
                 let total = 0;
 
-                if (document.getElementById('ignition-painless-start')?.checked) {
-                    total += CONSTANTS.IGNITION_BONUS;
-                }
-
                 if (document.getElementById('start-morning-block')?.checked) total += CONSTANTS.IGNITION_BONUS;
                 if (document.getElementById('start-afternoon-block')?.checked) total += CONSTANTS.IGNITION_BONUS;
                 if (document.getElementById('start-evening-block')?.checked) total += CONSTANTS.IGNITION_BONUS;
@@ -17333,7 +17326,7 @@ function calculateAMI() {
                     const yesterdayMinutes = toNightMinutes(yesterdayTime);
                     const deltaT = todayMinutes - yesterdayMinutes; // 正数=今天更晚，负数=今天更早
 
-                    // V2.20: 1点以后睡觉（minutes >= 25*60，即01:00）使用新奖励规则：
+                    // V2.21: 1点以后睡觉（minutes >= 25*60，即01:00）使用新奖励规则：
                     // 今天比昨天早<30min +0.5，早30-60min +1，早>60min +2
                     // 1点以前（高分段）仍使用原有规则
                     if (minutes >= 25 * 60) {
@@ -23299,7 +23292,7 @@ window.addEventListener('resize', function() {
                         <div style="display:flex;justify-content:space-between;align-items:center;padding:16px 24px;background:#f8fafc;border-bottom: 1px solid #d1fae5;flex-shrink:0;">
                             <h3 style="margin:0;font-size:18px;color:#1e293b;">👁️ 报告预览</h3>
                             <div style="display:flex;gap:10px;">
-                                <button type="button" onclick="(function(){var p=document.getElementById('tpi-preview-body');if(p){var w=window.open('','_blank');if(w){w.document.write('<html><head><meta charset=UTF-8><title>全维效能管理系统 TPI（V2.20）</title><style>body{font-family:Arial,sans-serif;max-width:900px;margin:40px auto;padding:20px;}h2{color:#0d9488;}table{width:100%;border-collapse:collapse;margin:20px 0;}th,td{padding:10px;border: 1px solid #bbf7d0;}th{background:#f3f4f6;}.btn{padding:10px 20px;margin:10px 5px;cursor:pointer;border: 1px solid #86efac;border-radius:6px;background:#fff;}</style><\/head><body>'+p.innerHTML+'<div style=text-align:center;margin-top:30px><button type="button" class=btn onclick=window.print()>🖨️ 打印</button><button type="button" class=btn onclick=window.close()>关闭</button></div><\/body></html>');w.document.close();}}})()" style="padding:6px 14px;border: 1px solid #6ee7b7;border-radius:6px;background:#fff;cursor:pointer;font-size:13px;color:#334155;transition:all 0.15s;" onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background='#fff'">🌐 新窗口打开</button>
+                                <button type="button" onclick="(function(){var p=document.getElementById('tpi-preview-body');if(p){var w=window.open('','_blank');if(w){w.document.write('<html><head><meta charset=UTF-8><title>全维效能管理系统 TPI（V2.21）</title><style>body{font-family:Arial,sans-serif;max-width:900px;margin:40px auto;padding:20px;}h2{color:#0d9488;}table{width:100%;border-collapse:collapse;margin:20px 0;}th,td{padding:10px;border: 1px solid #bbf7d0;}th{background:#f3f4f6;}.btn{padding:10px 20px;margin:10px 5px;cursor:pointer;border: 1px solid #86efac;border-radius:6px;background:#fff;}</style><\/head><body>'+p.innerHTML+'<div style=text-align:center;margin-top:30px><button type="button" class=btn onclick=window.print()>🖨️ 打印</button><button type="button" class=btn onclick=window.close()>关闭</button></div><\/body></html>');w.document.close();}}})()" style="padding:6px 14px;border: 1px solid #6ee7b7;border-radius:6px;background:#fff;cursor:pointer;font-size:13px;color:#334155;transition:all 0.15s;" onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background='#fff'">🌐 新窗口打开</button>
                                 <button class="tpi-preview-close-btn" type="button" onclick="document.getElementById('tpi-preview-modal').remove()" style="padding:6px 14px;border: 1px solid #86efac;border-radius:6px;background:#f9fafb;color:#374151;cursor:pointer;font-size:13px;font-weight:600;transition:background 0.15s;">✕ 关闭</button>
                             </div>
                         </div>
@@ -24105,7 +24098,7 @@ window.addEventListener('resize', function() {
                 filename = 'TPI_数据导出_' + new Date().toISOString().split('T')[0] + '.txt';
                 mimeType = 'text/plain';
             } else if (format === 'html') {
-                let html = `<html><head><meta charset="UTF-8"><title>全维效能管理系统 TPI（V2.20）</title><\/head><body>
+                let html = `<html><head><meta charset="UTF-8"><title>全维效能管理系统 TPI（V2.21）</title><\/head><body>
 
         <div id="score-dashboard" style="background: linear-gradient(135deg, #e0e7ff 0%, #ddd6fe 100%); padding: 8px 16px; border-radius: 0; margin: 0; color: #1e293b; box-shadow: 0 2px 6px rgba(0,0,0,0.1);">
             <div style="max-width: 1400px; margin: 0 auto; display: flex; align-items: center; justify-content: center; gap: 10px; flex-wrap: nowrap;">
@@ -25120,7 +25113,7 @@ window.archiveOldDataComplete = function() {
                         alert('✅ JSON导出成功！');
                     }
                     else if (format === 'html') {
-                        let html = '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>全维效能管理系统 TPI（V2.20）</title>';
+                        let html = '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>全维效能管理系统 TPI（V2.21）</title>';
                         html += `<style>
 
     .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 10001; align-items: center; justify-content: center; }
@@ -27668,7 +27661,7 @@ window.addEventListener('unhandledrejection', function(event) {
   }
 
   function backupAllDataNow(){
-    const out = { _meta: { version: (window.TPI_VERSION||'全维效能管理系统 TPI（V2.20）'), appVersion: (window.TPI_APP_VERSION||'2.19'), exportedAt: new Date().toISOString() }, localStorage: {} };
+    const out = { _meta: { version: (window.TPI_VERSION||'全维效能管理系统 TPI（V2.21）'), appVersion: (window.TPI_APP_VERSION||'2.19'), exportedAt: new Date().toISOString() }, localStorage: {} };
     for(let i=0;i<__tpi_ls_length();i++){
       const k = __tpi_ls_key(i);
       if(!k) continue;
@@ -27975,7 +27968,7 @@ try{
       }
       window.__tpi_backup_lock = true;
 
-      const out = { _meta: { version: (window.TPI_VERSION||'全维效能管理系统 TPI（V2.20）'), appVersion: (window.TPI_APP_VERSION||'2.19'), exportedAt: new Date().toISOString() }, localStorage: {} };
+      const out = { _meta: { version: (window.TPI_VERSION||'全维效能管理系统 TPI（V2.21）'), appVersion: (window.TPI_APP_VERSION||'2.19'), exportedAt: new Date().toISOString() }, localStorage: {} };
 
       for(let i=0;i<__tpi_ls_length();i++){
         const k = __tpi_ls_key(i);
@@ -28526,7 +28519,7 @@ try{
       }
       window.__tpi_backup_lock = true;
 
-      const out = { _meta: { version: (window.TPI_VERSION||'全维效能管理系统 TPI（V2.20）'), appVersion: (window.TPI_APP_VERSION||'2.19'), exportedAt: new Date().toISOString() }, localStorage: {} };
+      const out = { _meta: { version: (window.TPI_VERSION||'全维效能管理系统 TPI（V2.21）'), appVersion: (window.TPI_APP_VERSION||'2.19'), exportedAt: new Date().toISOString() }, localStorage: {} };
 
       for(let i=0;i<__tpi_ls_length();i++){
         const k = __tpi_ls_key(i);
@@ -43882,7 +43875,7 @@ h3.card-title, h4.card-title,
   function _v157_collectAll(){
     var result={
       _meta:{
-        version: window.TPI_VERSION||'全维效能管理系统 TPI（V2.20）',
+        version: window.TPI_VERSION||'全维效能管理系统 TPI（V2.21）',
         appVersion: window.TPI_APP_VERSION||'2.19',
         backupVersion:'V2.19',
         backupFormat:'full_v157_ultimate',
@@ -44266,7 +44259,7 @@ h3.card-title, h4.card-title,
 
     var result = {
       _meta: {
-        version: window.TPI_VERSION || '全维效能管理系统 TPI（V2.20）',
+        version: window.TPI_VERSION || '全维效能管理系统 TPI（V2.21）',
         appVersion: window.TPI_APP_VERSION || '2.19',
         backupVersion: 'V2.19',
         backupFormat: 'full_v219_ultimate',
@@ -44632,7 +44625,7 @@ h3.card-title, h4.card-title,
 'use strict';
 (function() {
 
-  // V2.20 今日任务明细 (Daily Task Log · DTL)
+  // V2.21 今日任务明细 (Daily Task Log · DTL)
   // 读取当日所有得分项，汇总成表格展示
 
   function _safeNum(v) {
